@@ -8,7 +8,7 @@
 import os
 
 extension Logger {
-    static let appSubsystem = "com.mazzsva.Calliope"
+    static let appSubsystem = "com.mazzsva.Lexicon"
 
     init(category: String) {
         self.init(subsystem: Self.appSubsystem, category: category)
