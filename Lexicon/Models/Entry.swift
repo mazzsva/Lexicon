@@ -17,7 +17,7 @@ struct Entry: Equatable, Identifiable, Sendable {
 }
 
 extension Entry {
-    static let mock = Entry(
+    static let blueMoon = Entry(
         createdAt: Date(timeIntervalSince1970: 1_750_000_000),
         definition: "Something that happens very rarely.",
         id: UUID(0),
@@ -25,23 +25,21 @@ extension Entry {
         term: "Once in a blue moon"
     )
 
-    static let mocks: [Entry] = [
-        .mock,
-        .unbookmarkedMock,
-        Entry(
-            createdAt: Date(timeIntervalSince1970: 1_748_000_000),
-            definition: "The easiest wins, taken first.",
-            id: UUID(2),
-            isBookmarked: false,
-            term: "Low-hanging fruit"
-        ),
-    ]
-
-    static let unbookmarkedMock = Entry(
+    static let burningCandle = Entry(
         createdAt: Date(timeIntervalSince1970: 1_749_000_000),
         definition: "To work early and late until you're exhausted.",
         id: UUID(1),
         isBookmarked: false,
         term: "Burn the candle at both ends"
     )
+
+    static let lowHangingFruit = Entry(
+        createdAt: Date(timeIntervalSince1970: 1_748_000_000),
+        definition: "The easiest wins, taken first.",
+        id: UUID(2),
+        isBookmarked: false,
+        term: "Low-hanging fruit"
+    )
+
+    static let mocks: [Entry] = [.blueMoon, .burningCandle, .lowHangingFruit]
 }

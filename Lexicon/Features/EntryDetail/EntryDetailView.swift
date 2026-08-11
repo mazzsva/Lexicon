@@ -64,7 +64,7 @@ struct EntryDetailView: View {
 #Preview("Bookmarked") {
     NavigationStack {
         EntryDetailView(
-            store: Store(initialState: EntryDetail.State(entry: .mock)) {
+            store: Store(initialState: EntryDetail.State(entry: .blueMoon)) {
                 EntryDetail()
             }
         )
@@ -74,7 +74,7 @@ struct EntryDetailView: View {
 #Preview("Not Bookmarked") {
     NavigationStack {
         EntryDetailView(
-            store: Store(initialState: EntryDetail.State(entry: .unbookmarkedMock)) {
+            store: Store(initialState: EntryDetail.State(entry: .burningCandle)) {
                 EntryDetail()
             }
         )

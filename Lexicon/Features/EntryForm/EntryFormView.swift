@@ -65,7 +65,7 @@ struct EntryFormView: View {
 
 #Preview("Edit") {
     EntryFormView(
-        store: Store(initialState: EntryForm.State(entry: .mock)) {
+        store: Store(initialState: EntryForm.State(entry: .blueMoon)) {
             EntryForm()
         }
     )
