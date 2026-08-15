@@ -34,9 +34,9 @@ An iOS app for saving the words and phrases you want to remember.
 | `Dependencies/` | Auth, SignInWithApple, Entries, NetworkMonitor, Haptics |
 | `Support/` | Logging, app version, shared view modifier |
 
-Each screen is a reducer and a view of the same name, and `AppFeature` holds whichever one the session calls for. The navigation comes from state as well, so `Home` owns the stack of entry details and each sheet it presents, and no view drives its own presentation.
+Each screen is a reducer and a view of the same name, and `AppFeature` holds whichever one the session calls for. Navigation comes from state too, so `Home` owns the stack of entry details and each sheet it presents, and no view drives its own presentation.
 
-Every side effect crosses a client with live and preview values, so no view touches Firebase and previews run without a network. A snapshot listener on `users/{uid}/entries/{id}` is the only source of truth for the list. That listener keeps reading from Firestore's local cache when the connection drops, and writes queue there until it returns.
+Every side effect crosses a client with live and preview values, so no view touches Firebase and previews run without a network. A snapshot listener on `users/{uid}/entries/{id}` is the only source of truth for the list. That listener keeps reading from Firestore's local cache when the connection drops, and writes queue there until it returns, so the list stays readable and editable offline.
 
 ## Requirements
 
