@@ -29,9 +29,22 @@ struct AppleCredential: Equatable, Sendable {
 
 enum AppleCredentialState: Sendable {
     case authorized
-    case indeterminate
     case notFound
     case revoked
+    case transferred
+    case unknown
+}
+
+extension AppleCredentialState: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .authorized: "authorized"
+        case .notFound: "not found"
+        case .revoked: "revoked"
+        case .transferred: "transferred to another team"
+        case .unknown: "in an unknown state"
+        }
+    }
 }
 
 extension AppleCredential {
@@ -72,9 +85,9 @@ extension SignInWithAppleClient: DependencyKey {
                             case .revoked:
                                 continuation.resume(returning: .revoked)
                             case .transferred:
-                                continuation.resume(returning: .indeterminate)
+                                continuation.resume(returning: .transferred)
                             @unknown default:
-                                continuation.resume(returning: .indeterminate)
+                                continuation.resume(returning: .unknown)
                             }
                         }
                 }

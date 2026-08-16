@@ -100,7 +100,7 @@ struct AppFeature {
             case .appleCredentialInvalidated(let credentialState):
                 guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
                 logger.notice(
-                    "Apple ID credential is \(String(describing: credentialState), privacy: .public); signing out.")
+                    "Apple ID credential is \(credentialState.description, privacy: .public); signing out.")
                 return .run { _ in
                     try await authClient.signOut()
                 } catch: { error, _ in
