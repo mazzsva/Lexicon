@@ -12,6 +12,7 @@ import DependenciesMacros
 import Foundation
 import Security
 import UIKit
+import os
 
 @DependencyClient
 struct SignInWithAppleClient: Sendable {
@@ -76,7 +77,11 @@ extension SignInWithAppleClient: DependencyKey {
             credentialState: { userID in
                 await withCheckedContinuation { continuation in
                     ASAuthorizationAppleIDProvider()
-                        .getCredentialState(forUserID: userID) { state, _ in
+                        .getCredentialState(forUserID: userID) { state, error in
+                            if let error {
+                                logger.error(
+                                    "Reading the Apple ID credential state failed: \(error, privacy: .public)")
+                            }
                             switch state {
                             case .authorized:
                                 continuation.resume(returning: .authorized)
@@ -214,3 +219,5 @@ extension AuthorizationCoordinator: ASAuthorizationControllerPresentationContext
         }
     }
 }
+
+private let logger = Logger(category: "SignInWithAppleClient")
