@@ -196,6 +196,7 @@ struct Home {
         }
     }
 
+    // The haptic welcomes the user into the app, so it plays even when the entries fail to load
     private func celebrateFirstLoad(_ state: State) -> Effect<Action> {
         state.isFreshSignIn ? .run { _ in await hapticsClient.success() } : .none
     }
