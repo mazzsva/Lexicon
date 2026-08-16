@@ -65,6 +65,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom)
         }
+        // The swipe stays disabled at every step so the user leaves Settings only through the Dismiss button
         .interactiveDismissDisabled()
     }
 }
