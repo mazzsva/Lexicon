@@ -14,11 +14,12 @@ struct HomeView: View {
     @Namespace private var namespace
 
     var body: some View {
+        let entries = store.filteredEntries
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             ScrollView {
                 GlassEffectContainer(spacing: 0) {
                     LazyVStack(spacing: 16) {
-                        ForEach(store.filteredEntries) { entry in
+                        ForEach(entries) { entry in
                             NavigationLink(state: EntryDetail.State(entry: entry)) {
                                 EntryCardView(entry: entry)
                             }
@@ -65,7 +66,7 @@ struct HomeView: View {
                         systemImage: "tray.fill",
                         description: Text("Tap the plus button to add an entry.")
                     )
-                } else if store.entries != nil, store.filteredEntries.isEmpty {
+                } else if store.entries != nil, entries.isEmpty {
                     ContentUnavailableView.search(text: store.searchText)
                 }
             }
