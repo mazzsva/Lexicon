@@ -10,6 +10,7 @@ import DependenciesMacros
 import FirebaseFirestore
 import Foundation
 import IssueReporting
+import os
 
 @DependencyClient
 struct EntriesClient: Sendable {
@@ -130,7 +131,10 @@ private actor FirestoreStorage {
                         continuation.finish(throwing: error)
                         return
                     }
-                    guard let snapshot else { return }
+                    guard let snapshot else {
+                        reportIssue("Entries listener reported neither a snapshot nor an error.")
+                        return
+                    }
                     continuation.yield(
                         EntriesSnapshot(
                             entries: snapshot.documents.compactMap(Entry.init(document:)),
@@ -168,6 +172,7 @@ extension Entry {
             let isBookmarked = data["isBookmarked"] as? Bool,
             let term = data["term"] as? String
         else {
+            logger.error("Skipping entry document \(document.documentID, privacy: .public) that failed to decode.")
             reportIssue("Skipping entry document \(document.documentID) that failed to decode.")
             return nil
         }
@@ -189,3 +194,5 @@ extension Entry {
         ]
     }
 }
+
+private let logger = Logger(category: "EntriesClient")
