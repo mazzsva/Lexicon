@@ -53,19 +53,13 @@ struct Home {
             }
         }
 
-        var isDeletingAccount: Bool {
-            guard case .settings(let settings)? = destination else { return false }
-            return settings.isDeletingAccount
-        }
+        var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
         var isLoadingFirstEntries: Bool { entries == nil }
 
-        var isReauthenticating: Bool {
-            guard case .settings(let settings)? = destination else { return false }
-            return settings.isReauthenticating
-        }
+        var isReauthenticating: Bool { destination?.settings?.isReauthenticating ?? false }
 
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }

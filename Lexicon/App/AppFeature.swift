@@ -23,10 +23,7 @@ struct AppFeature {
         var isSignedOutSettling = false
         var scene: Scene.State?
 
-        var isDeletingAccount: Bool {
-            guard case .home(let home) = scene else { return false }
-            return home.isDeletingAccount
-        }
+        var isDeletingAccount: Bool { scene?.home?.isDeletingAccount ?? false }
 
         var isLoading: Bool {
             switch scene {
@@ -39,14 +36,11 @@ struct AppFeature {
             }
         }
 
-        var isReauthenticating: Bool {
-            guard case .home(let home) = scene else { return false }
-            return home.isReauthenticating
-        }
-
         var isPresentingWelcome: Bool {
             !hasDismissedWelcome && !isLoading
         }
+
+        var isReauthenticating: Bool { scene?.home?.isReauthenticating ?? false }
 
         var loadingMessage: String? {
             switch scene {
