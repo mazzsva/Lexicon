@@ -38,11 +38,13 @@ struct EntryDetailView: View {
             }
             ToolbarSpacer(.fixed, placement: .topBarTrailing)
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                Button(
+                    store.entry.isBookmarked ? "Remove Bookmark" : "Bookmark",
+                    systemImage: store.entry.isBookmarked ? "bookmark.fill" : "bookmark"
+                ) {
                     store.send(.bookmarkButtonTapped)
-                } label: {
-                    Image(systemName: store.entry.isBookmarked ? "bookmark.fill" : "bookmark")
                 }
+                .labelStyle(.iconOnly)
                 .tint(store.entry.isBookmarked ? .bookmark : .secondary)
             }
             ToolbarItem(placement: .bottomBar) {
