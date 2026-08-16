@@ -33,6 +33,7 @@ struct SettingsView: View {
                 }
                 .disabled(store.isDeletingAccount)
             }
+            // Without this the navigation bar shows a back chevron at the root of the stack
             .navigationBarBackButtonHidden()
             .scrollDisabled(true)
             .scrollContentBackground(.hidden)
