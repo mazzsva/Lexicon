@@ -11,9 +11,11 @@ import os
 
 @Reducer
 struct SignIn {
+    enum Alert: Equatable {}
+
     @ObservableState
     struct State: Equatable {
-        @Presents var alert: AlertState<Never>?
+        @Presents var alert: AlertState<SignIn.Alert>?
         var step: Step?
 
         enum Step: Equatable {
@@ -27,7 +29,7 @@ struct SignIn {
     }
 
     enum Action {
-        case alert(PresentationAction<Never>)
+        case alert(PresentationAction<Alert>)
         case authorizationResponse(Result<AppleCredential, any Error>)
         case signInButtonTapped
         case signInFailed(any Error)
@@ -76,7 +78,7 @@ struct SignIn {
     }
 }
 
-extension AlertState where Action == Never {
+extension AlertState where Action == SignIn.Alert {
     static let signInFailed = AlertState {
         TextState("Couldn't Sign In")
     } message: {

@@ -13,10 +13,12 @@ import os
 struct Home {
     @Reducer
     enum Destination {
-        case alert(AlertState<Never>)
+        case alert(AlertState<Home.Alert>)
         case createEntry(EntryForm)
         case settings(Settings)
     }
+
+    enum Alert: Equatable {}
 
     @ObservableState
     struct State: Equatable {
@@ -243,7 +245,7 @@ struct Home {
 
 extension Home.Destination.State: Equatable {}
 
-extension AlertState where Action == Never {
+extension AlertState where Action == Home.Alert {
     static let entryDeleteFailed = AlertState {
         TextState("Couldn't Delete Entry")
     } message: {
