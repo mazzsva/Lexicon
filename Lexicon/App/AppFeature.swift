@@ -137,6 +137,7 @@ struct AppFeature {
         .run { _ in
             try await entriesClient.clearLocalData()
         } catch: { error, _ in
+            logger.error("Clearing the local entries data failed: \(error, privacy: .public)")
             reportIssue(error, "Clearing the local entries data failed.")
         }
     }
@@ -189,6 +190,7 @@ struct AppFeature {
 
         case (.home, .some(let user)):
             logger.notice("Auth changed accounts without signing out first; ending the session before the new one.")
+            reportIssue("Auth changed accounts without signing out first.")
             state.scene = nil
             return .concatenate(
                 clearLocalData(),
