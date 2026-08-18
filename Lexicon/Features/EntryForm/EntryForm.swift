@@ -10,9 +10,6 @@ import Foundation
 
 @Reducer
 struct EntryForm {
-    static let maxDefinitionUTF8Count = 40_000
-    static let maxTermUTF8Count = 800
-
     @ObservableState
     struct State: Equatable {
         var definition: String
@@ -54,14 +51,6 @@ struct EntryForm {
         BindingReducer()
         Reduce { state, action in
             switch action {
-            case .binding(\.definition):
-                state.definition = String(state.definition.prefix(utf8Count: Self.maxDefinitionUTF8Count))
-                return .none
-
-            case .binding(\.term):
-                state.term = String(state.term.prefix(utf8Count: Self.maxTermUTF8Count))
-                return .none
-
             case .binding:
                 return .none
 
@@ -86,16 +75,5 @@ struct EntryForm {
                 return .send(.delegate(.didSubmit(entry)))
             }
         }
-    }
-}
-
-extension String {
-    fileprivate func prefix(utf8Count: Int) -> Substring {
-        guard utf8.count > utf8Count else { return self[...] }
-        var end = utf8.index(utf8.startIndex, offsetBy: utf8Count)
-        while String.Index(end, within: self) == nil {
-            end = utf8.index(before: end)
-        }
-        return self[..<end]
     }
 }
