@@ -33,9 +33,11 @@ struct EntryCardView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Image(systemName: entry.isBookmarked ? "bookmark.fill" : "bookmark")
-                    .font(.caption)
-                    .foregroundStyle(entry.isBookmarked ? .bookmark : .secondary)
+                if entry.isBookmarked {
+                    Image(systemName: "bookmark.fill")
+                        .font(.caption)
+                        .foregroundStyle(.bookmark)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
