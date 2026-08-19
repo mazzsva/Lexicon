@@ -32,6 +32,17 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(store.isDeletingAccount)
+                #if DEBUG
+                Section("Debug") {
+                    Button("Add Mock Entries") {
+                        store.send(.debugAddMockEntriesButtonTapped)
+                    }
+                    Button("Delete All Entries", role: .destructive) {
+                        store.send(.debugDeleteAllEntriesButtonTapped)
+                    }
+                }
+                .disabled(store.isDeletingAccount)
+                #endif
             }
             // Without this the navigation bar shows a back chevron at the root of the stack
             .navigationBarBackButtonHidden()

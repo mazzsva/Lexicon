@@ -42,6 +42,10 @@ struct Settings {
         case accountDeletionFailed(any Error)
         case alert(PresentationAction<Alert>)
         case appleCredentialReceived
+        #if DEBUG
+        case debugAddMockEntriesButtonTapped
+        case debugDeleteAllEntriesButtonTapped
+        #endif
         case deleteAccountButtonTapped
         case dismissButtonTapped
         case entriesDeleted
@@ -92,6 +96,14 @@ struct Settings {
                 state.deletionStep = .deletingEntries
                 return startDeletionTimeout()
 
+            #if DEBUG
+            case .debugAddMockEntriesButtonTapped:
+                return addMockEntries(uid: state.user.uid)
+
+            case .debugDeleteAllEntriesButtonTapped:
+                return deleteAllEntries(uid: state.user.uid)
+            #endif
+
             case .deleteAccountButtonTapped:
                 guard !state.isDeletingAccount else { return .none }
                 state.alert = .confirmAccountDeletion
@@ -119,6 +131,26 @@ struct Settings {
         }
         .ifLet(\.$alert, action: \.alert)
     }
+
+    #if DEBUG
+    private func addMockEntries(uid: String) -> Effect<Action> {
+        .run { _ in
+            for entry in Entry.mocks {
+                try await entriesClient.save(entry: entry, uid: uid)
+            }
+        } catch: { error, _ in
+            logger.error("Adding the mock entries failed: \(error, privacy: .public)")
+        }
+    }
+
+    private func deleteAllEntries(uid: String) -> Effect<Action> {
+        .run { _ in
+            try await entriesClient.deleteAll(uid: uid)
+        } catch: { error, _ in
+            logger.error("Deleting all the entries failed: \(error, privacy: .public)")
+        }
+    }
+    #endif
 
     private func deleteAccount(uid: String) -> Effect<Action> {
         .run { send in
