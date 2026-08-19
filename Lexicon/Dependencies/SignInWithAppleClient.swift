@@ -125,10 +125,6 @@ extension SignInWithAppleClient: DependencyKey {
             requestCredential: { .mock }
         )
     }
-
-    static var testValue: SignInWithAppleClient {
-        SignInWithAppleClient()
-    }
 }
 
 extension DependencyValues {

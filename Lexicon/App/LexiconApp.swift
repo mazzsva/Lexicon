@@ -7,7 +7,6 @@
 
 import ComposableArchitecture
 import FirebaseCore
-import IssueReporting
 import SwiftUI
 
 @main
@@ -18,15 +17,12 @@ struct LexiconApp: App {
     }
 
     init() {
-        guard !isTesting else { return }
         FirebaseApp.configure()
     }
 
     var body: some Scene {
         WindowGroup {
-            if !isTesting {
-                AppView(store: Self.store)
-            }
+            AppView(store: Self.store)
         }
     }
 }

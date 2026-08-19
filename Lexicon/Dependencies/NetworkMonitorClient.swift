@@ -42,10 +42,6 @@ extension NetworkMonitorClient: DependencyKey {
             }
         )
     }
-
-    static var testValue: NetworkMonitorClient {
-        NetworkMonitorClient()
-    }
 }
 
 extension DependencyValues {
