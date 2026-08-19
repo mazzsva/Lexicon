@@ -32,12 +32,6 @@ struct EntryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") {
-                    store.send(.editButtonTapped)
-                }
-            }
-            ToolbarSpacer(.fixed, placement: .topBarTrailing)
-            ToolbarItem(placement: .topBarTrailing) {
                 Button(
                     store.entry.isBookmarked ? "Remove Bookmark" : "Bookmark",
                     systemImage: store.entry.isBookmarked ? "bookmark.fill" : "bookmark"
@@ -46,6 +40,12 @@ struct EntryDetailView: View {
                 }
                 .labelStyle(.iconOnly)
                 .tint(store.entry.isBookmarked ? .bookmark : .secondary)
+            }
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit") {
+                    store.send(.editButtonTapped)
+                }
             }
             ToolbarItem(placement: .bottomBar) {
                 Button("Delete Entry", role: .destructive) {
