@@ -25,6 +25,7 @@ struct Home {
         @Presents var destination: Destination.State?
         var entries: IdentifiedArrayOf<Entry>?
         var isOnline = true
+        var isShowingBookmarkedOnly = false
         var isSyncing = true
         var path = StackState<EntryDetail.State>()
         var searchText = ""
@@ -46,11 +47,17 @@ struct Home {
 
         var filteredEntries: IdentifiedArrayOf<Entry> {
             guard let entries else { return [] }
-            guard !searchText.isEmpty else { return entries }
-            return entries.filter { entry in
-                entry.term.localizedStandardContains(searchText)
-                    || entry.definition.localizedStandardContains(searchText)
+            var result = entries
+            if isShowingBookmarkedOnly {
+                result = result.filter(\.isBookmarked)
             }
+            if !searchText.isEmpty {
+                result = result.filter { entry in
+                    entry.term.localizedStandardContains(searchText)
+                        || entry.definition.localizedStandardContains(searchText)
+                }
+            }
+            return result
         }
 
         var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }
@@ -69,6 +76,7 @@ struct Home {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case bookmarkFilterButtonTapped
         case connectivityChanged(Bool)
         case destination(PresentationAction<Destination.Action>)
         case entriesRetryTimerElapsed
@@ -97,6 +105,10 @@ struct Home {
         Reduce { state, action in
             switch action {
             case .binding:
+                return .none
+
+            case .bookmarkFilterButtonTapped:
+                state.isShowingBookmarkedOnly.toggle()
                 return .none
 
             case .connectivityChanged(let isOnline):
@@ -133,6 +145,9 @@ struct Home {
                 state.isSyncing = snapshot.isSyncing
                 let entries = IdentifiedArray(uniqueElements: snapshot.entries)
                 state.entries = entries
+                if entries.isEmpty {
+                    state.isShowingBookmarkedOnly = false
+                }
                 for id in Array(state.path.ids) {
                     guard let entryID = state.path[id: id]?.entry.id else { continue }
                     if let entry = entries[id: entryID] {

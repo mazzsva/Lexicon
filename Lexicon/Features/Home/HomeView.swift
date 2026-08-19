@@ -14,12 +14,12 @@ struct HomeView: View {
     @Namespace private var namespace
 
     var body: some View {
-        let entries = store.filteredEntries
+        let visibleEntries = store.filteredEntries
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             ScrollView {
                 GlassEffectContainer(spacing: 0) {
                     LazyVStack(spacing: 16) {
-                        ForEach(entries) { entry in
+                        ForEach(visibleEntries) { entry in
                             NavigationLink(state: EntryDetail.State(entry: entry)) {
                                 EntryCardView(entry: entry)
                             }
@@ -44,6 +44,19 @@ struct HomeView: View {
                         SyncStatusLabel(entryCount: store.entryCount, status: store.syncStatus)
                     }
                 }
+                if store.entryCount > 0 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(
+                            store.isShowingBookmarkedOnly ? "Show All Entries" : "Show Bookmarked Entries",
+                            systemImage: store.isShowingBookmarkedOnly ? "bookmark.fill" : "bookmark"
+                        ) {
+                            store.send(.bookmarkFilterButtonTapped)
+                        }
+                        .labelStyle(.iconOnly)
+                        .tint(store.isShowingBookmarkedOnly ? .bookmark : .secondary)
+                    }
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Settings", systemImage: "gear") {
                         store.send(.settingsButtonTapped)
@@ -66,8 +79,14 @@ struct HomeView: View {
                         systemImage: "tray.fill",
                         description: Text("Tap the plus button to add an entry.")
                     )
-                } else if store.entries != nil, entries.isEmpty {
+                } else if store.entries != nil, visibleEntries.isEmpty, !store.searchText.isEmpty {
                     ContentUnavailableView.search(text: store.searchText)
+                } else if store.entries != nil, visibleEntries.isEmpty {
+                    ContentUnavailableView(
+                        "No Bookmarks",
+                        systemImage: "bookmark.fill",
+                        description: Text("Bookmark an entry to find it here.")
+                    )
                 }
             }
         } destination: { detailStore in
