@@ -2,7 +2,8 @@
 
 An iOS app for saving the words and phrases you want to remember.
 
-<img src="https://github.com/user-attachments/assets/01be0748-c8d8-4d60-a5ed-949da2adbf94" alt="Sign In" width="32%"> <img src="https://github.com/user-attachments/assets/0d64d418-8f83-431d-b63c-7e43f600a2b1" alt="Home" width="32%"> <img src="https://github.com/user-attachments/assets/3629ac5f-e481-4467-90a1-ea08754e61e8" alt="Entry Detail" width="32%">
+<img src="https://github.com/user-attachments/assets/f97afda5-c1ca-423c-b9a3-a2eaa232d328" alt="signinview" width="32%"> <img src="https://github.com/user-attachments/assets/ed8f7277-bd7a-42f6-9919-530ba40cd93c" alt="homeview" width="32%"> <img src="https://github.com/user-attachments/assets/de03152e-59f6-4235-af6c-f825ec5e0977" alt="entrydetailview" width="32%">
+
 
 ## Features
 
