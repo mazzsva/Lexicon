@@ -23,7 +23,7 @@ struct Home {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        var entries: IdentifiedArrayOf<Entry>?
+        @Shared var entries: IdentifiedArrayOf<Entry>?
         var isOnline = true
         var isShowingBookmarkedOnly = false
         var isSyncing = true
@@ -39,25 +39,16 @@ struct Home {
         }
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
+            _entries = Shared(value: nil)
             self.sessionOrigin = sessionOrigin
             self.user = user
         }
 
         var entryCount: Int { entries?.count ?? 0 }
 
-        var filteredEntries: IdentifiedArrayOf<Entry> {
-            guard let entries else { return [] }
-            var result = entries
-            if isShowingBookmarkedOnly {
-                result = result.filter(\.isBookmarked)
-            }
-            if !searchText.isEmpty {
-                result = result.filter { entry in
-                    entry.term.localizedStandardContains(searchText)
-                        || entry.definition.localizedStandardContains(searchText)
-                }
-            }
-            return result
+        var filteredEntries: [Shared<Entry>] {
+            guard let entries = Shared($entries) else { return [] }
+            return Array(entries).filter { isVisible($0.wrappedValue) }
         }
 
         var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }
@@ -71,6 +62,13 @@ struct Home {
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
             return isSyncing ? .syncing : .synced
+        }
+
+        private func isVisible(_ entry: Entry) -> Bool {
+            if isShowingBookmarkedOnly, !entry.isBookmarked { return false }
+            guard !searchText.isEmpty else { return true }
+            return entry.term.localizedStandardContains(searchText)
+                || entry.definition.localizedStandardContains(searchText)
         }
     }
 
@@ -137,24 +135,23 @@ struct Home {
                     }
                     .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
                 guard state.entries == nil else { return retry }
-                state.entries = []
+                state.$entries.withLock { $0 = [] }
                 return .merge(retry, celebrateFirstLoad(state))
 
             case .entriesUpdated(let snapshot):
                 let isFirstLoad = state.entries == nil
                 state.isSyncing = snapshot.isSyncing
                 let entries = IdentifiedArray(uniqueElements: snapshot.entries)
-                state.entries = entries
+                state.$entries.withLock { $0 = entries }
                 if entries.isEmpty {
                     state.isShowingBookmarkedOnly = false
                 }
                 for id in Array(state.path.ids) {
-                    guard let entryID = state.path[id: id]?.entry.id else { continue }
-                    if let entry = entries[id: entryID] {
-                        state.path[id: id]?.entry = entry
-                    } else {
-                        state.path.pop(from: id)
-                    }
+                    guard
+                        let entryID = state.path[id: id]?.entry.id,
+                        entries[id: entryID] == nil
+                    else { continue }
+                    state.path.pop(from: id)
                 }
                 guard isFirstLoad else { return .none }
                 return celebrateFirstLoad(state)

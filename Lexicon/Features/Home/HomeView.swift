@@ -19,8 +19,8 @@ struct HomeView: View {
             ScrollView {
                 GlassEffectContainer(spacing: 0) {
                     LazyVStack(spacing: 16) {
-                        ForEach(visibleEntries) { entry in
-                            NavigationLink(state: EntryDetail.State(entry: entry)) {
+                        ForEach(visibleEntries) { $entry in
+                            NavigationLink(state: EntryDetail.State(entry: $entry)) {
                                 EntryCardView(entry: entry)
                             }
                             .buttonStyle(.plain)
