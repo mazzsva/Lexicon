@@ -46,9 +46,11 @@ struct Home {
 
         var entryCount: Int { entries?.count ?? 0 }
 
-        var filteredEntries: [Shared<Entry>] {
+        var filteredEntries: [SharedReader<Entry>] {
             guard let entries = Shared($entries) else { return [] }
-            return Array(entries).filter { isVisible($0.wrappedValue) }
+            return Array(entries)
+                .filter { isVisible($0.wrappedValue) }
+                .map { SharedReader($0) }
         }
 
         var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }

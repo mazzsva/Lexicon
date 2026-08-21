@@ -23,7 +23,7 @@ struct EntryDetail {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        @Shared var entry: Entry
+        @SharedReader var entry: Entry
     }
 
     enum Action {
@@ -46,10 +46,11 @@ struct EntryDetail {
         Reduce { state, action in
             switch action {
             case .bookmarkButtonTapped:
-                state.$entry.withLock { $0.isBookmarked.toggle() }
+                var entry = state.entry
+                entry.isBookmarked.toggle()
                 return .merge(
                     .run { _ in await hapticsClient.selection() },
-                    .send(.delegate(.didUpdate(state.entry)))
+                    .send(.delegate(.didUpdate(entry)))
                 )
 
             case .delegate:
@@ -64,7 +65,6 @@ struct EntryDetail {
 
             case .destination(.presented(.editEntry(.delegate(.didSubmit(let entry))))):
                 state.destination = nil
-                state.$entry.withLock { $0 = entry }
                 return .merge(
                     .run { _ in await hapticsClient.success() },
                     .send(.delegate(.didUpdate(entry)))
