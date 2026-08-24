@@ -1,6 +1,6 @@
 # Lexicon
 
-An iOS app for saving the words and phrases you want to remember.
+The iOS app that keeps the words you want to remember.
 
 <img src="https://github.com/user-attachments/assets/f97afda5-c1ca-423c-b9a3-a2eaa232d328" alt="signinview" width="32%"> <img src="https://github.com/user-attachments/assets/ed8f7277-bd7a-42f6-9919-530ba40cd93c" alt="homeview" width="32%"> <img src="https://github.com/user-attachments/assets/de03152e-59f6-4235-af6c-f825ec5e0977" alt="entrydetailview" width="32%">
 
