@@ -22,9 +22,10 @@ struct Settings {
     }
 
     enum DeletionStep: Equatable {
-        case deletingEntries
+        case credentialRevoked
+        case deleting
+        case entriesDeleted
         case reauthenticating
-        case revokingCredential
     }
 
     @ObservableState
@@ -42,6 +43,7 @@ struct Settings {
         case accountDeletionFailed(any Error)
         case alert(PresentationAction<Alert>)
         case appleCredentialReceived
+        case appleCredentialRevoked
         #if DEBUG
         case debugAddMockEntriesButtonTapped
         case debugDeleteAllEntriesButtonTapped
@@ -67,7 +69,7 @@ struct Settings {
         Reduce { state, action in
             switch action {
             case .accountDeletionFailed(let error):
-                guard state.deletionStep != .revokingCredential else {
+                guard state.deletionStep != .credentialRevoked else {
                     logger.error(
                         "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
                     return .merge(
@@ -75,10 +77,11 @@ struct Settings {
                         signOut()
                     )
                 }
+                let hasDeletedEntries = state.deletionStep == .entriesDeleted
                 state.deletionStep = nil
                 if !error.isSignInWithAppleCancellation {
                     logger.error("Account deletion failed: \(error, privacy: .public)")
-                    state.alert = .accountDeletionFailed
+                    state.alert = hasDeletedEntries ? .accountDeletionUnfinished : .accountDeletionFailed
                 }
                 return .cancel(id: CancelID.accountDeletion)
 
@@ -93,8 +96,12 @@ struct Settings {
                 return .none
 
             case .appleCredentialReceived:
-                state.deletionStep = .deletingEntries
+                state.deletionStep = .deleting
                 return startDeletionTimeout()
+
+            case .appleCredentialRevoked:
+                state.deletionStep = .credentialRevoked
+                return .none
 
             #if DEBUG
             case .debugAddMockEntriesButtonTapped:
@@ -114,7 +121,7 @@ struct Settings {
                 return .run { _ in await dismiss() }
 
             case .entriesDeleted:
-                state.deletionStep = .revokingCredential
+                state.deletionStep = .entriesDeleted
                 return .none
 
             case .signOutButtonTapped:
@@ -165,6 +172,7 @@ struct Settings {
             await send(.entriesDeleted)
             try Task.checkCancellation()
             try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
+            await send(.appleCredentialRevoked)
             try Task.checkCancellation()
             try await authClient.deleteAccount()
         } catch: { error, send in
@@ -195,6 +203,12 @@ extension AlertState where Action == Settings.Alert {
         TextState("Couldn't Delete Account")
     } message: {
         TextState("Something went wrong while deleting your account. Please try again.")
+    }
+
+    static let accountDeletionUnfinished = AlertState {
+        TextState("Couldn't Delete Account")
+    } message: {
+        TextState("Your entries were deleted, but your account wasn't.")
     }
 
     static let confirmAccountDeletion = AlertState {
