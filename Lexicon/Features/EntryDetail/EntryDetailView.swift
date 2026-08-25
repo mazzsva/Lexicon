@@ -18,7 +18,9 @@ struct EntryDetailView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text(store.entry.definition)
+                if !store.entry.definition.isEmpty {
+                    Text(store.entry.definition)
+                }
 
                 Text("Created \(store.entry.createdAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption)
