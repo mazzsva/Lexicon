@@ -17,10 +17,12 @@ struct EntryCardView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                Text(entry.definition)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if !entry.definition.isEmpty {
+                    Text(entry.definition)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
