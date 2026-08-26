@@ -200,15 +200,15 @@ struct Settings {
 
 extension AlertState where Action == Settings.Alert {
     static let accountDeletionFailed = AlertState {
-        TextState("Couldn't Delete Account")
+        TextState("Something Went Wrong")
     } message: {
-        TextState("Something went wrong while deleting your account. Please try again.")
+        TextState("Your account couldn't be deleted.")
     }
 
     static let accountDeletionUnfinished = AlertState {
-        TextState("Couldn't Delete Account")
+        TextState("Something Went Wrong")
     } message: {
-        TextState("Your entries were deleted, but your account wasn't.")
+        TextState("Your account couldn't be fully deleted.")
     }
 
     static let confirmAccountDeletion = AlertState {
@@ -221,7 +221,7 @@ extension AlertState where Action == Settings.Alert {
             TextState("Cancel")
         }
     } message: {
-        TextState("Are you sure you want to delete your account?")
+        TextState("Your account and all your entries will be permanently deleted. Are you sure?")
     }
 
     static let confirmSignOut = AlertState {
@@ -238,9 +238,9 @@ extension AlertState where Action == Settings.Alert {
     }
 
     static let signOutFailed = AlertState {
-        TextState("Couldn't Sign Out")
+        TextState("Something Went Wrong")
     } message: {
-        TextState("Something went wrong while signing out. Please try again.")
+        TextState("You couldn't be signed out.")
     }
 }
 

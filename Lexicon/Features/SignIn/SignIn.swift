@@ -80,9 +80,9 @@ struct SignIn {
 
 extension AlertState where Action == SignIn.Alert {
     static let signInFailed = AlertState {
-        TextState("Couldn't Sign In")
+        TextState("Something Went Wrong")
     } message: {
-        TextState("Something went wrong while signing in. Please try again.")
+        TextState("You couldn't be signed in.")
     }
 }
 

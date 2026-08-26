@@ -256,15 +256,15 @@ extension Home.Destination.State: Equatable {}
 
 extension AlertState where Action == Home.Alert {
     static let entryDeleteFailed = AlertState {
-        TextState("Couldn't Delete Entry")
+        TextState("Something Went Wrong")
     } message: {
-        TextState("Something went wrong while deleting your entry. Please try again.")
+        TextState("Your entry couldn't be deleted.")
     }
 
     static let entrySaveFailed = AlertState {
-        TextState("Couldn't Save Entry")
+        TextState("Something Went Wrong")
     } message: {
-        TextState("Something went wrong while saving your entry. Please try again.")
+        TextState("Your entry couldn't be saved.")
     }
 }
 
