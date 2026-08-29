@@ -13,7 +13,18 @@
 		EFEF341C2FF987B500E80CBE /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = EFEF341B2FF987B500E80CBE /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		EF5068BC30437F7F0017ACD8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EFEF33ED2FF954F400E80CBE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EFEF33F42FF954F400E80CBE;
+			remoteInfo = Lexicon;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		EF5068B830437F7F0017ACD8 /* LexiconTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LexiconTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EFEF33F52FF954F400E80CBE /* Lexicon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lexicon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -28,6 +39,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		EF5068B930437F7F0017ACD8 /* LexiconTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LexiconTests;
+			sourceTree = "<group>";
+		};
 		EFEF33F72FF954F400E80CBE /* Lexicon */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -39,6 +55,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		EF5068B530437F7F0017ACD8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EFEF33F22FF954F400E80CBE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -57,6 +80,7 @@
 			isa = PBXGroup;
 			children = (
 				EFEF33F72FF954F400E80CBE /* Lexicon */,
+				EF5068B930437F7F0017ACD8 /* LexiconTests */,
 				EFEF34162FF9871900E80CBE /* Frameworks */,
 				EFEF33F62FF954F400E80CBE /* Products */,
 			);
@@ -66,6 +90,7 @@
 			isa = PBXGroup;
 			children = (
 				EFEF33F52FF954F400E80CBE /* Lexicon.app */,
+				EF5068B830437F7F0017ACD8 /* LexiconTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -80,6 +105,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		EF5068B730437F7F0017ACD8 /* LexiconTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EF5068C030437F7F0017ACD8 /* Build configuration list for PBXNativeTarget "LexiconTests" */;
+			buildPhases = (
+				EF5068B430437F7F0017ACD8 /* Sources */,
+				EF5068B530437F7F0017ACD8 /* Frameworks */,
+				EF5068B630437F7F0017ACD8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EF5068BD30437F7F0017ACD8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EF5068B930437F7F0017ACD8 /* LexiconTests */,
+			);
+			name = LexiconTests;
+			packageProductDependencies = (
+			);
+			productName = LexiconTests;
+			productReference = EF5068B830437F7F0017ACD8 /* LexiconTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		EFEF33F42FF954F400E80CBE /* Lexicon */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = EFEF34002FF954F500E80CBE /* Build configuration list for PBXNativeTarget "Lexicon" */;
@@ -117,6 +165,10 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					EF5068B730437F7F0017ACD8 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = EFEF33F42FF954F400E80CBE;
+					};
 					EFEF33F42FF954F400E80CBE = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -141,11 +193,19 @@
 			projectRoot = "";
 			targets = (
 				EFEF33F42FF954F400E80CBE /* Lexicon */,
+				EF5068B730437F7F0017ACD8 /* LexiconTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		EF5068B630437F7F0017ACD8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EFEF33F32FF954F400E80CBE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -179,6 +239,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		EF5068B430437F7F0017ACD8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EFEF33F12FF954F400E80CBE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -188,7 +255,59 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		EF5068BD30437F7F0017ACD8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EFEF33F42FF954F400E80CBE /* Lexicon */;
+			targetProxy = EF5068BC30437F7F0017ACD8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		EF5068BE30437F7F0017ACD8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mazzsva.LexiconTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lexicon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lexicon";
+			};
+			name = Debug;
+		};
+		EF5068BF30437F7F0017ACD8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mazzsva.LexiconTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lexicon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lexicon";
+			};
+			name = Release;
+		};
 		EFEF33FE2FF954F500E80CBE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -387,6 +506,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		EF5068C030437F7F0017ACD8 /* Build configuration list for PBXNativeTarget "LexiconTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF5068BE30437F7F0017ACD8 /* Debug */,
+				EF5068BF30437F7F0017ACD8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		EFEF33F02FF954F400E80CBE /* Build configuration list for PBXProject "Lexicon" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
