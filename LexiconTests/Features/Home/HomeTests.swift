@@ -98,4 +98,15 @@ struct HomeTests {
             await store.finish()
         }
     }
+
+    @Test
+    func newEntryButtonOpensAnEmptyForm() async {
+        let store = TestStore(initialState: Home.State(user: .mock)) {
+            Home()
+        }
+
+        await store.send(.newEntryButtonTapped) {
+            $0.destination = .createEntry(EntryForm.State())
+        }
+    }
 }
