@@ -290,5 +290,18 @@ struct HomeTests {
         }
     }
 
+    @Test
+    func aFailedSaveKeepsThePresentedForm() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.destination = .createEntry(EntryForm.State())
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure()))
+    }
+
     private struct EntriesFailure: Error {}
 }
