@@ -232,4 +232,37 @@ struct HomeTests {
             await store.finish()
         }
     }
+
+    @Test
+    func taskSubscribesToTheEntriesAndTheConnectivity() async {
+        let entries = AsyncThrowingStream<EntriesSnapshot, any Error>.makeStream()
+        let connectivity = AsyncStream<Bool>.makeStream()
+
+        let store = TestStore(initialState: Home.State(user: .mock)) {
+            Home()
+        } withDependencies: {
+            $0.entriesClient.entries = { uid in
+                #expect(uid == User.mock.uid)
+                return entries.stream
+            }
+            $0.networkMonitorClient.connectivityChanges = { connectivity.stream }
+        }
+
+        await store.send(.task)
+
+        entries.continuation.yield(.mock)
+        await store.receive(\.entriesUpdated) {
+            $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            $0.isSyncing = false
+        }
+
+        connectivity.continuation.yield(false)
+        await store.receive(\.connectivityChanged, false) {
+            $0.isOnline = false
+        }
+
+        entries.continuation.finish()
+        connectivity.continuation.finish()
+        await store.finish()
+    }
 }
