@@ -34,6 +34,10 @@ extension HapticsClient: DependencyKey {
     static var previewValue: HapticsClient {
         HapticsClient(selection: {}, success: {}, warning: {})
     }
+
+    static var testValue: HapticsClient {
+        HapticsClient()
+    }
 }
 
 extension DependencyValues {

@@ -70,6 +70,10 @@ extension EntriesClient: DependencyKey {
             save: { _, _ in }
         )
     }
+
+    static var testValue: EntriesClient {
+        EntriesClient()
+    }
 }
 
 extension DependencyValues {

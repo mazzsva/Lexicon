@@ -72,6 +72,10 @@ extension AuthClient: DependencyKey {
             signOut: {}
         )
     }
+
+    static var testValue: AuthClient {
+        AuthClient()
+    }
 }
 
 extension DependencyValues {
