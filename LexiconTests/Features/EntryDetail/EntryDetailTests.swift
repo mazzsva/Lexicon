@@ -41,4 +41,20 @@ struct EntryDetailTests {
         }
         await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
     }
+
+    @Test
+    func cancelingDeletionKeepsTheEntry() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(
+                destination: .alert(.confirmDeletion),
+                entry: SharedReader(value: .blueMoon)
+            )
+        ) {
+            EntryDetail()
+        }
+
+        await store.send(.destination(.dismiss)) {
+            $0.destination = nil
+        }
+    }
 }
