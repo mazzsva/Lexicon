@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import Foundation
 import Testing
 
 @testable import Lexicon
@@ -107,6 +108,55 @@ struct HomeTests {
 
         await store.send(.newEntryButtonTapped) {
             $0.destination = .createEntry(EntryForm.State())
+        }
+    }
+
+    @Test
+    func creatingAnEntrySavesItAndClosesTheForm() async {
+        let now = Date(timeIntervalSince1970: 1_751_000_000)
+        let created = Entry(
+            createdAt: now,
+            definition: "The easiest wins, taken first.",
+            id: UUID(0),
+            isBookmarked: false,
+            term: "Low-hanging fruit"
+        )
+
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.destination = .createEntry(EntryForm.State())
+
+        await confirmation("Saves the entry") { savesEntry in
+            await confirmation("Plays the success haptic") { playsHaptic in
+                let store = TestStore(initialState: state) {
+                    Home()
+                } withDependencies: {
+                    $0.date.now = now
+                    $0.entriesClient.save = { entry, uid in
+                        #expect(entry == created)
+                        #expect(uid == User.mock.uid)
+                        savesEntry()
+                    }
+                    $0.hapticsClient.success = { playsHaptic() }
+                    $0.uuid = .incrementing
+                }
+
+                await store.send(
+                    .destination(.presented(.createEntry(.binding(.set(\.term, "  Low-hanging fruit  ")))))
+                ) { state in
+                    state.destination?.modify(\.createEntry) { $0.term = "  Low-hanging fruit  " }
+                }
+                await store.send(
+                    .destination(.presented(.createEntry(.binding(.set(\.definition, created.definition)))))
+                ) { state in
+                    state.destination?.modify(\.createEntry) { $0.definition = created.definition }
+                }
+                await store.send(.destination(.presented(.createEntry(.saveButtonTapped))))
+                await store.receive(\.destination.presented.createEntry.delegate.didSubmit, created) {
+                    $0.destination = nil
+                }
+                await store.finish()
+            }
         }
     }
 }
