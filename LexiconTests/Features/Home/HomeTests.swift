@@ -51,4 +51,23 @@ struct HomeTests {
             $0.isSyncing = false
         }
     }
+
+    @Test
+    func aDeletedEntryPopsItsDetail() async {
+        let remaining = [Entry.burningCandle, Entry.lowHangingFruit]
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        let detailID = Array(state.path.ids)[0]
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.entriesUpdated(EntriesSnapshot(entries: remaining, isSyncing: false))) {
+            $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: remaining) }
+            $0.isSyncing = false
+            $0.path.pop(from: detailID)
+        }
+    }
 }
