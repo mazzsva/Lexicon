@@ -207,4 +207,29 @@ struct HomeTests {
         await store.receive(\.entriesRetryTimerElapsed)
         await store.finish()
     }
+
+    @Test
+    func aFreshSignInIsCelebratedEvenWhenTheFirstLoadFails() async {
+        let clock = TestClock()
+        let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+
+        await confirmation("Plays the success haptic") { playsHaptic in
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.continuousClock = clock
+                $0.entriesClient.entries = { _ in
+                    AsyncThrowingStream { continuation in continuation.finish() }
+                }
+                $0.hapticsClient.success = { playsHaptic() }
+            }
+
+            await store.send(.entriesStreamFailed) {
+                $0.$entries.withLock { $0 = [] }
+            }
+            await clock.advance(by: .seconds(5))
+            await store.receive(\.entriesRetryTimerElapsed)
+            await store.finish()
+        }
+    }
 }
