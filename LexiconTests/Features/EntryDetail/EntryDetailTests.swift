@@ -89,4 +89,34 @@ struct EntryDetailTests {
             $0.destination = .editEntry(EntryForm.State(entry: .blueMoon))
         }
     }
+
+    @Test
+    func savingTheEditedEntryClosesTheFormAndTellsTheParent() async {
+        await confirmation("Plays the success haptic") { playsHaptic in
+            let store = TestStore(
+                initialState: EntryDetail.State(
+                    destination: .editEntry(EntryForm.State(entry: .blueMoon)),
+                    entry: SharedReader(value: .blueMoon)
+                )
+            ) {
+                EntryDetail()
+            } withDependencies: {
+                $0.hapticsClient.success = { playsHaptic() }
+            }
+
+            var edited = Entry.blueMoon
+            edited.definition = "Something that almost never happens."
+
+            await store.send(
+                .destination(.presented(.editEntry(.binding(.set(\.definition, edited.definition)))))
+            ) { state in
+                state.destination?.modify(\.editEntry) { $0.definition = edited.definition }
+            }
+            await store.send(.destination(.presented(.editEntry(.saveButtonTapped))))
+            await store.receive(\.destination.presented.editEntry.delegate.didSubmit, edited) {
+                $0.destination = nil
+            }
+            await store.receive(\.delegate.didUpdate, edited)
+        }
+    }
 }
