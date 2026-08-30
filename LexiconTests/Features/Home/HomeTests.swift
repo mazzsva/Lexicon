@@ -70,4 +70,32 @@ struct HomeTests {
             $0.path.pop(from: detailID)
         }
     }
+
+    @Test
+    func updatingFromTheDetailSavesTheEntry() async {
+        var bookmarked = Entry.burningCandle
+        bookmarked.isBookmarked = true
+
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .burningCandle)))
+        let detailID = Array(state.path.ids)[0]
+
+        await confirmation("Saves the entry") { savesEntry in
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.entriesClient.save = { entry, uid in
+                    #expect(entry == bookmarked)
+                    #expect(uid == User.mock.uid)
+                    savesEntry()
+                }
+            }
+
+            await store.send(
+                .path(.element(id: detailID, action: .delegate(.didUpdate(bookmarked))))
+            )
+            await store.finish()
+        }
+    }
 }
