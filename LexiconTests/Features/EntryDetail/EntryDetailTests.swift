@@ -60,18 +60,20 @@ struct EntryDetailTests {
 
     @Test
     func bookmarkButtonTellsTheParent() async {
-        let store = TestStore(
-            initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
-        ) {
-            EntryDetail()
-        } withDependencies: {
-            $0.hapticsClient.selection = {}
+        await confirmation("Plays the selection haptic") { playsHaptic in
+            let store = TestStore(
+                initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
+            ) {
+                EntryDetail()
+            } withDependencies: {
+                $0.hapticsClient.selection = { playsHaptic() }
+            }
+
+            var bookmarked = Entry.burningCandle
+            bookmarked.isBookmarked = true
+
+            await store.send(.bookmarkButtonTapped)
+            await store.receive(\.delegate.didUpdate, bookmarked)
         }
-
-        var bookmarked = Entry.burningCandle
-        bookmarked.isBookmarked = true
-
-        await store.send(.bookmarkButtonTapped)
-        await store.receive(\.delegate.didUpdate, bookmarked)
     }
 }
