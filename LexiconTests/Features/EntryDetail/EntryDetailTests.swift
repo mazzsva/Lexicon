@@ -24,4 +24,21 @@ struct EntryDetailTests {
             $0.destination = .alert(.confirmDeletion)
         }
     }
+
+    @Test
+    func confirmingDeletionTellsTheParent() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(
+                destination: .alert(.confirmDeletion),
+                entry: SharedReader(value: .blueMoon)
+            )
+        ) {
+            EntryDetail()
+        }
+
+        await store.send(.destination(.presented(.alert(.confirmDeletion)))) {
+            $0.destination = nil
+        }
+        await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
+    }
 }
