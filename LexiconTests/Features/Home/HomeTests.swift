@@ -159,4 +159,32 @@ struct HomeTests {
             }
         }
     }
+
+    @Test
+    func aFailedStreamRetriesAfterFiveSeconds() async {
+        let clock = TestClock()
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.isSyncing = false
+
+        let store = TestStore(initialState: state) {
+            Home()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.entriesClient.entries = { _ in
+                AsyncThrowingStream { continuation in continuation.finish() }
+            }
+        }
+
+        await store.send(.entriesStreamFailed) {
+            $0.isSyncing = true
+        }
+        await clock.advance(by: .seconds(4))
+        await store.send(.bookmarkFilterButtonTapped) {
+            $0.isShowingBookmarkedOnly = true
+        }
+        await clock.advance(by: .seconds(1))
+        await store.receive(\.entriesRetryTimerElapsed)
+        await store.finish()
+    }
 }
