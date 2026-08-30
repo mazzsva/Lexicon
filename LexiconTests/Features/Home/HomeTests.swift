@@ -39,4 +39,16 @@ struct HomeTests {
             await store.finish()
         }
     }
+
+    @Test
+    func entriesUpdatedStoresTheEntriesAndStopsSyncing() async {
+        let store = TestStore(initialState: Home.State(user: .mock)) {
+            Home()
+        }
+
+        await store.send(.entriesUpdated(.mock)) {
+            $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            $0.isSyncing = false
+        }
+    }
 }
