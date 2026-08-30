@@ -265,4 +265,30 @@ struct HomeTests {
         connectivity.continuation.finish()
         await store.finish()
     }
+
+    @Test
+    func aFailedDeletionShowsAnAlert() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        let detailID = Array(state.path.ids)[0]
+
+        let store = TestStore(initialState: state) {
+            Home()
+        } withDependencies: {
+            $0.entriesClient.delete = { _, _ in throw EntriesFailure() }
+            $0.hapticsClient.warning = {}
+        }
+
+        await store.send(
+            .path(.element(id: detailID, action: .delegate(.didDelete(Entry.blueMoon.id))))
+        ) {
+            $0.path.pop(from: detailID)
+        }
+        await store.receive(\.entryDeleteFailed) {
+            $0.destination = .alert(.entryDeleteFailed)
+        }
+    }
+
+    private struct EntriesFailure: Error {}
 }
