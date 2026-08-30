@@ -57,4 +57,21 @@ struct EntryDetailTests {
             $0.destination = nil
         }
     }
+
+    @Test
+    func bookmarkButtonTellsTheParent() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
+        ) {
+            EntryDetail()
+        } withDependencies: {
+            $0.hapticsClient.selection = {}
+        }
+
+        var bookmarked = Entry.burningCandle
+        bookmarked.isBookmarked = true
+
+        await store.send(.bookmarkButtonTapped)
+        await store.receive(\.delegate.didUpdate, bookmarked)
+    }
 }
