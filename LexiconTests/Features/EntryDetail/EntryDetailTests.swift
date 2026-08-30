@@ -76,4 +76,17 @@ struct EntryDetailTests {
             await store.receive(\.delegate.didUpdate, bookmarked)
         }
     }
+
+    @Test
+    func editButtonOpensTheFormOnTheEntry() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+        ) {
+            EntryDetail()
+        }
+
+        await store.send(.editButtonTapped) {
+            $0.destination = .editEntry(EntryForm.State(entry: .blueMoon))
+        }
+    }
 }
