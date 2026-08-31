@@ -86,5 +86,17 @@ struct SignInTests {
         }
     }
 
+    @Test
+    func aSecondTapWhileAuthenticatingIsIgnored() async {
+        var state = SignIn.State()
+        state.step = .awaitingAuthorization
+
+        let store = TestStore(initialState: state) {
+            SignIn()
+        }
+
+        await store.send(.signInButtonTapped)
+    }
+
     private struct SignInFailure: Error {}
 }
