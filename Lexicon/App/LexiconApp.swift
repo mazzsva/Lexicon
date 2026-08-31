@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import FirebaseCore
+import Foundation
 import SwiftUI
 
 @main
@@ -17,12 +18,19 @@ struct LexiconApp: App {
     }
 
     init() {
+        guard !isRunningTests else { return }
         FirebaseApp.configure()
     }
 
     var body: some Scene {
         WindowGroup {
-            AppView(store: Self.store)
+            if !isRunningTests {
+                AppView(store: Self.store)
+            }
         }
     }
+}
+
+private var isRunningTests: Bool {
+    ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 }
