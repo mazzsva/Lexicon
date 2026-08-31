@@ -356,5 +356,16 @@ struct HomeTests {
         }
     }
 
+    @Test
+    func settingsButtonOpensTheSettings() async {
+        let store = TestStore(initialState: Home.State(user: .mock)) {
+            Home()
+        }
+
+        await store.send(.settingsButtonTapped) {
+            $0.destination = .settings(Settings.State(user: .mock))
+        }
+    }
+
     private struct EntriesFailure: Error {}
 }
