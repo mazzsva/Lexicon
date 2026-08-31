@@ -26,8 +26,8 @@ struct HomeTests {
                 Home()
             } withDependencies: {
                 $0.entriesClient.delete = { id, uid in
-                    #expect(id == Entry.blueMoon.id)
-                    #expect(uid == User.mock.uid)
+                    expectNoDifference(id, Entry.blueMoon.id)
+                    expectNoDifference(uid, User.mock.uid)
                     deletesEntry()
                 }
                 $0.hapticsClient.warning = {}
@@ -88,8 +88,8 @@ struct HomeTests {
                 Home()
             } withDependencies: {
                 $0.entriesClient.save = { entry, uid in
-                    #expect(entry == bookmarked)
-                    #expect(uid == User.mock.uid)
+                    expectNoDifference(entry, bookmarked)
+                    expectNoDifference(uid, User.mock.uid)
                     savesEntry()
                 }
             }
@@ -134,8 +134,8 @@ struct HomeTests {
                 } withDependencies: {
                     $0.date.now = now
                     $0.entriesClient.save = { entry, uid in
-                        #expect(entry == created)
-                        #expect(uid == User.mock.uid)
+                        expectNoDifference(entry, created)
+                        expectNoDifference(uid, User.mock.uid)
                         savesEntry()
                     }
                     $0.hapticsClient.success = { playsHaptic() }
@@ -243,7 +243,7 @@ struct HomeTests {
             Home()
         } withDependencies: {
             $0.entriesClient.entries = { uid in
-                #expect(uid == User.mock.uid)
+                expectNoDifference(uid, User.mock.uid)
                 return entries.stream
             }
             $0.networkMonitorClient.connectivityChanges = { connectivity.stream }

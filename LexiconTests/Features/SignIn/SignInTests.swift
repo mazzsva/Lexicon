@@ -7,6 +7,7 @@
 
 import AuthenticationServices
 import ComposableArchitecture
+import CustomDump
 import Testing
 
 @testable import Lexicon
@@ -20,7 +21,7 @@ struct SignInTests {
                 SignIn()
             } withDependencies: {
                 $0.authClient.signIn = { credential in
-                    #expect(credential == .mock)
+                    expectNoDifference(credential, .mock)
                     signsIn()
                 }
                 $0.signInWithAppleClient.requestCredential = { .mock }
