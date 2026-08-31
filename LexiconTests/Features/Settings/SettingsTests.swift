@@ -42,5 +42,24 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func aFailedSignOutShowsAnAlert() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmSignOut
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.authClient.signOut = { throw SignOutFailure() }
+        }
+
+        await store.send(.alert(.presented(.confirmSignOut))) {
+            $0.alert = nil
+        }
+        await store.receive(\.signOutFailed) {
+            $0.alert = .signOutFailed
+        }
+    }
+
     private struct SignOutFailure: Error {}
 }
