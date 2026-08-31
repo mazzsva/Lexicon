@@ -36,5 +36,19 @@ struct SignInTests {
         }
     }
 
+    @Test
+    func aCanceledAuthorizationIsSilent() async {
+        var state = SignIn.State()
+        state.step = .awaitingAuthorization
+
+        let store = TestStore(initialState: state) {
+            SignIn()
+        }
+
+        await store.send(.authorizationResponse(.failure(ASAuthorizationError(.canceled)))) {
+            $0.step = nil
+        }
+    }
+
     private struct SignInFailure: Error {}
 }
