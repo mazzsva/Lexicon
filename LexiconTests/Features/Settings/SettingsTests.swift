@@ -23,5 +23,24 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func confirmingSignOutSignsTheUserOut() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmSignOut
+
+        await confirmation("Signs the user out") { signsOut in
+            let store = TestStore(initialState: state) {
+                Settings()
+            } withDependencies: {
+                $0.authClient.signOut = { signsOut() }
+            }
+
+            await store.send(.alert(.presented(.confirmSignOut))) {
+                $0.alert = nil
+            }
+            await store.finish()
+        }
+    }
+
     private struct SignOutFailure: Error {}
 }
