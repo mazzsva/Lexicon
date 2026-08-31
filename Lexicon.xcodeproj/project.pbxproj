@@ -543,6 +543,8 @@
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.26.0;
 			};
+			traits = (
+			);
 		};
 		EFEF34152FF9863E00E80CBE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
