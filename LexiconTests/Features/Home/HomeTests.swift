@@ -339,5 +339,22 @@ struct HomeTests {
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
     }
 
+    @Test
+    func anEmptyListClearsTheBookmarkFilter() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.isShowingBookmarkedOnly = true
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.entriesUpdated(.empty)) {
+            $0.$entries.withLock { $0 = [] }
+            $0.isShowingBookmarkedOnly = false
+            $0.isSyncing = false
+        }
+    }
+
     private struct EntriesFailure: Error {}
 }
