@@ -319,5 +319,25 @@ struct HomeTests {
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
     }
 
+    @Test
+    func theSearchTextMatchesTermsAndDefinitions() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.binding(.set(\.searchText, "candle"))) {
+            $0.searchText = "candle"
+        }
+        expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.burningCandle])
+
+        await store.send(.binding(.set(\.searchText, "easiest"))) {
+            $0.searchText = "easiest"
+        }
+        expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
+    }
+
     private struct EntriesFailure: Error {}
 }
