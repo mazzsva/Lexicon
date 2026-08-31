@@ -24,4 +24,16 @@ struct EntryFormTests {
         state.term = "Burn the candle at both ends"
         #expect(state.isSubmittable)
     }
+
+    @Test
+    func savingABlankTermDoesNothing() async {
+        let store = TestStore(initialState: EntryForm.State()) {
+            EntryForm()
+        }
+
+        await store.send(.binding(.set(\.term, "   "))) {
+            $0.term = "   "
+        }
+        await store.send(.saveButtonTapped)
+    }
 }
