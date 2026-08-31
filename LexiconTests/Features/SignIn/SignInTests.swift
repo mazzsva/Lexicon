@@ -50,5 +50,20 @@ struct SignInTests {
         }
     }
 
+    @Test
+    func aFailedAuthorizationShowsAnAlert() async {
+        var state = SignIn.State()
+        state.step = .awaitingAuthorization
+
+        let store = TestStore(initialState: state) {
+            SignIn()
+        }
+
+        await store.send(.authorizationResponse(.failure(SignInFailure()))) {
+            $0.alert = .signInFailed
+            $0.step = nil
+        }
+    }
+
     private struct SignInFailure: Error {}
 }
