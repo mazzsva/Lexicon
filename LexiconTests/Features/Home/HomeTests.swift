@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import CustomDump
 import Foundation
 import Testing
 
@@ -301,6 +302,21 @@ struct HomeTests {
         }
 
         await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure()))
+    }
+
+    @Test
+    func theBookmarkFilterShowsOnlyBookmarkedEntries() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.bookmarkFilterButtonTapped) {
+            $0.isShowingBookmarkedOnly = true
+        }
+        expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
     }
 
     private struct EntriesFailure: Error {}
