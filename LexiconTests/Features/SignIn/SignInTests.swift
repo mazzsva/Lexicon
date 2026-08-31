@@ -65,5 +65,26 @@ struct SignInTests {
         }
     }
 
+    @Test
+    func aFailedSignInShowsAnAlert() async {
+        let store = TestStore(initialState: SignIn.State()) {
+            SignIn()
+        } withDependencies: {
+            $0.authClient.signIn = { _ in throw SignInFailure() }
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+
+        await store.send(.signInButtonTapped) {
+            $0.step = .awaitingAuthorization
+        }
+        await store.receive(\.authorizationResponse.success, .mock) {
+            $0.step = .signingIn(isNewAccount: false)
+        }
+        await store.receive(\.signInFailed) {
+            $0.alert = .signInFailed
+            $0.step = nil
+        }
+    }
+
     private struct SignInFailure: Error {}
 }
