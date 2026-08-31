@@ -36,4 +36,18 @@ struct EntryFormTests {
         }
         await store.send(.saveButtonTapped)
     }
+
+    @Test
+    func theDismissButtonDismissesTheForm() async {
+        await confirmation("Dismisses the form") { dismissesForm in
+            let store = TestStore(initialState: EntryForm.State(entry: .blueMoon)) {
+                EntryForm()
+            } withDependencies: {
+                $0.dismiss = DismissEffect { dismissesForm() }
+            }
+
+            await store.send(.dismissButtonTapped)
+            await store.finish()
+        }
+    }
 }
