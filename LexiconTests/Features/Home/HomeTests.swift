@@ -395,5 +395,26 @@ struct HomeTests {
         expectNoDifference(store.state.syncStatus, .syncing)
     }
 
+    @Test
+    func aFailedSaveShowsAnAlert() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        let detailID = Array(state.path.ids)[0]
+
+        let store = TestStore(initialState: state) {
+            Home()
+        } withDependencies: {
+            $0.entriesClient.save = { _, _ in throw EntriesFailure() }
+        }
+
+        await store.send(
+            .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
+        )
+        await store.receive(\.entrySaveFailed) {
+            $0.destination = .alert(.entrySaveFailed)
+        }
+    }
+
     private struct EntriesFailure: Error {}
 }
