@@ -24,4 +24,19 @@ struct AppFeatureTests {
         state.$hasDismissedWelcome.withLock { $0 = true }
         #expect(!state.isPresentingWelcome)
     }
+
+    @Test(.dependencies)
+    func theWelcomeContinueButtonDismissesItForGood() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.welcomeContinueButtonTapped) {
+            $0.$hasDismissedWelcome.withLock { $0 = true }
+        }
+        #expect(!store.state.isPresentingWelcome)
+    }
 }
