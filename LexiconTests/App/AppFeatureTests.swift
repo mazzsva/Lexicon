@@ -230,4 +230,34 @@ struct AppFeatureTests {
             await store.finish()
         }
     }
+
+    @Test
+    func theLoadingMessageDescribesWhatTheAppIsDoing() {
+        var state = AppFeature.State()
+        #expect(state.isLoading)
+        expectNoDifference(state.loadingMessage, nil)
+
+        var signIn = SignIn.State()
+        signIn.step = .signingIn(isNewAccount: false)
+        state.scene = .signIn(signIn)
+        #expect(state.isLoading)
+        expectNoDifference(state.loadingMessage, "Signing in…")
+
+        signIn.step = .signingIn(isNewAccount: true)
+        state.scene = .signIn(signIn)
+        expectNoDifference(state.loadingMessage, "Creating your account…")
+
+        var settings = Settings.State(user: .mock)
+        settings.deletionStep = .reauthenticating
+        var home = Home.State(user: .mock)
+        home.destination = .settings(settings)
+        state.scene = .home(home)
+        #expect(state.isLoading)
+        expectNoDifference(state.loadingMessage, nil)
+
+        settings.deletionStep = .deleting
+        home.destination = .settings(settings)
+        state.scene = .home(home)
+        expectNoDifference(state.loadingMessage, "Deleting your account…")
+    }
 }
