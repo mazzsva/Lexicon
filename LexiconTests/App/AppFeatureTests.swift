@@ -138,4 +138,28 @@ struct AppFeatureTests {
             await store.finish()
         }
     }
+
+    @Test
+    func switchingAccountsRestartsTheSession() async {
+        let other = User(email: "other@example.com", uid: "other-uid")
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        } withDependencies: {
+            $0.authClient.appleUserID = { nil }
+            $0.entriesClient.clearLocalData = {}
+        }
+
+        await withExpectedIssue {
+            await store.send(.authUserChanged(other)) {
+                $0.scene = nil
+            }
+        }
+        await store.receive(\.authUserChanged) {
+            $0.scene = .home(Home.State(user: other))
+        }
+        await store.finish()
+    }
 }
