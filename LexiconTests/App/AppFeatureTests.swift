@@ -62,4 +62,20 @@ struct AppFeatureTests {
             await store.finish()
         }
     }
+
+    @Test
+    func aSignedOutUserRoutesToSignInAndClearsTheLocalData() async {
+        await confirmation("Clears the local data") { clearsLocalData in
+            let store = TestStore(initialState: AppFeature.State()) {
+                AppFeature()
+            } withDependencies: {
+                $0.entriesClient.clearLocalData = { clearsLocalData() }
+            }
+
+            await store.send(.authUserChanged(nil)) {
+                $0.scene = .signIn(SignIn.State())
+            }
+            await store.finish()
+        }
+    }
 }
