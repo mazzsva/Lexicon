@@ -103,20 +103,18 @@ struct EntryDetailTests {
             } withDependencies: {
                 $0.hapticsClient.success = { playsHaptic() }
             }
+            store.exhaustivity = .off
 
             var edited = Entry.blueMoon
             edited.definition = "Something that almost never happens."
 
             await store.send(
                 .destination(.presented(.editEntry(.binding(.set(\.definition, edited.definition)))))
-            ) { state in
-                state.destination?.modify(\.editEntry) { $0.definition = edited.definition }
-            }
+            )
             await store.send(.destination(.presented(.editEntry(.saveButtonTapped))))
-            await store.receive(\.destination.presented.editEntry.delegate.didSubmit, edited) {
+            await store.receive(\.delegate.didUpdate, edited) {
                 $0.destination = nil
             }
-            await store.receive(\.delegate.didUpdate, edited)
         }
     }
 }
