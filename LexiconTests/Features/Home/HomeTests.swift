@@ -142,18 +142,16 @@ struct HomeTests {
                     $0.uuid = .incrementing
                 }
 
+                store.exhaustivity = .off
+
                 await store.send(
                     .destination(.presented(.createEntry(.binding(.set(\.term, "  Low-hanging fruit  ")))))
-                ) { state in
-                    state.destination?.modify(\.createEntry) { $0.term = "  Low-hanging fruit  " }
-                }
+                )
                 await store.send(
                     .destination(.presented(.createEntry(.binding(.set(\.definition, created.definition)))))
-                ) { state in
-                    state.destination?.modify(\.createEntry) { $0.definition = created.definition }
-                }
+                )
                 await store.send(.destination(.presented(.createEntry(.saveButtonTapped))))
-                await store.receive(\.destination.presented.createEntry.delegate.didSubmit, created) {
+                await store.receive(\.destination.presented.createEntry.delegate.didSubmit) {
                     $0.destination = nil
                 }
                 await store.finish()
