@@ -61,5 +61,16 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func deleteAccountButtonAsksForConfirmation() async {
+        let store = TestStore(initialState: Settings.State(user: .mock)) {
+            Settings()
+        }
+
+        await store.send(.deleteAccountButtonTapped) {
+            $0.alert = .confirmAccountDeletion
+        }
+    }
+
     private struct SignOutFailure: Error {}
 }
