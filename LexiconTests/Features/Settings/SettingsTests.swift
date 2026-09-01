@@ -209,6 +209,43 @@ struct SettingsTests {
         await store.finish()
     }
 
+    @Test
+    func aFailureAfterTheRevokeSignsTheUserOut() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let clock = TestClock()
+        await confirmation("Signs the user out") { signsOut in
+            let store = TestStore(initialState: state) {
+                Settings()
+            } withDependencies: {
+                $0.authClient.deleteAccount = { throw DeletionFailure() }
+                $0.authClient.reauthenticate = { _ in }
+                $0.authClient.revokeAppleToken = { _ in }
+                $0.authClient.signOut = { signsOut() }
+                $0.continuousClock = clock
+                $0.entriesClient.deleteAll = { _ in }
+                $0.signInWithAppleClient.requestCredential = { .mock }
+            }
+
+            await store.send(.alert(.presented(.confirmAccountDeletion))) {
+                $0.alert = nil
+                $0.deletionStep = .reauthenticating
+            }
+            await store.receive(\.appleCredentialReceived) {
+                $0.deletionStep = .deleting
+            }
+            await store.receive(\.entriesDeleted) {
+                $0.deletionStep = .entriesDeleted
+            }
+            await store.receive(\.appleCredentialRevoked) {
+                $0.deletionStep = .credentialRevoked
+            }
+            await store.receive(\.accountDeletionFailed)
+            await store.finish()
+        }
+    }
+
     private struct DeletionFailure: Error {}
 
     private struct SignOutFailure: Error {}
