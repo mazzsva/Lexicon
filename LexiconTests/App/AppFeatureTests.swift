@@ -6,14 +6,16 @@
 //
 
 import ComposableArchitecture
+import CustomDump
 import DependenciesTestSupport
 import Testing
 
 @testable import Lexicon
 
+@Suite(.dependencies)
 @MainActor
 struct AppFeatureTests {
-    @Test(.dependencies)
+    @Test
     func theWelcomeIsPresentedOnlyOnceTheAppIsReady() {
         var state = AppFeature.State()
         #expect(!state.isPresentingWelcome)
@@ -25,7 +27,7 @@ struct AppFeatureTests {
         #expect(!state.isPresentingWelcome)
     }
 
-    @Test(.dependencies)
+    @Test
     func theWelcomeContinueButtonDismissesItForGood() async {
         var state = AppFeature.State()
         state.scene = .signIn(SignIn.State())
