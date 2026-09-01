@@ -55,10 +55,6 @@ struct Settings {
         case signOutFailed(any Error)
     }
 
-    enum CancelID {
-        case accountDeletion
-    }
-
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.dismiss) var dismiss
@@ -72,10 +68,7 @@ struct Settings {
                 guard state.deletionStep != .credentialRevoked else {
                     logger.error(
                         "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
-                    return .merge(
-                        .cancel(id: CancelID.accountDeletion),
-                        signOut()
-                    )
+                    return signOut()
                 }
                 let hasDeletedEntries = state.deletionStep == .entriesDeleted
                 state.deletionStep = nil
@@ -83,7 +76,7 @@ struct Settings {
                     logger.error("Account deletion failed: \(error, privacy: .public)")
                     state.alert = hasDeletedEntries ? .accountDeletionUnfinished : .accountDeletionFailed
                 }
-                return .cancel(id: CancelID.accountDeletion)
+                return .none
 
             case .alert(.presented(.confirmAccountDeletion)):
                 state.deletionStep = .reauthenticating
@@ -97,7 +90,7 @@ struct Settings {
 
             case .appleCredentialReceived:
                 state.deletionStep = .deleting
-                return startDeletionTimeout()
+                return .none
 
             case .appleCredentialRevoked:
                 state.deletionStep = .credentialRevoked
@@ -166,19 +159,28 @@ struct Settings {
                 throw AccountDeletionError.missingAuthorizationCode
             }
             await send(.appleCredentialReceived)
-            try await authClient.reauthenticate(credential: credential)
-            try Task.checkCancellation()
-            try await entriesClient.deleteAll(uid: uid)
-            await send(.entriesDeleted)
-            try Task.checkCancellation()
-            try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
-            await send(.appleCredentialRevoked)
-            try Task.checkCancellation()
-            try await authClient.deleteAccount()
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    try await clock.sleep(for: .seconds(60))
+                    throw AccountDeletionError.timedOut
+                }
+                group.addTask {
+                    try await authClient.reauthenticate(credential: credential)
+                    try Task.checkCancellation()
+                    try await entriesClient.deleteAll(uid: uid)
+                    await send(.entriesDeleted)
+                    try Task.checkCancellation()
+                    try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
+                    await send(.appleCredentialRevoked)
+                    try Task.checkCancellation()
+                    try await authClient.deleteAccount()
+                }
+                try await group.next()
+                group.cancelAll()
+            }
         } catch: { error, send in
             await send(.accountDeletionFailed(error))
         }
-        .cancellable(id: CancelID.accountDeletion)
     }
 
     private func signOut() -> Effect<Action> {
@@ -187,14 +189,6 @@ struct Settings {
         } catch: { error, send in
             await send(.signOutFailed(error))
         }
-    }
-
-    private func startDeletionTimeout() -> Effect<Action> {
-        .run { send in
-            try await clock.sleep(for: .seconds(60))
-            await send(.accountDeletionFailed(AccountDeletionError.timedOut))
-        }
-        .cancellable(id: CancelID.accountDeletion)
     }
 }
 

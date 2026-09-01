@@ -96,7 +96,6 @@ struct SettingsTests {
             Settings()
         } withDependencies: {
             $0.authClient.deleteAccount = {}
-            $0.authClient.signOut = {}
             $0.authClient.reauthenticate = { credential in
                 expectNoDifference(credential, .mock)
             }
@@ -123,9 +122,6 @@ struct SettingsTests {
         await store.receive(\.appleCredentialRevoked) {
             $0.deletionStep = .credentialRevoked
         }
-
-        await clock.advance(by: .seconds(60))
-        await store.receive(\.accountDeletionFailed)
         await store.finish()
     }
 
