@@ -97,4 +97,16 @@ struct AppFeatureTests {
         }
         await store.finish()
     }
+
+    @Test
+    func theSameUserIsIgnored() async {
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.authUserChanged(.mock))
+    }
 }
