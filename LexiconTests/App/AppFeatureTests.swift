@@ -278,4 +278,29 @@ struct AppFeatureTests {
 
         await store.send(.authUserChanged(nil))
     }
+
+    @Test
+    func deletingTheAccountShowsItsLoadingMessage() async {
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        } withDependencies: {
+            $0.authClient.reauthenticate = { _ in try await Task.never() }
+            $0.continuousClock = TestClock()
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+        store.exhaustivity = .off
+
+        await store.send(\.scene.home.settingsButtonTapped)
+        await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped)
+        await store.send(
+            .scene(.home(.destination(.presented(.settings(.alert(.presented(.confirmAccountDeletion)))))))
+        )
+        expectNoDifference(store.state.loadingMessage, nil)
+
+        await store.receive(\.scene.home.destination.settings.appleCredentialReceived)
+        expectNoDifference(store.state.loadingMessage, "Deleting your account…")
+    }
 }
