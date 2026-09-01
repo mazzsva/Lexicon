@@ -99,5 +99,19 @@ struct SignInTests {
         await store.send(.signInButtonTapped)
     }
 
+    @Test
+    func dismissingTheAlertClearsIt() async {
+        var state = SignIn.State()
+        state.alert = .signInFailed
+
+        let store = TestStore(initialState: state) {
+            SignIn()
+        }
+
+        await store.send(.alert(.dismiss)) {
+            $0.alert = nil
+        }
+    }
+
     private struct SignInFailure: Error {}
 }
