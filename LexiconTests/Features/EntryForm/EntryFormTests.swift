@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import Foundation
 import Testing
 
 @testable import Lexicon
@@ -65,5 +66,33 @@ struct EntryFormTests {
         }
         await store.send(.saveButtonTapped)
         await store.receive(\.delegate.didSubmit, edited)
+    }
+
+    @Test
+    func creatingAnEntryGeneratesItsIdentityAndDate() async {
+        let now = Date(timeIntervalSince1970: 1_751_000_000)
+        let created = Entry(
+            createdAt: now,
+            definition: "The easiest wins, taken first.",
+            id: UUID(0),
+            isBookmarked: false,
+            term: "Low-hanging fruit"
+        )
+
+        let store = TestStore(initialState: EntryForm.State()) {
+            EntryForm()
+        } withDependencies: {
+            $0.date.now = now
+            $0.uuid = .incrementing
+        }
+
+        await store.send(.binding(.set(\.term, "  Low-hanging fruit  "))) {
+            $0.term = "  Low-hanging fruit  "
+        }
+        await store.send(.binding(.set(\.definition, created.definition))) {
+            $0.definition = created.definition
+        }
+        await store.send(.saveButtonTapped)
+        await store.receive(\.delegate.didSubmit, created)
     }
 }
