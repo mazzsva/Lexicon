@@ -78,4 +78,23 @@ struct AppFeatureTests {
             await store.finish()
         }
     }
+
+    @Test
+    func finishingTheSignInRoutesToHomeAsAFreshSession() async {
+        var signIn = SignIn.State()
+        signIn.step = .signingIn(isNewAccount: true)
+        var state = AppFeature.State()
+        state.scene = .signIn(signIn)
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.authUserChanged(.mock)) {
+            $0.scene = .home(
+                Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: true))
+            )
+        }
+        await store.finish()
+    }
 }
