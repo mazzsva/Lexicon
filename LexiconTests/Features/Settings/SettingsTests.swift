@@ -86,5 +86,48 @@ struct SettingsTests {
         await store.send(.signOutButtonTapped)
     }
 
+    @Test
+    func confirmingTheAccountDeletionWalksThroughEveryStep() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let clock = TestClock()
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.authClient.deleteAccount = {}
+            $0.authClient.signOut = {}
+            $0.authClient.reauthenticate = { credential in
+                expectNoDifference(credential, .mock)
+            }
+            $0.authClient.revokeAppleToken = { authorizationCode in
+                expectNoDifference(authorizationCode, AppleCredential.mock.authorizationCode)
+            }
+            $0.continuousClock = clock
+            $0.entriesClient.deleteAll = { uid in
+                expectNoDifference(uid, User.mock.uid)
+            }
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.appleCredentialReceived) {
+            $0.deletionStep = .deleting
+        }
+        await store.receive(\.entriesDeleted) {
+            $0.deletionStep = .entriesDeleted
+        }
+        await store.receive(\.appleCredentialRevoked) {
+            $0.deletionStep = .credentialRevoked
+        }
+
+        await clock.advance(by: .seconds(60))
+        await store.receive(\.accountDeletionFailed)
+        await store.finish()
+    }
+
     private struct SignOutFailure: Error {}
 }
