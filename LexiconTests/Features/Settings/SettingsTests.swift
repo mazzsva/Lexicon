@@ -125,5 +125,35 @@ struct SettingsTests {
         await store.finish()
     }
 
+    @Test
+    func aStalledDeletionTimesOutAfterOneMinute() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let clock = TestClock()
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.authClient.reauthenticate = { _ in try await Task.never() }
+            $0.continuousClock = clock
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.appleCredentialReceived) {
+            $0.deletionStep = .deleting
+        }
+
+        await clock.advance(by: .seconds(60))
+        await store.receive(\.accountDeletionFailed) {
+            $0.alert = .accountDeletionFailed
+            $0.deletionStep = nil
+        }
+        await store.finish()
+    }
+
     private struct SignOutFailure: Error {}
 }
