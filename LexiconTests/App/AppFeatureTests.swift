@@ -259,6 +259,12 @@ struct AppFeatureTests {
         home.destination = .settings(settings)
         state.scene = .home(home)
         expectNoDifference(state.loadingMessage, "Deleting your account…")
+
+        state.scene = .home(
+            Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+        )
+        #expect(state.isLoading)
+        expectNoDifference(state.loadingMessage, "Signing in…")
     }
 
     @Test
