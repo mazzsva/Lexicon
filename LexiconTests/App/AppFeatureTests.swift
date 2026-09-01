@@ -162,4 +162,24 @@ struct AppFeatureTests {
         }
         await store.finish()
     }
+
+    @Test
+    func becomingActiveSignsOutARevokedCredential() async {
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        await confirmation("Signs the user out") { signsOut in
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.authClient.signOut = { signsOut() }
+                $0.signInWithAppleClient.credentialState = { _ in .revoked }
+            }
+
+            await store.send(.appBecameActive)
+            await store.receive(\.appleCredentialInvalidated)
+            await store.finish()
+        }
+    }
 }
