@@ -260,4 +260,16 @@ struct AppFeatureTests {
         state.scene = .home(home)
         expectNoDifference(state.loadingMessage, "Deleting your account…")
     }
+
+    @Test
+    func aSignedOutUserOnTheSignInIsIgnored() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.authUserChanged(nil))
+    }
 }
