@@ -41,4 +41,25 @@ struct AppFeatureTests {
         }
         #expect(!store.state.isPresentingWelcome)
     }
+
+    @Test
+    func aSignedInUserRoutesToHomeAndVerifiesTheCredential() async {
+        await confirmation("Verifies the Apple credential") { verifiesCredential in
+            let store = TestStore(initialState: AppFeature.State()) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.signInWithAppleClient.credentialState = { userID in
+                    expectNoDifference(userID, "apple-user")
+                    verifiesCredential()
+                    return .authorized
+                }
+            }
+
+            await store.send(.authUserChanged(.mock)) {
+                $0.scene = .home(Home.State(user: .mock))
+            }
+            await store.finish()
+        }
+    }
 }
