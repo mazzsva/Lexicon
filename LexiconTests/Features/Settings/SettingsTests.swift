@@ -72,5 +72,19 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func theButtonsAreIgnoredWhileTheAccountIsBeingDeleted() async {
+        var state = Settings.State(user: .mock)
+        state.deletionStep = .deleting
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        }
+
+        await store.send(.deleteAccountButtonTapped)
+        await store.send(.dismissButtonTapped)
+        await store.send(.signOutButtonTapped)
+    }
+
     private struct SignOutFailure: Error {}
 }
