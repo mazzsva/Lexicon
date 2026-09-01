@@ -182,4 +182,21 @@ struct AppFeatureTests {
             await store.finish()
         }
     }
+
+    @Test
+    func theCredentialChecksAreIgnoredWhileDeletingTheAccount() async {
+        var settings = Settings.State(user: .mock)
+        settings.deletionStep = .credentialRevoked
+        var home = Home.State(user: .mock)
+        home.destination = .settings(settings)
+        var state = AppFeature.State()
+        state.scene = .home(home)
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.appBecameActive)
+        await store.send(.appleCredentialInvalidated(.revoked))
+    }
 }
