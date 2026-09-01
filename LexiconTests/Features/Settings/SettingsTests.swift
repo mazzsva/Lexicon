@@ -246,6 +246,20 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func theDismissButtonClosesTheSettings() async {
+        await confirmation("Dismisses the settings") { dismissesSettings in
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            } withDependencies: {
+                $0.dismiss = DismissEffect { dismissesSettings() }
+            }
+
+            await store.send(.dismissButtonTapped)
+            await store.finish()
+        }
+    }
+
     private struct DeletionFailure: Error {}
 
     private struct SignOutFailure: Error {}
