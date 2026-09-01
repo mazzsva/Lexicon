@@ -367,5 +367,33 @@ struct HomeTests {
         }
     }
 
+    @Test
+    func theConnectivityDrivesTheSyncStatus() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.isSyncing = false
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        expectNoDifference(store.state.syncStatus, .synced)
+
+        await store.send(.connectivityChanged(false)) {
+            $0.isOnline = false
+        }
+        expectNoDifference(store.state.syncStatus, .offline)
+
+        await store.send(.entriesUpdated(.syncing)) {
+            $0.isSyncing = true
+        }
+        expectNoDifference(store.state.syncStatus, .offline)
+
+        await store.send(.connectivityChanged(true)) {
+            $0.isOnline = true
+        }
+        expectNoDifference(store.state.syncStatus, .syncing)
+    }
+
     private struct EntriesFailure: Error {}
 }
