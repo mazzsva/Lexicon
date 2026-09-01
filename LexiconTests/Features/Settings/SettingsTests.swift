@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 31/08/26.
 //
 
+import AuthenticationServices
 import ComposableArchitecture
 import Testing
 
@@ -154,6 +155,28 @@ struct SettingsTests {
         }
         await store.finish()
     }
+
+    @Test
+    func aCanceledReauthorizationIsSilent() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.signInWithAppleClient.requestCredential = { throw ASAuthorizationError(.canceled) }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.accountDeletionFailed) {
+            $0.deletionStep = nil
+        }
+    }
+
+    private struct DeletionFailure: Error {}
 
     private struct SignOutFailure: Error {}
 }
