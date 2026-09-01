@@ -176,6 +176,39 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func aFailureAfterTheEntriesReportsAnUnfinishedDeletion() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let clock = TestClock()
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.authClient.reauthenticate = { _ in }
+            $0.authClient.revokeAppleToken = { _ in throw DeletionFailure() }
+            $0.continuousClock = clock
+            $0.entriesClient.deleteAll = { _ in }
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.appleCredentialReceived) {
+            $0.deletionStep = .deleting
+        }
+        await store.receive(\.entriesDeleted) {
+            $0.deletionStep = .entriesDeleted
+        }
+        await store.receive(\.accountDeletionFailed) {
+            $0.alert = .accountDeletionUnfinished
+            $0.deletionStep = nil
+        }
+        await store.finish()
+    }
+
     private struct DeletionFailure: Error {}
 
     private struct SignOutFailure: Error {}
