@@ -109,4 +109,33 @@ struct AppFeatureTests {
 
         await store.send(.authUserChanged(.mock))
     }
+
+    @Test
+    func signingOutSettlesBeforeTheSignInAppears() async {
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        let clock = TestClock()
+        await confirmation("Clears the local data") { clearsLocalData in
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.continuousClock = clock
+                $0.entriesClient.clearLocalData = { clearsLocalData() }
+            }
+
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+                $0.scene = .signIn(SignIn.State())
+            }
+            expectNoDifference(store.state.isLoading, true)
+
+            await clock.advance(by: .milliseconds(500))
+            await store.receive(\.signedOutSettleTimerElapsed) {
+                $0.isSignedOutSettling = false
+            }
+            expectNoDifference(store.state.isLoading, false)
+            await store.finish()
+        }
+    }
 }
