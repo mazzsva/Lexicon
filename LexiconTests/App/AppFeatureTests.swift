@@ -199,4 +199,35 @@ struct AppFeatureTests {
         await store.send(.appBecameActive)
         await store.send(.appleCredentialInvalidated(.revoked))
     }
+
+    @Test
+    func taskObservesTheAuthChangesAndTheCredentialRevocations() async {
+        let authChanges = AsyncStream<User?>.makeStream()
+        let revocations = AsyncStream<Void>.makeStream()
+
+        await confirmation("Signs the user out") { signsOut in
+            let store = TestStore(initialState: AppFeature.State()) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { nil }
+                $0.authClient.authStateChanges = { authChanges.stream }
+                $0.authClient.signOut = { signsOut() }
+                $0.signInWithAppleClient.credentialRevocations = { revocations.stream }
+            }
+
+            await store.send(.task)
+
+            authChanges.continuation.yield(.mock)
+            await store.receive(\.authUserChanged) {
+                $0.scene = .home(Home.State(user: .mock))
+            }
+
+            revocations.continuation.yield()
+            await store.receive(\.appleCredentialInvalidated)
+
+            authChanges.continuation.finish()
+            revocations.continuation.finish()
+            await store.finish()
+        }
+    }
 }
