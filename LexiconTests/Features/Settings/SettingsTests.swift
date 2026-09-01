@@ -260,6 +260,34 @@ struct SettingsTests {
         }
     }
 
+    @Test
+    func aCredentialWithoutAnAuthorizationCodeFailsTheDeletion() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.signInWithAppleClient.requestCredential = {
+                AppleCredential(
+                    authorizationCode: nil,
+                    idToken: "mock-id-token",
+                    isFirstAuthorization: false,
+                    rawNonce: "mock-raw-nonce"
+                )
+            }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.accountDeletionFailed) {
+            $0.alert = .accountDeletionFailed
+            $0.deletionStep = nil
+        }
+    }
+
     private struct DeletionFailure: Error {}
 
     private struct SignOutFailure: Error {}
