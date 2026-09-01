@@ -416,5 +416,40 @@ struct HomeTests {
         }
     }
 
+    @Test
+    func aThrowingEntriesStreamRetries() async {
+        let clock = TestClock()
+        let hasFailed = LockIsolated(false)
+
+        let store = TestStore(initialState: Home.State(user: .mock)) {
+            Home()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.entriesClient.entries = { _ in
+                let isFirstAttempt = hasFailed.withValue { failed -> Bool in
+                    defer { failed = true }
+                    return !failed
+                }
+                return AsyncThrowingStream { continuation in
+                    isFirstAttempt
+                        ? continuation.finish(throwing: EntriesFailure())
+                        : continuation.finish()
+                }
+            }
+            $0.networkMonitorClient.connectivityChanges = {
+                AsyncStream { continuation in continuation.finish() }
+            }
+        }
+
+        await store.send(.task)
+        await store.receive(\.entriesStreamFailed) {
+            $0.$entries.withLock { $0 = [] }
+        }
+
+        await clock.advance(by: .seconds(5))
+        await store.receive(\.entriesRetryTimerElapsed)
+        await store.finish()
+    }
+
     private struct EntriesFailure: Error {}
 }
