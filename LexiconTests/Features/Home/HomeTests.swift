@@ -474,5 +474,19 @@ struct HomeTests {
         }
     }
 
+    @Test
+    func aSurvivingEntryKeepsItsDetail() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        state.isSyncing = false
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.entriesUpdated(.mock))
+    }
+
     private struct EntriesFailure: Error {}
 }
