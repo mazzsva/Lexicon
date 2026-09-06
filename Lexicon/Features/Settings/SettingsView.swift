@@ -69,7 +69,7 @@ struct SettingsView: View {
             }
             .alert($store.scope(state: \.alert, action: \.alert))
         }
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaBar(edge: .bottom) {
             Text("Version \(Bundle.main.appVersion)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
