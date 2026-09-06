@@ -501,5 +501,13 @@ struct HomeTests {
         await store.send(.entryDeleteFailed(Entry.blueMoon.id, EntriesFailure()))
     }
 
+    @Test
+    func theEntriesAreEmptyWhileTheyLoad() {
+        let state = Home.State(user: .mock)
+
+        #expect(state.isLoadingFirstEntries)
+        expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
+    }
+
     private struct EntriesFailure: Error {}
 }
