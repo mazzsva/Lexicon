@@ -449,5 +449,14 @@ struct HomeTests {
         await store.finish()
     }
 
+    @Test
+    func theEntryCountFollowsTheEntries() {
+        var state = Home.State(user: .mock)
+        expectNoDifference(state.entryCount, 0)
+
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        expectNoDifference(state.entryCount, 3)
+    }
+
     private struct EntriesFailure: Error {}
 }
