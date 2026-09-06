@@ -188,26 +188,6 @@ struct HomeTests {
     }
 
     @Test
-    func aFirstLoadFailureShowsTheEmptyState() async {
-        let clock = TestClock()
-        let store = TestStore(initialState: Home.State(user: .mock)) {
-            Home()
-        } withDependencies: {
-            $0.continuousClock = clock
-            $0.entriesClient.entries = { _ in
-                AsyncThrowingStream { continuation in continuation.finish() }
-            }
-        }
-
-        await store.send(.entriesStreamFailed) {
-            $0.$entries.withLock { $0 = [] }
-        }
-        await clock.advance(by: .seconds(5))
-        await store.receive(\.entriesRetryTimerElapsed)
-        await store.finish()
-    }
-
-    @Test
     func aFreshSignInIsCelebratedEvenWhenTheFirstLoadFails() async {
         let clock = TestClock()
         let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
@@ -415,7 +395,7 @@ struct HomeTests {
     }
 
     @Test
-    func aThrowingEntriesStreamRetries() async {
+    func aThrowingEntriesStreamShowsTheEmptyStateAndRetries() async {
         let clock = TestClock()
         let hasFailed = LockIsolated(false)
 
