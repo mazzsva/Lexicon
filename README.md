@@ -2,8 +2,7 @@
 
 The iOS app that keeps the words you want to remember.
 
-<img src="https://github.com/user-attachments/assets/f97afda5-c1ca-423c-b9a3-a2eaa232d328" alt="signinview" width="32%"> <img src="https://github.com/user-attachments/assets/ed8f7277-bd7a-42f6-9919-530ba40cd93c" alt="homeview" width="32%"> <img src="https://github.com/user-attachments/assets/de03152e-59f6-4235-af6c-f825ec5e0977" alt="entrydetailview" width="32%">
-
+<img src="https://github.com/user-attachments/assets/cc6b2759-f785-4002-ba23-f80965bf176c" alt="signinview" width="32%"> <img src="https://github.com/user-attachments/assets/3c1d0cc2-aea8-45a5-8582-18f3df45cef1" alt="homeview" width="32%"> <img src="https://github.com/user-attachments/assets/1a636cf1-cce9-47ad-91e8-eef0be5f2a11" alt="entrydetailview" width="32%">
 
 ## Features
 
