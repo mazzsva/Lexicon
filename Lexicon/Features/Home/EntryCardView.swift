@@ -44,7 +44,10 @@ struct EntryCardView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            Color(.secondarySystemGroupedBackground),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

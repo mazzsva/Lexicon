@@ -17,14 +17,12 @@ struct HomeView: View {
         let visibleEntries = store.filteredEntries
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             ScrollView {
-                GlassEffectContainer(spacing: 0) {
-                    LazyVStack(spacing: 16) {
-                        ForEach(visibleEntries) { $entry in
-                            NavigationLink(state: EntryDetail.State(entry: $entry)) {
-                                EntryCardView(entry: entry)
-                            }
-                            .buttonStyle(.plain)
+                LazyVStack(spacing: 16) {
+                    ForEach(visibleEntries) { $entry in
+                        NavigationLink(state: EntryDetail.State(entry: $entry)) {
+                            EntryCardView(entry: entry)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
