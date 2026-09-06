@@ -488,5 +488,18 @@ struct HomeTests {
         await store.send(.entriesUpdated(.mock))
     }
 
+    @Test
+    func aFailedDeletionKeepsThePresentedForm() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.destination = .createEntry(EntryForm.State())
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.entryDeleteFailed(Entry.blueMoon.id, EntriesFailure()))
+    }
+
     private struct EntriesFailure: Error {}
 }
