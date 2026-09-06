@@ -458,5 +458,21 @@ struct HomeTests {
         expectNoDifference(state.entryCount, 3)
     }
 
+    @Test
+    func aDetailActionIsLeftToTheDetail() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        let detailID = Array(state.path.ids)[0]
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.path(.element(id: detailID, action: .deleteButtonTapped))) {
+            $0.path[id: detailID]?.destination = .alert(.confirmDeletion)
+        }
+    }
+
     private struct EntriesFailure: Error {}
 }
