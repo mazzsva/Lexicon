@@ -265,6 +265,11 @@ struct AppFeatureTests {
         )
         #expect(state.isLoading)
         expectNoDifference(state.loadingMessage, "Signing in…")
+
+        signIn.step = .awaitingAuthorization
+        state.scene = .signIn(signIn)
+        #expect(state.isLoading)
+        expectNoDifference(state.loadingMessage, nil)
     }
 
     @Test
