@@ -14,6 +14,7 @@ import Testing
 
 @MainActor
 struct HomeTests {
+    // The entries stream and the network monitor start with the scene
     @Test
     func theTaskObservesTheEntriesAndTheConnectivity() async {
         let entries = AsyncThrowingStream<EntriesSnapshot, any Error>.makeStream()
@@ -47,6 +48,7 @@ struct HomeTests {
         await store.finish()
     }
 
+    // A snapshot stops the syncing only when it comes from the server without a local write
     @Test
     func anEntriesUpdateStoresThemAndStopsTheSyncing() async {
         let store = TestStore(initialState: Home.State(user: .mock)) {
@@ -59,6 +61,7 @@ struct HomeTests {
         }
     }
 
+    // Nil entries mean the first load, and an empty array means an empty list
     @Test
     func theEntriesAreEmptyWhileTheFirstLoadRuns() {
         let state = Home.State(user: .mock)
@@ -67,6 +70,7 @@ struct HomeTests {
         expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
     }
 
+    // The count ignores the search text and the bookmark filter
     @Test
     func theEntryCountFollowsTheEntries() {
         var state = Home.State(user: .mock)
@@ -76,6 +80,7 @@ struct HomeTests {
         expectNoDifference(state.entryCount, 3)
     }
 
+    // The entries the user can already read must not disappear on a failure
     @Test
     func aFailedStreamKeepsTheEntriesAndRetriesAfterFiveSeconds() async {
         let clock = TestClock()
@@ -104,6 +109,7 @@ struct HomeTests {
         await store.finish()
     }
 
+    // An empty array replaces nil, so the list shows the empty state and not the spinner
     @Test
     func aFailedFirstLoadShowsTheEmptyStateAndRetries() async {
         let clock = TestClock()
@@ -139,6 +145,7 @@ struct HomeTests {
         await store.finish()
     }
 
+    // The haptic welcomes the user, so it does not depend on the entries
     @Test
     func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
         let clock = TestClock()
@@ -164,6 +171,7 @@ struct HomeTests {
         }
     }
 
+    // A sync cannot finish without a network, so the offline status wins
     @Test
     func theConnectivityDrivesTheSyncStatus() async {
         var state = Home.State(user: .mock)
@@ -192,6 +200,7 @@ struct HomeTests {
         expectNoDifference(store.state.syncStatus, .syncing)
     }
 
+    // Blue moon is the only mock entry with a bookmark
     @Test
     func theBookmarkFilterShowsOnlyBookmarkedEntries() async {
         var state = Home.State(user: .mock)
@@ -207,6 +216,7 @@ struct HomeTests {
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
     }
 
+    // The filter button disappears with the last entry, so the filter must clear itself
     @Test
     func anEmptyListClearsTheBookmarkFilter() async {
         var state = Home.State(user: .mock)
@@ -224,6 +234,7 @@ struct HomeTests {
         }
     }
 
+    // The user can remember the meaning of an entry but not its term
     @Test
     func theSearchTextMatchesTheTermsAndTheDefinitions() async {
         var state = Home.State(user: .mock)
@@ -244,6 +255,7 @@ struct HomeTests {
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
     }
 
+    // A form without an entry creates one, and a form with an entry edits it
     @Test
     func theNewEntryButtonOpensAnEmptyForm() async {
         let store = TestStore(initialState: Home.State(user: .mock)) {
@@ -255,6 +267,7 @@ struct HomeTests {
         }
     }
 
+    // The form only reports the entry, and home writes it to the server
     @Test
     func creatingAnEntrySavesItAndClosesTheForm() async {
         let now = Date(timeIntervalSince1970: 1_751_000_000)
@@ -302,6 +315,7 @@ struct HomeTests {
         }
     }
 
+    // The settings need the user, and home is the scene that holds it
     @Test
     func theSettingsButtonOpensTheSettings() async {
         let store = TestStore(initialState: Home.State(user: .mock)) {
@@ -313,6 +327,7 @@ struct HomeTests {
         }
     }
 
+    // Home reads the delegate actions only, and the detail keeps the rest
     @Test
     func aNonDelegateDetailActionIsHandledByTheDetail() async {
         var state = Home.State(user: .mock)
@@ -329,6 +344,7 @@ struct HomeTests {
         }
     }
 
+    // The detail leaves the stack first because its entry is about to disappear
     @Test
     func deletingFromTheDetailPopsBackAndDeletesTheEntry() async {
         var state = Home.State(user: .mock)
@@ -357,6 +373,7 @@ struct HomeTests {
         }
     }
 
+    // The detail stays on screen because it reads the entry from the shared state
     @Test
     func updatingFromTheDetailSavesTheEntry() async {
         var bookmarked = Entry.burningCandle
@@ -385,6 +402,7 @@ struct HomeTests {
         }
     }
 
+    // A different device can delete the entry while its detail is on screen
     @Test
     func aDeletedEntryPopsItsDetail() async {
         let remaining = [Entry.burningCandle, Entry.lowHangingFruit]
@@ -404,6 +422,7 @@ struct HomeTests {
         }
     }
 
+    // A snapshot that still holds the entry must not disturb the stack
     @Test
     func aSurvivingEntryKeepsItsDetail() async {
         var state = Home.State(user: .mock)
@@ -418,6 +437,7 @@ struct HomeTests {
         await store.send(.entriesUpdated(.mock))
     }
 
+    // The detail pops before the delete reaches the server, so an alert must report the failure
     @Test
     func aFailedDeletionShowsAnAlert() async {
         var state = Home.State(user: .mock)
@@ -442,6 +462,7 @@ struct HomeTests {
         }
     }
 
+    // The deletion of one entry must not interrupt the creation of a different one
     @Test
     func aFailedDeletionKeepsThePresentedForm() async {
         var state = Home.State(user: .mock)
@@ -455,6 +476,7 @@ struct HomeTests {
         await store.send(.entryDeleteFailed(Entry.blueMoon.id, EntriesFailure()))
     }
 
+    // The save leaves no trace on screen, so an alert must report the failure
     @Test
     func aFailedSaveShowsAnAlert() async {
         var state = Home.State(user: .mock)
@@ -476,6 +498,7 @@ struct HomeTests {
         }
     }
 
+    // A save that fails in the background must not interrupt the form on screen
     @Test
     func aFailedSaveKeepsThePresentedForm() async {
         var state = Home.State(user: .mock)

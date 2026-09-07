@@ -14,6 +14,7 @@ import Testing
 
 @MainActor
 struct SignInTests {
+    // Apple authorizes the user first, and Firebase accepts the credential after
     @Test
     func theSignInButtonAuthorizesTheCredentialAndSignsIn() async {
         await confirmation("Signs in with the credential") { signsIn in
@@ -37,6 +38,7 @@ struct SignInTests {
         }
     }
 
+    // A second request would open a second Apple sheet
     @Test
     func theSignInButtonIsIgnoredWhileAuthenticating() async {
         var state = SignIn.State()
@@ -49,6 +51,7 @@ struct SignInTests {
         await store.send(.signInButtonTapped)
     }
 
+    // The user closed the Apple sheet, so the app returns to the button
     @Test
     func aCanceledAuthorizationIsSilent() async {
         var state = SignIn.State()
@@ -63,6 +66,7 @@ struct SignInTests {
         }
     }
 
+    // Apple can fail before Firebase ever sees the credential
     @Test
     func aFailedAuthorizationShowsAnAlert() async {
         var state = SignIn.State()
@@ -78,6 +82,7 @@ struct SignInTests {
         }
     }
 
+    // Firebase can reject a credential that Apple authorized
     @Test
     func aFailedSignInShowsAnAlert() async {
         let store = TestStore(initialState: SignIn.State()) {
@@ -99,6 +104,7 @@ struct SignInTests {
         }
     }
 
+    // The user can tap the sign in button again after the alert
     @Test
     func dismissingTheAlertClearsIt() async {
         var state = SignIn.State()

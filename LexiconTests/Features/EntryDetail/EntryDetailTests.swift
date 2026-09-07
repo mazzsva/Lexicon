@@ -12,6 +12,7 @@ import Testing
 
 @MainActor
 struct EntryDetailTests {
+    // The detail reads the entry, and only home can write it
     @Test
     func theBookmarkButtonBookmarksTheEntryAndTellsTheParent() async {
         await confirmation("Plays the selection haptic") { playsHaptic in
@@ -31,6 +32,7 @@ struct EntryDetailTests {
         }
     }
 
+    // The form starts from the entry, so it edits and does not create
     @Test
     func theEditButtonOpensTheFormOnTheEntry() async {
         let store = TestStore(
@@ -44,6 +46,7 @@ struct EntryDetailTests {
         }
     }
 
+    // The detail closes the form itself, and home receives the entry to save
     @Test
     func savingTheEditedEntryClosesTheFormAndTellsTheParent() async {
         await confirmation("Plays the success haptic") { playsHaptic in
@@ -72,6 +75,7 @@ struct EntryDetailTests {
         }
     }
 
+    // The entry disappears from every device
     @Test
     func theDeleteButtonAsksForConfirmation() async {
         let store = TestStore(
@@ -85,6 +89,7 @@ struct EntryDetailTests {
         }
     }
 
+    // The detail cannot delete because home holds the entries
     @Test
     func confirmingTheDeletionTellsTheParent() async {
         let store = TestStore(
@@ -102,6 +107,7 @@ struct EntryDetailTests {
         await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
     }
 
+    // A dismissed alert must not reach the parent
     @Test
     func cancelingTheDeletionKeepsTheEntry() async {
         let store = TestStore(

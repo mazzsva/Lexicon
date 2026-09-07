@@ -15,6 +15,7 @@ import Testing
 @Suite(.dependencies)
 @MainActor
 struct AppFeatureTests {
+    // Firebase and Apple report the two events that can start or end a session
     @Test
     func theTaskObservesTheAuthChangesAndTheCredentialRevocations() async {
         let authChanges = AsyncStream<User?>.makeStream()
@@ -46,6 +47,7 @@ struct AppFeatureTests {
         }
     }
 
+    // Apple can revoke the credential while the app does not run
     @Test
     func aSignedInUserAtLaunchRoutesToHomeAndVerifiesTheCredential() async {
         await confirmation("Verifies the Apple credential") { verifiesCredential in
@@ -67,6 +69,7 @@ struct AppFeatureTests {
         }
     }
 
+    // Firestore keeps its cache on disk, so the app removes the entries of the last user
     @Test
     func aSignedOutUserAtLaunchRoutesToSignInAndClearsTheLocalData() async {
         await confirmation("Clears the local data") { clearsLocalData in
@@ -83,6 +86,7 @@ struct AppFeatureTests {
         }
     }
 
+    // The sign in scene shows first at launch, so a restored session comes through it
     @Test
     func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
         var state = AppFeature.State()
@@ -106,6 +110,7 @@ struct AppFeatureTests {
         }
     }
 
+    // Apple authorized the user a moment ago, so the app does not check the credential again
     @Test
     func finishingTheSignInRoutesToHomeAsAFreshSignIn() async {
         var signIn = SignIn.State()
@@ -125,6 +130,7 @@ struct AppFeatureTests {
         await store.finish()
     }
 
+    // Firebase sends the same user again after each token refresh
     @Test
     func theSameSignedInUserIsIgnored() async {
         var state = AppFeature.State()
@@ -137,6 +143,7 @@ struct AppFeatureTests {
         await store.send(.authUserChanged(.mock))
     }
 
+    // Firebase reports no user while the sign in is in progress
     @Test
     func aSignedOutUserOnTheSignInIsIgnored() async {
         var state = AppFeature.State()
@@ -149,6 +156,7 @@ struct AppFeatureTests {
         await store.send(.authUserChanged(nil))
     }
 
+    // Auth must not change accounts without a sign out, so the app also reports an issue
     @Test
     func switchingAccountsRestartsTheSession() async {
         let other = User(email: "other@example.com", uid: "other-uid")
@@ -173,6 +181,7 @@ struct AppFeatureTests {
         await store.finish()
     }
 
+    // The loading state hides the sign in controls while the local data disappears
     @Test
     func signingOutSettlesBeforeTheSignInAppears() async {
         var state = AppFeature.State()
@@ -202,6 +211,7 @@ struct AppFeatureTests {
         }
     }
 
+    // The user can revoke the Apple ID while the app is in the background
     @Test
     func becomingActiveSignsTheUserOutWhenTheCredentialIsRevoked() async {
         var state = AppFeature.State()
@@ -222,6 +232,7 @@ struct AppFeatureTests {
         }
     }
 
+    // The deletion revokes the credential itself, and a sign out would stop it
     @Test
     func theCredentialChecksAreIgnoredWhileDeletingTheAccount() async {
         var settings = Settings.State(user: .mock)
@@ -239,6 +250,7 @@ struct AppFeatureTests {
         await store.send(.appleCredentialInvalidated(.revoked))
     }
 
+    // The message follows the step in progress, and a system sheet gets none
     @Test
     func theLoadingMessageDescribesWhatTheAppIsDoing() {
         var state = AppFeature.State()
@@ -280,6 +292,7 @@ struct AppFeatureTests {
         expectNoDifference(state.loadingMessage, nil)
     }
 
+    // The Apple sheet covers the app, so the message waits for the deletion to start
     @Test
     func theLoadingMessageAppearsOnceTheAccountDeletionStarts() async {
         var state = AppFeature.State()
@@ -305,6 +318,7 @@ struct AppFeatureTests {
         expectNoDifference(store.state.loadingMessage, "Deleting your account…")
     }
 
+    // The welcome must not cover the loading screen at launch
     @Test
     func theWelcomeIsPresentedOnlyOnceTheAppIsReady() {
         var state = AppFeature.State()
@@ -317,6 +331,7 @@ struct AppFeatureTests {
         #expect(!state.isPresentingWelcome)
     }
 
+    // App storage keeps the flag, so the welcome does not return at the next launch
     @Test
     func theWelcomeContinueButtonDismissesItForGood() async {
         var state = AppFeature.State()

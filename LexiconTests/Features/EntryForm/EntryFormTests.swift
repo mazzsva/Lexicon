@@ -13,6 +13,7 @@ import Testing
 
 @MainActor
 struct EntryFormTests {
+    // An entry needs a term, and the definition can stay empty
     @Test
     func onlyANonBlankTermIsSubmittable() {
         var state = EntryForm.State()
@@ -26,6 +27,7 @@ struct EntryFormTests {
         #expect(state.isSubmittable)
     }
 
+    // The view disables the save button, and the reducer refuses the term as well
     @Test
     func savingABlankTermDoesNothing() async {
         let store = TestStore(initialState: EntryForm.State()) {
@@ -38,6 +40,7 @@ struct EntryFormTests {
         await store.send(.saveButtonTapped)
     }
 
+    // The form gives the entry an identity, so the save does not wait for the server
     @Test
     func creatingAnEntryGeneratesItsIdentityAndDate() async {
         let now = Date(timeIntervalSince1970: 1_751_000_000)
@@ -66,6 +69,7 @@ struct EntryFormTests {
         await store.receive(\.delegate.didSubmit, created)
     }
 
+    // The identity and the date come from the original, so the save replaces it
     @Test
     func editingAnEntryKeepsItsIdentity() async {
         var edited = Entry.blueMoon
@@ -82,6 +86,7 @@ struct EntryFormTests {
         await store.receive(\.delegate.didSubmit, edited)
     }
 
+    // The parent presents the form, so only the dismiss effect can close it
     @Test
     func theDismissButtonClosesTheForm() async {
         await confirmation("Dismisses the form") { dismissesForm in

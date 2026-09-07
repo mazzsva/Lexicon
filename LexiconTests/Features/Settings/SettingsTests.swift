@@ -14,6 +14,7 @@ import Testing
 
 @MainActor
 struct SettingsTests {
+    // A sign out clears the local entries
     @Test
     func theSignOutButtonAsksForConfirmation() async {
         let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -25,6 +26,7 @@ struct SettingsTests {
         }
     }
 
+    // The app feature listens to Firebase, so the settings only start the sign out
     @Test
     func confirmingTheSignOutSignsTheUserOut() async {
         var state = Settings.State(user: .mock)
@@ -44,6 +46,7 @@ struct SettingsTests {
         }
     }
 
+    // The settings stay on screen because the user is still signed in
     @Test
     func aFailedSignOutShowsAnAlert() async {
         var state = Settings.State(user: .mock)
@@ -63,6 +66,7 @@ struct SettingsTests {
         }
     }
 
+    // The deletion removes the entries from every device
     @Test
     func theDeleteAccountButtonAsksForConfirmation() async {
         let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -74,6 +78,7 @@ struct SettingsTests {
         }
     }
 
+    // The account must exist until the entries and the Apple token are gone
     @Test
     func confirmingTheAccountDeletionWalksThroughEveryStep() async {
         var state = Settings.State(user: .mock)
@@ -113,6 +118,7 @@ struct SettingsTests {
         await store.finish()
     }
 
+    // The user closed the Apple sheet, so the app returns to the settings
     @Test
     func aCanceledReauthorizationStopsTheDeletionSilently() async {
         var state = Settings.State(user: .mock)
@@ -133,6 +139,7 @@ struct SettingsTests {
         }
     }
 
+    // Without the code the app cannot revoke the Apple token, so it deletes nothing
     @Test
     func aCredentialWithoutAnAuthorizationCodeFailsTheDeletion() async {
         var state = Settings.State(user: .mock)
@@ -161,6 +168,7 @@ struct SettingsTests {
         }
     }
 
+    // The entries are already gone, so the alert must not report a deletion that did not start
     @Test
     func aFailureAfterTheEntriesAreDeletedReportsAnUnfinishedDeletion() async {
         var state = Settings.State(user: .mock)
@@ -194,6 +202,7 @@ struct SettingsTests {
         await store.finish()
     }
 
+    // Apple no longer trusts the app, so the session cannot continue
     @Test
     func aFailureAfterTheCredentialIsRevokedSignsTheUserOut() async {
         var state = Settings.State(user: .mock)
@@ -231,6 +240,7 @@ struct SettingsTests {
         }
     }
 
+    // A request that never returns leaves the user with a spinner
     @Test
     func aStalledDeletionTimesOutAfterOneMinute() async {
         var state = Settings.State(user: .mock)
@@ -261,6 +271,7 @@ struct SettingsTests {
         await store.finish()
     }
 
+    // The deletion must not stop halfway
     @Test
     func theButtonsAreIgnoredWhileTheAccountIsBeingDeleted() async {
         var state = Settings.State(user: .mock)
@@ -275,6 +286,7 @@ struct SettingsTests {
         await store.send(.signOutButtonTapped)
     }
 
+    // Home presents the settings, so only the dismiss effect can close them
     @Test
     func theDismissButtonClosesTheSettings() async {
         await confirmation("Dismisses the settings") { dismissesSettings in
@@ -290,6 +302,7 @@ struct SettingsTests {
     }
 
     #if DEBUG
+    // The button fills an empty account in the debug builds
     @Test
     func theDebugAddMockEntriesButtonSavesTheMockEntries() async {
         let saved = LockIsolated<[Entry]>([])
@@ -308,6 +321,7 @@ struct SettingsTests {
         expectNoDifference(saved.value, Entry.mocks)
     }
 
+    // The button clears the entries and keeps the account
     @Test
     func theDebugDeleteAllEntriesButtonDeletesEveryEntry() async {
         await confirmation("Deletes all the entries") { deletesAllEntries in
