@@ -307,6 +307,23 @@ struct SettingsTests {
         await store.finish()
         expectNoDifference(saved.value, Entry.mocks)
     }
+
+    @Test
+    func theDebugButtonDeletesAllTheEntries() async {
+        await confirmation("Deletes all the entries") { deletesAllEntries in
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            } withDependencies: {
+                $0.entriesClient.deleteAll = { uid in
+                    expectNoDifference(uid, User.mock.uid)
+                    deletesAllEntries()
+                }
+            }
+
+            await store.send(.debugDeleteAllEntriesButtonTapped)
+            await store.finish()
+        }
+    }
     #endif
 
     private struct DeletionFailure: Error {}
