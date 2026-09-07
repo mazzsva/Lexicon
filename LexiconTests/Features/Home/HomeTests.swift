@@ -48,6 +48,15 @@ struct HomeTests {
         await store.finish()
     }
 
+    // Nil entries mean the first load, and an empty array means an empty list
+    @Test
+    func theEntriesAreEmptyWhileTheFirstLoadRuns() {
+        let state = Home.State(user: .mock)
+
+        #expect(state.isLoadingFirstEntries)
+        expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
+    }
+
     // A snapshot stops the syncing only when it comes from the server without a local write
     @Test
     func anEntriesUpdateStoresThemAndStopsTheSyncing() async {
@@ -61,15 +70,6 @@ struct HomeTests {
         }
     }
 
-    // Nil entries mean the first load, and an empty array means an empty list
-    @Test
-    func theEntriesAreEmptyWhileTheFirstLoadRuns() {
-        let state = Home.State(user: .mock)
-
-        #expect(state.isLoadingFirstEntries)
-        expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
-    }
-
     // The count ignores the search text and the bookmark filter
     @Test
     func theEntryCountFollowsTheEntries() {
@@ -78,35 +78,6 @@ struct HomeTests {
 
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
         expectNoDifference(state.entryCount, 3)
-    }
-
-    // The entries the user can already read must not disappear on a failure
-    @Test
-    func aFailedStreamKeepsTheEntriesAndRetriesAfterFiveSeconds() async {
-        let clock = TestClock()
-        var state = Home.State(user: .mock)
-        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-        state.isSyncing = false
-
-        let store = TestStore(initialState: state) {
-            Home()
-        } withDependencies: {
-            $0.continuousClock = clock
-            $0.entriesClient.entries = { _ in
-                AsyncThrowingStream { continuation in continuation.finish() }
-            }
-        }
-
-        await store.send(.entriesStreamFailed) {
-            $0.isSyncing = true
-        }
-        await clock.advance(by: .seconds(4))
-        await store.send(.bookmarkFilterButtonTapped) {
-            $0.isShowingBookmarkedOnly = true
-        }
-        await clock.advance(by: .seconds(1))
-        await store.receive(\.entriesRetryTimerElapsed)
-        await store.finish()
     }
 
     // An empty array replaces nil, so the list shows the empty state and not the spinner
@@ -141,6 +112,35 @@ struct HomeTests {
         }
 
         await clock.advance(by: .seconds(5))
+        await store.receive(\.entriesRetryTimerElapsed)
+        await store.finish()
+    }
+
+    // The entries the user can already read must not disappear on a failure
+    @Test
+    func aFailedStreamKeepsTheEntriesAndRetriesAfterFiveSeconds() async {
+        let clock = TestClock()
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.isSyncing = false
+
+        let store = TestStore(initialState: state) {
+            Home()
+        } withDependencies: {
+            $0.continuousClock = clock
+            $0.entriesClient.entries = { _ in
+                AsyncThrowingStream { continuation in continuation.finish() }
+            }
+        }
+
+        await store.send(.entriesStreamFailed) {
+            $0.isSyncing = true
+        }
+        await clock.advance(by: .seconds(4))
+        await store.send(.bookmarkFilterButtonTapped) {
+            $0.isShowingBookmarkedOnly = true
+        }
+        await clock.advance(by: .seconds(1))
         await store.receive(\.entriesRetryTimerElapsed)
         await store.finish()
     }
@@ -315,18 +315,6 @@ struct HomeTests {
         }
     }
 
-    // The settings need the user, and home is the scene that holds it
-    @Test
-    func theSettingsButtonOpensTheSettings() async {
-        let store = TestStore(initialState: Home.State(user: .mock)) {
-            Home()
-        }
-
-        await store.send(.settingsButtonTapped) {
-            $0.destination = .settings(Settings.State(user: .mock))
-        }
-    }
-
     // Home reads the delegate actions only, and the detail keeps the rest
     @Test
     func aNonDelegateDetailActionIsHandledByTheDetail() async {
@@ -341,35 +329,6 @@ struct HomeTests {
 
         await store.send(.path(.element(id: detailID, action: .deleteButtonTapped))) {
             $0.path[id: detailID]?.destination = .alert(.confirmDeletion)
-        }
-    }
-
-    // The detail leaves the stack first because its entry is about to disappear
-    @Test
-    func deletingFromTheDetailPopsBackAndDeletesTheEntry() async {
-        var state = Home.State(user: .mock)
-        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
-        let detailID = Array(state.path.ids)[0]
-
-        await confirmation("Deletes the entry") { deletesEntry in
-            let store = TestStore(initialState: state) {
-                Home()
-            } withDependencies: {
-                $0.entriesClient.delete = { id, uid in
-                    expectNoDifference(id, Entry.blueMoon.id)
-                    expectNoDifference(uid, User.mock.uid)
-                    deletesEntry()
-                }
-                $0.hapticsClient.warning = {}
-            }
-
-            await store.send(
-                .path(.element(id: detailID, action: .delegate(.didDelete(Entry.blueMoon.id))))
-            ) {
-                $0.path.pop(from: detailID)
-            }
-            await store.finish()
         }
     }
 
@@ -402,10 +361,9 @@ struct HomeTests {
         }
     }
 
-    // A different device can delete the entry while its detail is on screen
+    // The save leaves no trace on screen, so an alert must report the failure
     @Test
-    func aDeletedEntryPopsItsDetail() async {
-        let remaining = [Entry.burningCandle, Entry.lowHangingFruit]
+    func aFailedSaveShowsAnAlert() async {
         var state = Home.State(user: .mock)
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
         state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
@@ -413,28 +371,59 @@ struct HomeTests {
 
         let store = TestStore(initialState: state) {
             Home()
+        } withDependencies: {
+            $0.entriesClient.save = { _, _ in throw EntriesFailure() }
         }
 
-        await store.send(.entriesUpdated(EntriesSnapshot(entries: remaining, isSyncing: false))) {
-            $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: remaining) }
-            $0.isSyncing = false
-            $0.path.pop(from: detailID)
+        await store.send(
+            .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
+        )
+        await store.receive(\.entrySaveFailed) {
+            $0.destination = .alert(.entrySaveFailed)
         }
     }
 
-    // A snapshot that still holds the entry must not disturb the stack
+    // A save that fails in the background must not interrupt the form on screen
     @Test
-    func aSurvivingEntryKeepsItsDetail() async {
+    func aFailedSaveKeepsThePresentedForm() async {
         var state = Home.State(user: .mock)
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
-        state.isSyncing = false
+        state.destination = .createEntry(EntryForm.State())
 
         let store = TestStore(initialState: state) {
             Home()
         }
 
-        await store.send(.entriesUpdated(.mock))
+        await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure()))
+    }
+
+    // The detail leaves the stack first because its entry is about to disappear
+    @Test
+    func deletingFromTheDetailPopsBackAndDeletesTheEntry() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        let detailID = Array(state.path.ids)[0]
+
+        await confirmation("Deletes the entry") { deletesEntry in
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.entriesClient.delete = { id, uid in
+                    expectNoDifference(id, Entry.blueMoon.id)
+                    expectNoDifference(uid, User.mock.uid)
+                    deletesEntry()
+                }
+                $0.hapticsClient.warning = {}
+            }
+
+            await store.send(
+                .path(.element(id: detailID, action: .delegate(.didDelete(Entry.blueMoon.id))))
+            ) {
+                $0.path.pop(from: detailID)
+            }
+            await store.finish()
+        }
     }
 
     // The detail pops before the delete reaches the server, so an alert must report the failure
@@ -476,9 +465,10 @@ struct HomeTests {
         await store.send(.entryDeleteFailed(Entry.blueMoon.id, EntriesFailure()))
     }
 
-    // The save leaves no trace on screen, so an alert must report the failure
+    // A different device can delete the entry while its detail is on screen
     @Test
-    func aFailedSaveShowsAnAlert() async {
+    func aDeletedEntryPopsItsDetail() async {
+        let remaining = [Entry.burningCandle, Entry.lowHangingFruit]
         var state = Home.State(user: .mock)
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
         state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
@@ -486,30 +476,40 @@ struct HomeTests {
 
         let store = TestStore(initialState: state) {
             Home()
-        } withDependencies: {
-            $0.entriesClient.save = { _, _ in throw EntriesFailure() }
         }
 
-        await store.send(
-            .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
-        )
-        await store.receive(\.entrySaveFailed) {
-            $0.destination = .alert(.entrySaveFailed)
+        await store.send(.entriesUpdated(EntriesSnapshot(entries: remaining, isSyncing: false))) {
+            $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: remaining) }
+            $0.isSyncing = false
+            $0.path.pop(from: detailID)
         }
     }
 
-    // A save that fails in the background must not interrupt the form on screen
+    // A snapshot that still holds the entry must not disturb the stack
     @Test
-    func aFailedSaveKeepsThePresentedForm() async {
+    func aSurvivingEntryKeepsItsDetail() async {
         var state = Home.State(user: .mock)
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-        state.destination = .createEntry(EntryForm.State())
+        state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+        state.isSyncing = false
 
         let store = TestStore(initialState: state) {
             Home()
         }
 
-        await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure()))
+        await store.send(.entriesUpdated(.mock))
+    }
+
+    // The settings need the user, and home is the scene that holds it
+    @Test
+    func theSettingsButtonOpensTheSettings() async {
+        let store = TestStore(initialState: Home.State(user: .mock)) {
+            Home()
+        }
+
+        await store.send(.settingsButtonTapped) {
+            $0.destination = .settings(Settings.State(user: .mock))
+        }
     }
 
     private struct EntriesFailure: Error {}

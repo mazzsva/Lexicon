@@ -86,6 +86,48 @@ struct AppFeatureTests {
         }
     }
 
+    // The welcome must not cover the loading screen at launch
+    @Test
+    func theWelcomeIsPresentedOnlyOnceTheAppIsReady() {
+        var state = AppFeature.State()
+        #expect(!state.isPresentingWelcome)
+
+        state.scene = .signIn(SignIn.State())
+        #expect(state.isPresentingWelcome)
+
+        state.$hasDismissedWelcome.withLock { $0 = true }
+        #expect(!state.isPresentingWelcome)
+    }
+
+    // App storage keeps the flag, so the welcome does not return at the next launch
+    @Test
+    func theWelcomeContinueButtonDismissesItForGood() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.welcomeContinueButtonTapped) {
+            $0.$hasDismissedWelcome.withLock { $0 = true }
+        }
+        #expect(!store.state.isPresentingWelcome)
+    }
+
+    // Firebase reports no user while the sign in is in progress
+    @Test
+    func aSignedOutUserOnTheSignInIsIgnored() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.authUserChanged(nil))
+    }
+
     // The sign in scene shows first at launch, so a restored session comes through it
     @Test
     func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
@@ -141,74 +183,6 @@ struct AppFeatureTests {
         }
 
         await store.send(.authUserChanged(.mock))
-    }
-
-    // Firebase reports no user while the sign in is in progress
-    @Test
-    func aSignedOutUserOnTheSignInIsIgnored() async {
-        var state = AppFeature.State()
-        state.scene = .signIn(SignIn.State())
-
-        let store = TestStore(initialState: state) {
-            AppFeature()
-        }
-
-        await store.send(.authUserChanged(nil))
-    }
-
-    // Auth must not change accounts without a sign out, so the app also reports an issue
-    @Test
-    func switchingAccountsRestartsTheSession() async {
-        let other = User(email: "other@example.com", uid: "other-uid")
-        var state = AppFeature.State()
-        state.scene = .home(Home.State(user: .mock))
-
-        let store = TestStore(initialState: state) {
-            AppFeature()
-        } withDependencies: {
-            $0.authClient.appleUserID = { nil }
-            $0.entriesClient.clearLocalData = {}
-        }
-
-        await withExpectedIssue {
-            await store.send(.authUserChanged(other)) {
-                $0.scene = nil
-            }
-        }
-        await store.receive(\.authUserChanged) {
-            $0.scene = .home(Home.State(user: other))
-        }
-        await store.finish()
-    }
-
-    // The loading state hides the sign in controls while the local data disappears
-    @Test
-    func signingOutSettlesBeforeTheSignInAppears() async {
-        var state = AppFeature.State()
-        state.scene = .home(Home.State(user: .mock))
-
-        let clock = TestClock()
-        await confirmation("Clears the local data") { clearsLocalData in
-            let store = TestStore(initialState: state) {
-                AppFeature()
-            } withDependencies: {
-                $0.continuousClock = clock
-                $0.entriesClient.clearLocalData = { clearsLocalData() }
-            }
-
-            await store.send(.authUserChanged(nil)) {
-                $0.isSignedOutSettling = true
-                $0.scene = .signIn(SignIn.State())
-            }
-            expectNoDifference(store.state.isLoading, true)
-
-            await clock.advance(by: .milliseconds(500))
-            await store.receive(\.signedOutSettleTimerElapsed) {
-                $0.isSignedOutSettling = false
-            }
-            expectNoDifference(store.state.isLoading, false)
-            await store.finish()
-        }
     }
 
     // The user can revoke the Apple ID while the app is in the background
@@ -318,32 +292,58 @@ struct AppFeatureTests {
         expectNoDifference(store.state.loadingMessage, "Deleting your account…")
     }
 
-    // The welcome must not cover the loading screen at launch
+    // Auth must not change accounts without a sign out, so the app also reports an issue
     @Test
-    func theWelcomeIsPresentedOnlyOnceTheAppIsReady() {
+    func switchingAccountsRestartsTheSession() async {
+        let other = User(email: "other@example.com", uid: "other-uid")
         var state = AppFeature.State()
-        #expect(!state.isPresentingWelcome)
-
-        state.scene = .signIn(SignIn.State())
-        #expect(state.isPresentingWelcome)
-
-        state.$hasDismissedWelcome.withLock { $0 = true }
-        #expect(!state.isPresentingWelcome)
-    }
-
-    // App storage keeps the flag, so the welcome does not return at the next launch
-    @Test
-    func theWelcomeContinueButtonDismissesItForGood() async {
-        var state = AppFeature.State()
-        state.scene = .signIn(SignIn.State())
+        state.scene = .home(Home.State(user: .mock))
 
         let store = TestStore(initialState: state) {
             AppFeature()
+        } withDependencies: {
+            $0.authClient.appleUserID = { nil }
+            $0.entriesClient.clearLocalData = {}
         }
 
-        await store.send(.welcomeContinueButtonTapped) {
-            $0.$hasDismissedWelcome.withLock { $0 = true }
+        await withExpectedIssue {
+            await store.send(.authUserChanged(other)) {
+                $0.scene = nil
+            }
         }
-        #expect(!store.state.isPresentingWelcome)
+        await store.receive(\.authUserChanged) {
+            $0.scene = .home(Home.State(user: other))
+        }
+        await store.finish()
+    }
+
+    // The loading state hides the sign in controls while the local data disappears
+    @Test
+    func signingOutSettlesBeforeTheSignInAppears() async {
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        let clock = TestClock()
+        await confirmation("Clears the local data") { clearsLocalData in
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.continuousClock = clock
+                $0.entriesClient.clearLocalData = { clearsLocalData() }
+            }
+
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+                $0.scene = .signIn(SignIn.State())
+            }
+            expectNoDifference(store.state.isLoading, true)
+
+            await clock.advance(by: .milliseconds(500))
+            await store.receive(\.signedOutSettleTimerElapsed) {
+                $0.isSignedOutSettling = false
+            }
+            expectNoDifference(store.state.isLoading, false)
+            await store.finish()
+        }
     }
 }
