@@ -183,6 +183,36 @@ struct SettingsTests {
         }
     }
 
+    // No entry is gone yet, so the alert must not report an unfinished deletion
+    @Test
+    func aFailureBeforeTheEntriesAreDeletedReportsAFailedDeletion() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let clock = TestClock()
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.authClient.reauthenticate = { _ in }
+            $0.continuousClock = clock
+            $0.entriesClient.deleteAll = { _ in throw DeletionFailure() }
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.appleCredentialReceived) {
+            $0.deletionStep = .deleting
+        }
+        await store.receive(\.accountDeletionFailed) {
+            $0.alert = .accountDeletionFailed
+            $0.deletionStep = nil
+        }
+        await store.finish()
+    }
+
     // The entries are already gone, so the alert must not report a deletion that did not start
     @Test
     func aFailureAfterTheEntriesAreDeletedReportsAnUnfinishedDeletion() async {
