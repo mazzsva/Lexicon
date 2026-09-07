@@ -42,7 +42,7 @@ struct HomeView: View {
                         SyncStatusLabel(entryCount: store.entryCount, status: store.syncStatus)
                     }
                 }
-                if store.entryCount > 0 {
+                if store.canFilterBookmarks {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(
                             store.isShowingBookmarkedOnly ? "Show All Entries" : "Show Bookmarked Entries",
@@ -71,20 +71,23 @@ struct HomeView: View {
                 }
             }
             .overlay {
-                if store.entries?.isEmpty == true {
-                    ContentUnavailableView(
-                        "No Entries",
-                        systemImage: "tray.fill",
-                        description: Text("Tap the plus button to add an entry.")
-                    )
-                } else if store.entries != nil, visibleEntries.isEmpty, !store.searchText.isEmpty {
-                    ContentUnavailableView.search(text: store.searchText)
-                } else if store.entries != nil, visibleEntries.isEmpty {
+                switch store.emptyState {
+                case .bookmarks:
                     ContentUnavailableView(
                         "No Bookmarks",
                         systemImage: "bookmark.fill",
                         description: Text("Bookmark an entry to find it here.")
                     )
+                case .entries:
+                    ContentUnavailableView(
+                        "No Entries",
+                        systemImage: "tray.fill",
+                        description: Text("Tap the plus button to add an entry.")
+                    )
+                case .search:
+                    ContentUnavailableView.search(text: store.searchText)
+                case nil:
+                    EmptyView()
                 }
             }
         } destination: { detailStore in

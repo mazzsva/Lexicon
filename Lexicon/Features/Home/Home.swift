@@ -32,6 +32,12 @@ struct Home {
         let sessionOrigin: SessionOrigin
         let user: User
 
+        enum EmptyState: Equatable {
+            case bookmarks
+            case entries
+            case search
+        }
+
         @CasePathable
         enum SessionOrigin: Equatable {
             case freshSignIn(isNewAccount: Bool)
@@ -44,7 +50,15 @@ struct Home {
             self.user = user
         }
 
+        var canFilterBookmarks: Bool { entryCount > 0 }
+
         var entryCount: Int { entries?.count ?? 0 }
+
+        var emptyState: EmptyState? {
+            guard entries != nil, filteredEntries.isEmpty else { return nil }
+            if entryCount == 0 { return .entries }
+            return searchText.isEmpty ? .bookmarks : .search
+        }
 
         var filteredEntries: [SharedReader<Entry>] {
             guard let entries = Shared($entries) else { return [] }
