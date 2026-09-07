@@ -237,8 +237,7 @@ struct AppFeatureTests {
         #expect(state.isLoading)
         expectNoDifference(state.loadingMessage, "Signing in…")
 
-        signIn.step = .signingIn(isNewAccount: true)
-        state.scene = .signIn(signIn)
+        state.scene?.modify(\.signIn) { $0.step = .signingIn(isNewAccount: true) }
         expectNoDifference(state.loadingMessage, "Creating your account…")
 
         var settings = Settings.State(user: .mock)
@@ -249,9 +248,10 @@ struct AppFeatureTests {
         #expect(state.isLoading)
         expectNoDifference(state.loadingMessage, nil)
 
-        settings.deletionStep = .deleting
-        home.destination = .settings(settings)
-        state.scene = .home(home)
+        state.scene?
+            .modify(\.home) {
+                $0.destination?.modify(\.settings) { $0.deletionStep = .deleting }
+            }
         expectNoDifference(state.loadingMessage, "Deleting your account…")
 
         state.scene = .home(
