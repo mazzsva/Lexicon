@@ -38,6 +38,33 @@ struct SignInTests {
         }
     }
 
+    // Apple reports the first authorization, and only then does the app create an account
+    @Test
+    func aFirstAuthorizationSignsInAsANewAccount() async {
+        let credential = AppleCredential(
+            authorizationCode: "mock-authorization-code",
+            idToken: "mock-id-token",
+            isFirstAuthorization: true,
+            rawNonce: "mock-raw-nonce"
+        )
+
+        let store = TestStore(initialState: SignIn.State()) {
+            SignIn()
+        } withDependencies: {
+            $0.authClient.signIn = { _ in }
+            $0.signInWithAppleClient.requestCredential = { credential }
+        }
+
+        await store.send(.signInButtonTapped) {
+            $0.step = .awaitingAuthorization
+        }
+        await store.receive(\.authorizationResponse.success, credential) {
+            $0.step = .signingIn(isNewAccount: true)
+        }
+        #expect(store.state.isCreatingAccount)
+        await store.finish()
+    }
+
     // A second request would open a second Apple sheet
     @Test
     func theSignInButtonIsIgnoredWhileAuthenticating() async {

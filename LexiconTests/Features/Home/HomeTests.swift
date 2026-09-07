@@ -145,6 +145,27 @@ struct HomeTests {
         await store.finish()
     }
 
+    // Only the first load welcomes the user, and the later ones stay quiet
+    @Test
+    func aFreshSignInPlaysItsHapticOnlyOnTheFirstLoad() async {
+        let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+
+        await confirmation("Plays the success haptic") { playsHaptic in
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.hapticsClient.success = { playsHaptic() }
+            }
+
+            await store.send(.entriesUpdated(.mock)) {
+                $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+                $0.isSyncing = false
+            }
+            await store.send(.entriesUpdated(.mock))
+            await store.finish()
+        }
+    }
+
     // The haptic welcomes the user, so it does not depend on the entries
     @Test
     func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
@@ -216,6 +237,23 @@ struct HomeTests {
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
     }
 
+    // The same button clears the filter, so the list comes back
+    @Test
+    func theBookmarkFilterClearsOnASecondTap() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.isShowingBookmarkedOnly = true
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.bookmarkFilterButtonTapped) {
+            $0.isShowingBookmarkedOnly = false
+        }
+        expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), Entry.mocks)
+    }
+
     // The filter button disappears with the last entry, so the filter must clear itself
     @Test
     func anEmptyListClearsTheBookmarkFilter() async {
@@ -253,6 +291,28 @@ struct HomeTests {
             $0.searchText = "easiest"
         }
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
+    }
+
+    // The search runs inside the filter, so an unbookmarked match stays hidden
+    @Test
+    func theSearchTextAndTheBookmarkFilterApplyTogether() async {
+        var state = Home.State(user: .mock)
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        state.isShowingBookmarkedOnly = true
+
+        let store = TestStore(initialState: state) {
+            Home()
+        }
+
+        await store.send(.binding(.set(\.searchText, "candle"))) {
+            $0.searchText = "candle"
+        }
+        expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [])
+
+        await store.send(.binding(.set(\.searchText, "moon"))) {
+            $0.searchText = "moon"
+        }
+        expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
     }
 
     // A form without an entry creates one, and a form with an entry edits it

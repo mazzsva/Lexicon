@@ -32,6 +32,26 @@ struct EntryDetailTests {
         }
     }
 
+    // Blue moon starts with a bookmark, so the same button removes it
+    @Test
+    func theBookmarkButtonRemovesTheBookmarkAndTellsTheParent() async {
+        await confirmation("Plays the selection haptic") { playsHaptic in
+            let store = TestStore(
+                initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+            ) {
+                EntryDetail()
+            } withDependencies: {
+                $0.hapticsClient.selection = { playsHaptic() }
+            }
+
+            var unbookmarked = Entry.blueMoon
+            unbookmarked.isBookmarked = false
+
+            await store.send(.bookmarkButtonTapped)
+            await store.receive(\.delegate.didUpdate, unbookmarked)
+        }
+    }
+
     // The form starts from the entry, so it edits and does not create
     @Test
     func theEditButtonOpensTheFormOnTheEntry() async {
