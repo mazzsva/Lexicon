@@ -265,11 +265,14 @@ struct HomeTests {
             Home()
         }
 
+        #expect(store.state.canFilterBookmarks)
+
         await store.send(.entriesUpdated(.empty)) {
             $0.$entries.withLock { $0 = [] }
             $0.isShowingBookmarkedOnly = false
             $0.isSyncing = false
         }
+        #expect(!store.state.canFilterBookmarks)
     }
 
     // The user can remember the meaning of an entry but not its term
@@ -313,6 +316,29 @@ struct HomeTests {
             $0.searchText = "moon"
         }
         expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
+    }
+
+    // An empty list has three reasons, and each one needs its own message
+    @Test
+    func theEmptyStateFollowsTheEntriesAndTheFilters() async {
+        var state = Home.State(user: .mock)
+        expectNoDifference(state.emptyState, nil)
+
+        state.$entries.withLock { $0 = [] }
+        expectNoDifference(state.emptyState, .entries)
+
+        state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+        expectNoDifference(state.emptyState, nil)
+
+        state.$entries.withLock {
+            $0 = IdentifiedArray(uniqueElements: [Entry.burningCandle, Entry.lowHangingFruit])
+        }
+        state.isShowingBookmarkedOnly = true
+        expectNoDifference(state.emptyState, .bookmarks)
+
+        state.isShowingBookmarkedOnly = false
+        state.searchText = "nothing matches this"
+        expectNoDifference(state.emptyState, .search)
     }
 
     // A form without an entry creates one, and a form with an entry edits it
