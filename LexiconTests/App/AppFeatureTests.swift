@@ -308,4 +308,27 @@ struct AppFeatureTests {
         await store.receive(\.scene.home.destination.settings.appleCredentialReceived)
         expectNoDifference(store.state.loadingMessage, "Deleting your account…")
     }
+
+    @Test
+    func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        await confirmation("Verifies the Apple credential") { verifiesCredential in
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.signInWithAppleClient.credentialState = { _ in
+                    verifiesCredential()
+                    return .authorized
+                }
+            }
+
+            await store.send(.authUserChanged(.mock)) {
+                $0.scene = .home(Home.State(user: .mock, sessionOrigin: .restored))
+            }
+            await store.finish()
+        }
+    }
 }
