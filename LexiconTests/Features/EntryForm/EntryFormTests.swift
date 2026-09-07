@@ -27,19 +27,6 @@ struct EntryFormTests {
         #expect(state.isSubmittable)
     }
 
-    // The view disables the save button, and the reducer refuses the term as well
-    @Test
-    func savingABlankTermDoesNothing() async {
-        let store = TestStore(initialState: EntryForm.State()) {
-            EntryForm()
-        }
-
-        await store.send(.binding(.set(\.term, "   "))) {
-            $0.term = "   "
-        }
-        await store.send(.saveButtonTapped)
-    }
-
     // The form gives the entry an identity, so the save does not wait for the server
     @Test
     func creatingAnEntryGeneratesItsIdentityAndDate() async {
@@ -84,6 +71,19 @@ struct EntryFormTests {
         }
         await store.send(.saveButtonTapped)
         await store.receive(\.delegate.didSubmit, edited)
+    }
+
+    // The view disables the save button, and the reducer refuses the term as well
+    @Test
+    func savingABlankTermDoesNothing() async {
+        let store = TestStore(initialState: EntryForm.State()) {
+            EntryForm()
+        }
+
+        await store.send(.binding(.set(\.term, "   "))) {
+            $0.term = "   "
+        }
+        await store.send(.saveButtonTapped)
     }
 
     // The parent presents the form, so only the dismiss effect can close it
