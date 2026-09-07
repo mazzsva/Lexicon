@@ -118,6 +118,21 @@ struct SettingsTests {
         await store.finish()
     }
 
+    // The deletion must not stop halfway
+    @Test
+    func theButtonsAreIgnoredWhileTheAccountIsBeingDeleted() async {
+        var state = Settings.State(user: .mock)
+        state.deletionStep = .deleting
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        }
+
+        await store.send(.deleteAccountButtonTapped)
+        await store.send(.dismissButtonTapped)
+        await store.send(.signOutButtonTapped)
+    }
+
     // The user closed the Apple sheet, so the app returns to the settings
     @Test
     func aCanceledReauthorizationStopsTheDeletionSilently() async {
@@ -269,21 +284,6 @@ struct SettingsTests {
             $0.deletionStep = nil
         }
         await store.finish()
-    }
-
-    // The deletion must not stop halfway
-    @Test
-    func theButtonsAreIgnoredWhileTheAccountIsBeingDeleted() async {
-        var state = Settings.State(user: .mock)
-        state.deletionStep = .deleting
-
-        let store = TestStore(initialState: state) {
-            Settings()
-        }
-
-        await store.send(.deleteAccountButtonTapped)
-        await store.send(.dismissButtonTapped)
-        await store.send(.signOutButtonTapped)
     }
 
     // Home presents the settings, so only the dismiss effect can close them
