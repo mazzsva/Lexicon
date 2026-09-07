@@ -73,7 +73,7 @@ struct HomeTests {
     // The count ignores the search text and the bookmark filter
     @Test
     func theEntryCountFollowsTheEntries() {
-        var state = Home.State(user: .mock)
+        let state = Home.State(user: .mock)
         expectNoDifference(state.entryCount, 0)
 
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
@@ -224,7 +224,7 @@ struct HomeTests {
     // Blue moon is the only mock entry with a bookmark
     @Test
     func theBookmarkFilterShowsOnlyBookmarkedEntries() async {
-        var state = Home.State(user: .mock)
+        let state = Home.State(user: .mock)
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
 
         let store = TestStore(initialState: state) {
@@ -275,7 +275,7 @@ struct HomeTests {
     // The user can remember the meaning of an entry but not its term
     @Test
     func theSearchTextMatchesTheTermsAndTheDefinitions() async {
-        var state = Home.State(user: .mock)
+        let state = Home.State(user: .mock)
         state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
 
         let store = TestStore(initialState: state) {
@@ -407,7 +407,7 @@ struct HomeTests {
             let store = TestStore(initialState: state) {
                 Home()
             } withDependencies: {
-                $0.entriesClient.save = { entry, uid in
+                $0.entriesClient.save = { [bookmarked] entry, uid in
                     expectNoDifference(entry, bookmarked)
                     expectNoDifference(uid, User.mock.uid)
                     savesEntry()
