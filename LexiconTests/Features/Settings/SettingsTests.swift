@@ -7,6 +7,7 @@
 
 import AuthenticationServices
 import ComposableArchitecture
+import CustomDump
 import Testing
 
 @testable import Lexicon
@@ -287,6 +288,26 @@ struct SettingsTests {
             $0.deletionStep = nil
         }
     }
+
+    #if DEBUG
+    @Test
+    func theDebugButtonAddsTheMockEntries() async {
+        let saved = LockIsolated<[Entry]>([])
+
+        let store = TestStore(initialState: Settings.State(user: .mock)) {
+            Settings()
+        } withDependencies: {
+            $0.entriesClient.save = { entry, uid in
+                expectNoDifference(uid, User.mock.uid)
+                saved.withValue { $0.append(entry) }
+            }
+        }
+
+        await store.send(.debugAddMockEntriesButtonTapped)
+        await store.finish()
+        expectNoDifference(saved.value, Entry.mocks)
+    }
+    #endif
 
     private struct DeletionFailure: Error {}
 
