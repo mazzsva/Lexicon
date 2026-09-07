@@ -15,7 +15,7 @@ import Testing
 @MainActor
 struct SignInTests {
     @Test
-    func signingInAuthorizesTheCredentialAndSignsIn() async {
+    func theSignInButtonAuthorizesTheCredentialAndSignsIn() async {
         await confirmation("Signs in with the credential") { signsIn in
             let store = TestStore(initialState: SignIn.State()) {
                 SignIn()
@@ -35,6 +35,18 @@ struct SignInTests {
             }
             await store.finish()
         }
+    }
+
+    @Test
+    func theSignInButtonIsIgnoredWhileAuthenticating() async {
+        var state = SignIn.State()
+        state.step = .awaitingAuthorization
+
+        let store = TestStore(initialState: state) {
+            SignIn()
+        }
+
+        await store.send(.signInButtonTapped)
     }
 
     @Test
@@ -85,18 +97,6 @@ struct SignInTests {
             $0.alert = .signInFailed
             $0.step = nil
         }
-    }
-
-    @Test
-    func aSecondTapWhileAuthenticatingIsIgnored() async {
-        var state = SignIn.State()
-        state.step = .awaitingAuthorization
-
-        let store = TestStore(initialState: state) {
-            SignIn()
-        }
-
-        await store.send(.signInButtonTapped)
     }
 
     @Test

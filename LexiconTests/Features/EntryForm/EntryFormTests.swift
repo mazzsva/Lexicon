@@ -39,36 +39,6 @@ struct EntryFormTests {
     }
 
     @Test
-    func theDismissButtonDismissesTheForm() async {
-        await confirmation("Dismisses the form") { dismissesForm in
-            let store = TestStore(initialState: EntryForm.State(entry: .blueMoon)) {
-                EntryForm()
-            } withDependencies: {
-                $0.dismiss = DismissEffect { dismissesForm() }
-            }
-
-            await store.send(.dismissButtonTapped)
-            await store.finish()
-        }
-    }
-
-    @Test
-    func editingAnEntryKeepsItsIdentity() async {
-        var edited = Entry.blueMoon
-        edited.definition = "A rare event."
-
-        let store = TestStore(initialState: EntryForm.State(entry: .blueMoon)) {
-            EntryForm()
-        }
-
-        await store.send(.binding(.set(\.definition, "  A rare event.  "))) {
-            $0.definition = "  A rare event.  "
-        }
-        await store.send(.saveButtonTapped)
-        await store.receive(\.delegate.didSubmit, edited)
-    }
-
-    @Test
     func creatingAnEntryGeneratesItsIdentityAndDate() async {
         let now = Date(timeIntervalSince1970: 1_751_000_000)
         let created = Entry(
@@ -94,5 +64,35 @@ struct EntryFormTests {
         }
         await store.send(.saveButtonTapped)
         await store.receive(\.delegate.didSubmit, created)
+    }
+
+    @Test
+    func editingAnEntryKeepsItsIdentity() async {
+        var edited = Entry.blueMoon
+        edited.definition = "A rare event."
+
+        let store = TestStore(initialState: EntryForm.State(entry: .blueMoon)) {
+            EntryForm()
+        }
+
+        await store.send(.binding(.set(\.definition, "  A rare event.  "))) {
+            $0.definition = "  A rare event.  "
+        }
+        await store.send(.saveButtonTapped)
+        await store.receive(\.delegate.didSubmit, edited)
+    }
+
+    @Test
+    func theDismissButtonClosesTheForm() async {
+        await confirmation("Dismisses the form") { dismissesForm in
+            let store = TestStore(initialState: EntryForm.State(entry: .blueMoon)) {
+                EntryForm()
+            } withDependencies: {
+                $0.dismiss = DismissEffect { dismissesForm() }
+            }
+
+            await store.send(.dismissButtonTapped)
+            await store.finish()
+        }
     }
 }

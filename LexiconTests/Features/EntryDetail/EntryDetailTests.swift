@@ -13,53 +13,7 @@ import Testing
 @MainActor
 struct EntryDetailTests {
     @Test
-    func deleteButtonShowsConfirmationAlert() async {
-        let store = TestStore(
-            initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
-        ) {
-            EntryDetail()
-        }
-
-        await store.send(.deleteButtonTapped) {
-            $0.destination = .alert(.confirmDeletion)
-        }
-    }
-
-    @Test
-    func confirmingDeletionTellsTheParent() async {
-        let store = TestStore(
-            initialState: EntryDetail.State(
-                destination: .alert(.confirmDeletion),
-                entry: SharedReader(value: .blueMoon)
-            )
-        ) {
-            EntryDetail()
-        }
-
-        await store.send(.destination(.presented(.alert(.confirmDeletion)))) {
-            $0.destination = nil
-        }
-        await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
-    }
-
-    @Test
-    func cancelingDeletionKeepsTheEntry() async {
-        let store = TestStore(
-            initialState: EntryDetail.State(
-                destination: .alert(.confirmDeletion),
-                entry: SharedReader(value: .blueMoon)
-            )
-        ) {
-            EntryDetail()
-        }
-
-        await store.send(.destination(.dismiss)) {
-            $0.destination = nil
-        }
-    }
-
-    @Test
-    func bookmarkButtonTellsTheParent() async {
+    func theBookmarkButtonBookmarksTheEntryAndTellsTheParent() async {
         await confirmation("Plays the selection haptic") { playsHaptic in
             let store = TestStore(
                 initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
@@ -78,7 +32,7 @@ struct EntryDetailTests {
     }
 
     @Test
-    func editButtonOpensTheFormOnTheEntry() async {
+    func theEditButtonOpensTheFormOnTheEntry() async {
         let store = TestStore(
             initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
         ) {
@@ -115,6 +69,52 @@ struct EntryDetailTests {
             await store.receive(\.delegate.didUpdate, edited) {
                 $0.destination = nil
             }
+        }
+    }
+
+    @Test
+    func theDeleteButtonAsksForConfirmation() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+        ) {
+            EntryDetail()
+        }
+
+        await store.send(.deleteButtonTapped) {
+            $0.destination = .alert(.confirmDeletion)
+        }
+    }
+
+    @Test
+    func confirmingTheDeletionTellsTheParent() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(
+                destination: .alert(.confirmDeletion),
+                entry: SharedReader(value: .blueMoon)
+            )
+        ) {
+            EntryDetail()
+        }
+
+        await store.send(.destination(.presented(.alert(.confirmDeletion)))) {
+            $0.destination = nil
+        }
+        await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
+    }
+
+    @Test
+    func cancelingTheDeletionKeepsTheEntry() async {
+        let store = TestStore(
+            initialState: EntryDetail.State(
+                destination: .alert(.confirmDeletion),
+                entry: SharedReader(value: .blueMoon)
+            )
+        ) {
+            EntryDetail()
+        }
+
+        await store.send(.destination(.dismiss)) {
+            $0.destination = nil
         }
     }
 }

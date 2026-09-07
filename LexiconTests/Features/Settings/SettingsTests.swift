@@ -15,7 +15,7 @@ import Testing
 @MainActor
 struct SettingsTests {
     @Test
-    func signOutButtonAsksForConfirmation() async {
+    func theSignOutButtonAsksForConfirmation() async {
         let store = TestStore(initialState: Settings.State(user: .mock)) {
             Settings()
         }
@@ -26,7 +26,7 @@ struct SettingsTests {
     }
 
     @Test
-    func confirmingSignOutSignsTheUserOut() async {
+    func confirmingTheSignOutSignsTheUserOut() async {
         var state = Settings.State(user: .mock)
         state.alert = .confirmSignOut
 
@@ -64,7 +64,7 @@ struct SettingsTests {
     }
 
     @Test
-    func deleteAccountButtonAsksForConfirmation() async {
+    func theDeleteAccountButtonAsksForConfirmation() async {
         let store = TestStore(initialState: Settings.State(user: .mock)) {
             Settings()
         }
@@ -72,20 +72,6 @@ struct SettingsTests {
         await store.send(.deleteAccountButtonTapped) {
             $0.alert = .confirmAccountDeletion
         }
-    }
-
-    @Test
-    func theButtonsAreIgnoredWhileTheAccountIsBeingDeleted() async {
-        var state = Settings.State(user: .mock)
-        state.deletionStep = .deleting
-
-        let store = TestStore(initialState: state) {
-            Settings()
-        }
-
-        await store.send(.deleteAccountButtonTapped)
-        await store.send(.dismissButtonTapped)
-        await store.send(.signOutButtonTapped)
     }
 
     @Test
@@ -128,37 +114,7 @@ struct SettingsTests {
     }
 
     @Test
-    func aStalledDeletionTimesOutAfterOneMinute() async {
-        var state = Settings.State(user: .mock)
-        state.alert = .confirmAccountDeletion
-
-        let clock = TestClock()
-        let store = TestStore(initialState: state) {
-            Settings()
-        } withDependencies: {
-            $0.authClient.reauthenticate = { _ in try await Task.never() }
-            $0.continuousClock = clock
-            $0.signInWithAppleClient.requestCredential = { .mock }
-        }
-
-        await store.send(.alert(.presented(.confirmAccountDeletion))) {
-            $0.alert = nil
-            $0.deletionStep = .reauthenticating
-        }
-        await store.receive(\.appleCredentialReceived) {
-            $0.deletionStep = .deleting
-        }
-
-        await clock.advance(by: .seconds(60))
-        await store.receive(\.accountDeletionFailed) {
-            $0.alert = .accountDeletionFailed
-            $0.deletionStep = nil
-        }
-        await store.finish()
-    }
-
-    @Test
-    func aCanceledReauthorizationIsSilent() async {
+    func aCanceledReauthorizationStopsTheDeletionSilently() async {
         var state = Settings.State(user: .mock)
         state.alert = .confirmAccountDeletion
 
@@ -178,7 +134,35 @@ struct SettingsTests {
     }
 
     @Test
-    func aFailureAfterTheEntriesReportsAnUnfinishedDeletion() async {
+    func aCredentialWithoutAnAuthorizationCodeFailsTheDeletion() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.signInWithAppleClient.requestCredential = {
+                AppleCredential(
+                    authorizationCode: nil,
+                    idToken: "mock-id-token",
+                    isFirstAuthorization: false,
+                    rawNonce: "mock-raw-nonce"
+                )
+            }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.accountDeletionFailed) {
+            $0.alert = .accountDeletionFailed
+            $0.deletionStep = nil
+        }
+    }
+
+    @Test
+    func aFailureAfterTheEntriesAreDeletedReportsAnUnfinishedDeletion() async {
         var state = Settings.State(user: .mock)
         state.alert = .confirmAccountDeletion
 
@@ -211,7 +195,7 @@ struct SettingsTests {
     }
 
     @Test
-    func aFailureAfterTheRevokeSignsTheUserOut() async {
+    func aFailureAfterTheCredentialIsRevokedSignsTheUserOut() async {
         var state = Settings.State(user: .mock)
         state.alert = .confirmAccountDeletion
 
@@ -248,6 +232,50 @@ struct SettingsTests {
     }
 
     @Test
+    func aStalledDeletionTimesOutAfterOneMinute() async {
+        var state = Settings.State(user: .mock)
+        state.alert = .confirmAccountDeletion
+
+        let clock = TestClock()
+        let store = TestStore(initialState: state) {
+            Settings()
+        } withDependencies: {
+            $0.authClient.reauthenticate = { _ in try await Task.never() }
+            $0.continuousClock = clock
+            $0.signInWithAppleClient.requestCredential = { .mock }
+        }
+
+        await store.send(.alert(.presented(.confirmAccountDeletion))) {
+            $0.alert = nil
+            $0.deletionStep = .reauthenticating
+        }
+        await store.receive(\.appleCredentialReceived) {
+            $0.deletionStep = .deleting
+        }
+
+        await clock.advance(by: .seconds(60))
+        await store.receive(\.accountDeletionFailed) {
+            $0.alert = .accountDeletionFailed
+            $0.deletionStep = nil
+        }
+        await store.finish()
+    }
+
+    @Test
+    func theButtonsAreIgnoredWhileTheAccountIsBeingDeleted() async {
+        var state = Settings.State(user: .mock)
+        state.deletionStep = .deleting
+
+        let store = TestStore(initialState: state) {
+            Settings()
+        }
+
+        await store.send(.deleteAccountButtonTapped)
+        await store.send(.dismissButtonTapped)
+        await store.send(.signOutButtonTapped)
+    }
+
+    @Test
     func theDismissButtonClosesTheSettings() async {
         await confirmation("Dismisses the settings") { dismissesSettings in
             let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -261,37 +289,9 @@ struct SettingsTests {
         }
     }
 
-    @Test
-    func aCredentialWithoutAnAuthorizationCodeFailsTheDeletion() async {
-        var state = Settings.State(user: .mock)
-        state.alert = .confirmAccountDeletion
-
-        let store = TestStore(initialState: state) {
-            Settings()
-        } withDependencies: {
-            $0.signInWithAppleClient.requestCredential = {
-                AppleCredential(
-                    authorizationCode: nil,
-                    idToken: "mock-id-token",
-                    isFirstAuthorization: false,
-                    rawNonce: "mock-raw-nonce"
-                )
-            }
-        }
-
-        await store.send(.alert(.presented(.confirmAccountDeletion))) {
-            $0.alert = nil
-            $0.deletionStep = .reauthenticating
-        }
-        await store.receive(\.accountDeletionFailed) {
-            $0.alert = .accountDeletionFailed
-            $0.deletionStep = nil
-        }
-    }
-
     #if DEBUG
     @Test
-    func theDebugButtonAddsTheMockEntries() async {
+    func theDebugAddMockEntriesButtonSavesTheMockEntries() async {
         let saved = LockIsolated<[Entry]>([])
 
         let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -309,7 +309,7 @@ struct SettingsTests {
     }
 
     @Test
-    func theDebugButtonDeletesAllTheEntries() async {
+    func theDebugDeleteAllEntriesButtonDeletesEveryEntry() async {
         await confirmation("Deletes all the entries") { deletesAllEntries in
             let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()

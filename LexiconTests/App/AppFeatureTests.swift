@@ -16,34 +16,38 @@ import Testing
 @MainActor
 struct AppFeatureTests {
     @Test
-    func theWelcomeIsPresentedOnlyOnceTheAppIsReady() {
-        var state = AppFeature.State()
-        #expect(!state.isPresentingWelcome)
+    func theTaskObservesTheAuthChangesAndTheCredentialRevocations() async {
+        let authChanges = AsyncStream<User?>.makeStream()
+        let revocations = AsyncStream<Void>.makeStream()
 
-        state.scene = .signIn(SignIn.State())
-        #expect(state.isPresentingWelcome)
+        await confirmation("Signs the user out") { signsOut in
+            let store = TestStore(initialState: AppFeature.State()) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { nil }
+                $0.authClient.authStateChanges = { authChanges.stream }
+                $0.authClient.signOut = { signsOut() }
+                $0.signInWithAppleClient.credentialRevocations = { revocations.stream }
+            }
 
-        state.$hasDismissedWelcome.withLock { $0 = true }
-        #expect(!state.isPresentingWelcome)
+            await store.send(.task)
+
+            authChanges.continuation.yield(.mock)
+            await store.receive(\.authUserChanged) {
+                $0.scene = .home(Home.State(user: .mock))
+            }
+
+            revocations.continuation.yield()
+            await store.receive(\.appleCredentialInvalidated)
+
+            authChanges.continuation.finish()
+            revocations.continuation.finish()
+            await store.finish()
+        }
     }
 
     @Test
-    func theWelcomeContinueButtonDismissesItForGood() async {
-        var state = AppFeature.State()
-        state.scene = .signIn(SignIn.State())
-
-        let store = TestStore(initialState: state) {
-            AppFeature()
-        }
-
-        await store.send(.welcomeContinueButtonTapped) {
-            $0.$hasDismissedWelcome.withLock { $0 = true }
-        }
-        #expect(!store.state.isPresentingWelcome)
-    }
-
-    @Test
-    func aSignedInUserRoutesToHomeAndVerifiesTheCredential() async {
+    func aSignedInUserAtLaunchRoutesToHomeAndVerifiesTheCredential() async {
         await confirmation("Verifies the Apple credential") { verifiesCredential in
             let store = TestStore(initialState: AppFeature.State()) {
                 AppFeature()
@@ -64,7 +68,7 @@ struct AppFeatureTests {
     }
 
     @Test
-    func aSignedOutUserRoutesToSignInAndClearsTheLocalData() async {
+    func aSignedOutUserAtLaunchRoutesToSignInAndClearsTheLocalData() async {
         await confirmation("Clears the local data") { clearsLocalData in
             let store = TestStore(initialState: AppFeature.State()) {
                 AppFeature()
@@ -80,7 +84,30 @@ struct AppFeatureTests {
     }
 
     @Test
-    func finishingTheSignInRoutesToHomeAsAFreshSession() async {
+    func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        await confirmation("Verifies the Apple credential") { verifiesCredential in
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.signInWithAppleClient.credentialState = { _ in
+                    verifiesCredential()
+                    return .authorized
+                }
+            }
+
+            await store.send(.authUserChanged(.mock)) {
+                $0.scene = .home(Home.State(user: .mock, sessionOrigin: .restored))
+            }
+            await store.finish()
+        }
+    }
+
+    @Test
+    func finishingTheSignInRoutesToHomeAsAFreshSignIn() async {
         var signIn = SignIn.State()
         signIn.step = .signingIn(isNewAccount: true)
         var state = AppFeature.State()
@@ -99,7 +126,7 @@ struct AppFeatureTests {
     }
 
     @Test
-    func theSameUserIsIgnored() async {
+    func theSameSignedInUserIsIgnored() async {
         var state = AppFeature.State()
         state.scene = .home(Home.State(user: .mock))
 
@@ -108,6 +135,42 @@ struct AppFeatureTests {
         }
 
         await store.send(.authUserChanged(.mock))
+    }
+
+    @Test
+    func aSignedOutUserOnTheSignInIsIgnored() async {
+        var state = AppFeature.State()
+        state.scene = .signIn(SignIn.State())
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        }
+
+        await store.send(.authUserChanged(nil))
+    }
+
+    @Test
+    func switchingAccountsRestartsTheSession() async {
+        let other = User(email: "other@example.com", uid: "other-uid")
+        var state = AppFeature.State()
+        state.scene = .home(Home.State(user: .mock))
+
+        let store = TestStore(initialState: state) {
+            AppFeature()
+        } withDependencies: {
+            $0.authClient.appleUserID = { nil }
+            $0.entriesClient.clearLocalData = {}
+        }
+
+        await withExpectedIssue {
+            await store.send(.authUserChanged(other)) {
+                $0.scene = nil
+            }
+        }
+        await store.receive(\.authUserChanged) {
+            $0.scene = .home(Home.State(user: other))
+        }
+        await store.finish()
     }
 
     @Test
@@ -140,31 +203,7 @@ struct AppFeatureTests {
     }
 
     @Test
-    func switchingAccountsRestartsTheSession() async {
-        let other = User(email: "other@example.com", uid: "other-uid")
-        var state = AppFeature.State()
-        state.scene = .home(Home.State(user: .mock))
-
-        let store = TestStore(initialState: state) {
-            AppFeature()
-        } withDependencies: {
-            $0.authClient.appleUserID = { nil }
-            $0.entriesClient.clearLocalData = {}
-        }
-
-        await withExpectedIssue {
-            await store.send(.authUserChanged(other)) {
-                $0.scene = nil
-            }
-        }
-        await store.receive(\.authUserChanged) {
-            $0.scene = .home(Home.State(user: other))
-        }
-        await store.finish()
-    }
-
-    @Test
-    func becomingActiveSignsOutARevokedCredential() async {
+    func becomingActiveSignsTheUserOutWhenTheCredentialIsRevoked() async {
         var state = AppFeature.State()
         state.scene = .home(Home.State(user: .mock))
 
@@ -198,37 +237,6 @@ struct AppFeatureTests {
 
         await store.send(.appBecameActive)
         await store.send(.appleCredentialInvalidated(.revoked))
-    }
-
-    @Test
-    func taskObservesTheAuthChangesAndTheCredentialRevocations() async {
-        let authChanges = AsyncStream<User?>.makeStream()
-        let revocations = AsyncStream<Void>.makeStream()
-
-        await confirmation("Signs the user out") { signsOut in
-            let store = TestStore(initialState: AppFeature.State()) {
-                AppFeature()
-            } withDependencies: {
-                $0.authClient.appleUserID = { nil }
-                $0.authClient.authStateChanges = { authChanges.stream }
-                $0.authClient.signOut = { signsOut() }
-                $0.signInWithAppleClient.credentialRevocations = { revocations.stream }
-            }
-
-            await store.send(.task)
-
-            authChanges.continuation.yield(.mock)
-            await store.receive(\.authUserChanged) {
-                $0.scene = .home(Home.State(user: .mock))
-            }
-
-            revocations.continuation.yield()
-            await store.receive(\.appleCredentialInvalidated)
-
-            authChanges.continuation.finish()
-            revocations.continuation.finish()
-            await store.finish()
-        }
     }
 
     @Test
@@ -273,19 +281,7 @@ struct AppFeatureTests {
     }
 
     @Test
-    func aSignedOutUserOnTheSignInIsIgnored() async {
-        var state = AppFeature.State()
-        state.scene = .signIn(SignIn.State())
-
-        let store = TestStore(initialState: state) {
-            AppFeature()
-        }
-
-        await store.send(.authUserChanged(nil))
-    }
-
-    @Test
-    func deletingTheAccountShowsItsLoadingMessage() async {
+    func theLoadingMessageAppearsOnceTheAccountDeletionStarts() async {
         var state = AppFeature.State()
         state.scene = .home(Home.State(user: .mock))
 
@@ -310,25 +306,29 @@ struct AppFeatureTests {
     }
 
     @Test
-    func aRestoredSessionRoutesToHomeAndVerifiesTheCredential() async {
+    func theWelcomeIsPresentedOnlyOnceTheAppIsReady() {
+        var state = AppFeature.State()
+        #expect(!state.isPresentingWelcome)
+
+        state.scene = .signIn(SignIn.State())
+        #expect(state.isPresentingWelcome)
+
+        state.$hasDismissedWelcome.withLock { $0 = true }
+        #expect(!state.isPresentingWelcome)
+    }
+
+    @Test
+    func theWelcomeContinueButtonDismissesItForGood() async {
         var state = AppFeature.State()
         state.scene = .signIn(SignIn.State())
 
-        await confirmation("Verifies the Apple credential") { verifiesCredential in
-            let store = TestStore(initialState: state) {
-                AppFeature()
-            } withDependencies: {
-                $0.authClient.appleUserID = { "apple-user" }
-                $0.signInWithAppleClient.credentialState = { _ in
-                    verifiesCredential()
-                    return .authorized
-                }
-            }
-
-            await store.send(.authUserChanged(.mock)) {
-                $0.scene = .home(Home.State(user: .mock, sessionOrigin: .restored))
-            }
-            await store.finish()
+        let store = TestStore(initialState: state) {
+            AppFeature()
         }
+
+        await store.send(.welcomeContinueButtonTapped) {
+            $0.$hasDismissedWelcome.withLock { $0 = true }
+        }
+        #expect(!store.state.isPresentingWelcome)
     }
 }
