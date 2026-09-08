@@ -11,8 +11,6 @@ import SwiftUI
 struct HomeView: View {
     @Bindable var store: StoreOf<Home>
 
-    @Namespace private var namespace
-
     var body: some View {
         let visibleEntries = store.filteredEntries
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
@@ -59,7 +57,6 @@ struct HomeView: View {
                     Button("Settings", systemImage: "gear") {
                         store.send(.settingsButtonTapped)
                     }
-                    .matchedTransitionSource(id: "settings", in: namespace)
                 }
                 DefaultToolbarItem(kind: .search, placement: .bottomBar)
                 ToolbarSpacer(placement: .bottomBar)
@@ -104,7 +101,6 @@ struct HomeView: View {
             item: $store.scope(state: \.destination?.settings, action: \.destination.settings)
         ) { settingsStore in
             SettingsView(store: settingsStore)
-                .navigationTransition(.zoom(sourceID: "settings", in: namespace))
         }
     }
 }
