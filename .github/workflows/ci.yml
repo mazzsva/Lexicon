@@ -39,7 +39,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme Lexicon \
-            -destination 'platform=iOS Simulator,name=iPhone Air' \
+            -destination 'platform=iOS Simulator,name=iPhone Air,OS=latest' \
             -resultBundlePath TestResults.xcresult
 
       - name: Upload the test results
