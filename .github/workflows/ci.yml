@@ -40,6 +40,7 @@ jobs:
           xcodebuild test \
             -scheme Lexicon \
             -destination 'platform=iOS Simulator,name=iPhone Air,OS=latest' \
+            -skipMacroValidation \
             -resultBundlePath TestResults.xcresult
 
       - name: Upload the test results
