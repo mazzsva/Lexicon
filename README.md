@@ -1,5 +1,7 @@
 # Lexicon
 
+[![CI](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml/badge.svg)](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml)
+
 The iOS app that keeps the words you want to remember.
 
 <img src="https://github.com/user-attachments/assets/cc6b2759-f785-4002-ba23-f80965bf176c" alt="signinview" width="32%"> <img src="https://github.com/user-attachments/assets/3c1d0cc2-aea8-45a5-8582-18f3df45cef1" alt="homeview" width="32%"> <img src="https://github.com/user-attachments/assets/1a636cf1-cce9-47ad-91e8-eef0be5f2a11" alt="entrydetailview" width="32%">

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: macos-26
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Report the toolchain
+        run: |
+          xcodebuild -version
+          swift format --version
+          xcrun simctl list devices available
+
+      - name: Restore the Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ hashFiles('Lexicon.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: swiftpm-
+
+      - name: Lint the sources
+        run: swift format lint --recursive --strict Lexicon LexiconTests
+
+      - name: Run the tests
+        run: |
+          xcodebuild test \
+            -scheme Lexicon \
+            -destination 'platform=iOS Simulator,name=iPhone Air' \
+            -resultBundlePath TestResults.xcresult
+
+      - name: Upload the test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
