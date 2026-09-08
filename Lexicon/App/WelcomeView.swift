@@ -86,9 +86,11 @@ private struct WelcomeHighlightRow: View {
                 .foregroundStyle(.tint)
                 .frame(width: iconSize, height: iconSize)
                 .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
             Text(highlight.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 

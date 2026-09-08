@@ -39,6 +39,7 @@ struct EntryCardView: View {
                     Image(systemName: "bookmark.fill")
                         .font(.caption)
                         .foregroundStyle(.bookmark)
+                        .accessibilityLabel("Bookmarked")
                 }
             }
             .padding(.horizontal, 16)
@@ -49,6 +50,7 @@ struct EntryCardView: View {
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 

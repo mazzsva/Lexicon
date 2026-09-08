@@ -28,6 +28,13 @@ struct SyncStatusLabel: View {
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .animation(.default, value: status)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: Text {
+        guard status == .syncing else { return Text(text) }
+        return Text("Syncing, \(Text(text))")
     }
 
     private var text: LocalizedStringKey {
