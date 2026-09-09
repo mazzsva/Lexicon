@@ -13,7 +13,7 @@ extension View {
     }
 }
 
-private struct LoadingView: View {
+struct LoadingView: View {
     let message: String?
 
     var body: some View {
@@ -52,7 +52,7 @@ private struct LoadingWindow: UIViewRepresentable {
     }
 }
 
-private final class LoadingWindowAnchor: UIView {
+final class LoadingWindowAnchor: UIView {
     var isLoadingVisible = false {
         didSet {
             guard isLoadingVisible != oldValue else { return }
