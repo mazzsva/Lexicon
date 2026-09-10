@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import Foundation
 import IssueReporting
 import os
 
@@ -45,7 +46,7 @@ struct AppFeature {
         var loadingMessage: String? {
             switch scene {
             case .home where isDeletingAccount && !isReauthenticating:
-                return "Deleting your account…"
+                return String(localized: "Deleting your account…")
             case .home(let home) where home.isLoadingFirstEntries:
                 guard case .freshSignIn(let isNewAccount) = home.sessionOrigin else { return nil }
                 return Self.signInMessage(isCreatingAccount: isNewAccount)
@@ -58,7 +59,9 @@ struct AppFeature {
         }
 
         private static func signInMessage(isCreatingAccount: Bool) -> String {
-            isCreatingAccount ? "Creating your account…" : "Signing in…"
+            isCreatingAccount
+                ? String(localized: "Creating your account…")
+                : String(localized: "Signing in…")
         }
     }
 

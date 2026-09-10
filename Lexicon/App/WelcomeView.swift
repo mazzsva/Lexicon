@@ -55,7 +55,7 @@ struct WelcomeView: View {
 
 private struct WelcomeHighlight {
     let systemImage: String
-    let text: String
+    let text: LocalizedStringResource
 
     static let all = [
         WelcomeHighlight(

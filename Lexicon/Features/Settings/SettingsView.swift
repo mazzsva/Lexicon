@@ -17,7 +17,7 @@ struct SettingsView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Email")
-                        Text(store.user.email ?? "Unknown")
+                        Text(store.user.email ?? String(localized: "Unknown"))
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
