@@ -13,6 +13,7 @@ The iOS app that keeps the words you want to remember.
 - Search as you type, across both terms and definitions
 - See at a glance when your entries are syncing, and when you're offline
 - Sign in with Apple, then sign out or delete your account and its data from Settings
+- Reach every screen with VoiceOver, from the entry cards to the sync status
 
 ## Technologies
 
@@ -25,6 +26,9 @@ The iOS app that keeps the words you want to remember.
 | **Backend** | Firebase |
 | **Database** | Cloud Firestore |
 | **Authentication** | Sign in with Apple |
+| **Testing** | [Swift Testing](https://github.com/swiftlang/swift-testing) with `TestStore` |
+| **Localization** | String Catalog |
+| **Continuous integration** | GitHub Actions |
 
 ## Structure
 
@@ -35,10 +39,23 @@ The iOS app that keeps the words you want to remember.
 | `Models/` | Entry, User |
 | `Dependencies/` | Auth, SignInWithApple, Entries, NetworkMonitor, Haptics |
 | `Support/` | Logging, app version, shared view modifier |
+| `LexiconTests/` | A suite for each reducer, plus the loading window |
 
 Each screen is a reducer and a view of the same name, and `AppFeature` holds whichever one the session calls for. Navigation comes from state too, so `Home` owns the stack of entry details and each sheet it presents, and no view drives its own presentation.
 
 Every side effect crosses a client with live and preview values, so no view touches Firebase and previews run without a network. A snapshot listener on `users/{uid}/entries/{id}` is the only source of truth for the list. That listener keeps reading from Firestore's local cache when the connection drops, and writes queue there until it returns, so the list stays readable and editable offline.
+
+## Tests
+
+85 tests cover every reducer, plus the loading window. Each suite sends the actions a user sends and asserts the state that follows, and `TestStore` fails a test that changes state the test did not declare. Every side effect crosses a client, so no test touches the network. GitHub Actions lints with `swift format --strict` and runs the suite on every push and every pull request.
+
+## Accessibility
+
+Every control carries a label, so VoiceOver announces the icon-only buttons in the toolbars. Each entry card reads as a single element that ends with its bookmark state, in place of three separate stops. The sync status tells a VoiceOver user whether the entries are syncing, which the spinner alone cannot.
+
+## Localization
+
+Every string the app shows is a key in `Localizable.xcstrings`, including the alert text the reducers own and the plural that follows the entry count. The catalog carries the English source and is ready for a translation.
 
 ## Requirements
 
