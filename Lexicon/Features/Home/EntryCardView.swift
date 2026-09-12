@@ -47,9 +47,9 @@ struct EntryCardView: View {
         }
         .background(
             Color(.secondarySystemGroupedBackground),
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            in: ConcentricRectangle(corners: .concentric(minimum: 16))
         )
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .contentShape(ConcentricRectangle(corners: .concentric(minimum: 16)))
         .accessibilityElement(children: .combine)
     }
 }
