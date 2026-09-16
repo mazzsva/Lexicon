@@ -540,6 +540,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.14.1;
+			};
+		};
 		EFEF340A2FF9633100E80CBE /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
@@ -558,17 +566,14 @@
 				minimumVersion = 12.15.0;
 			};
 		};
-		EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.14.1;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		EF5068C230437F7F0017ACD8 /* DependenciesTestSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = DependenciesTestSupport;
+		};
 		EFEF340B2FF9633100E80CBE /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = EFEF340A2FF9633100E80CBE /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
@@ -588,11 +593,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EFEF34152FF9863E00E80CBE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
-		};
-		EF5068C230437F7F0017ACD8 /* DependenciesTestSupport */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
-			productName = DependenciesTestSupport;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
