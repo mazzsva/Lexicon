@@ -9,7 +9,7 @@ import ComposableArchitecture
 import SwiftUI
 
 struct AppView: View {
-    let store: StoreOf<AppFeature>
+    @Bindable var store: StoreOf<AppFeature>
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -28,7 +28,7 @@ struct AppView: View {
             }
         }
         .loadingWindow(isVisible: store.isLoading, message: store.loadingMessage)
-        .sheet(isPresented: .constant(store.isPresentingWelcome)) {
+        .sheet(isPresented: $store.isPresentingWelcome.sending(\.welcomePresentationChanged)) {
             WelcomeView { store.send(.welcomeContinueButtonTapped) }
                 .interactiveDismissDisabled()
         }

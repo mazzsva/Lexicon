@@ -73,6 +73,7 @@ struct AppFeature {
         case signedOutSettleTimerElapsed
         case task
         case welcomeContinueButtonTapped
+        case welcomePresentationChanged(Bool)
     }
 
     enum CancelID {
@@ -120,8 +121,11 @@ struct AppFeature {
                     observeCredentialRevocations()
                 )
 
-            case .welcomeContinueButtonTapped:
+            case .welcomeContinueButtonTapped, .welcomePresentationChanged(false):
                 state.$hasDismissedWelcome.withLock { $0 = true }
+                return .none
+
+            case .welcomePresentationChanged(true):
                 return .none
             }
         }

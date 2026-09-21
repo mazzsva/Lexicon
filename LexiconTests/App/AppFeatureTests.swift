@@ -115,6 +115,22 @@ extension BaseSuite {
             #expect(!store.state.isPresentingWelcome)
         }
 
+        @Test
+        func theWelcomeDismissedBySwiftUIIsDismissedForGood() async {
+            var state = AppFeature.State()
+            state.scene = .signIn(SignIn.State())
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            }
+
+            await store.send(.welcomePresentationChanged(true))
+            await store.send(.welcomePresentationChanged(false)) {
+                $0.$hasDismissedWelcome.withLock { $0 = true }
+            }
+            #expect(!store.state.isPresentingWelcome)
+        }
+
         // Firebase reports no user while the sign in is in progress
         @Test
         func aSignedOutUserOnTheSignInIsIgnored() async {
