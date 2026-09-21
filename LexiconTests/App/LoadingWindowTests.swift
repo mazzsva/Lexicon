@@ -94,6 +94,7 @@ extension BaseSuite {
         func aLoadingWindowThatReturnsBeforeTheFadeEndsIsReused() async throws {
             let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
             let anchor = attachedAnchor(in: scene)
+            anchor.fadeDuration = 0.01
             anchor.isLoadingVisible = true
             let window = try #require(loadingWindow(in: scene))
 
@@ -142,7 +143,7 @@ extension BaseSuite {
         }
 
         private func settle() async {
-            try? await Task.sleep(for: .milliseconds(500))
+            try? await Task.sleep(for: .milliseconds(100))
         }
 
         private func wait(until condition: () -> Bool) async {

@@ -53,6 +53,7 @@ private struct LoadingWindow: UIViewRepresentable {
 }
 
 final class LoadingWindowAnchor: UIView {
+    var fadeDuration: TimeInterval = 0.25
     var isLoadingVisible = false {
         didSet {
             guard isLoadingVisible != oldValue else { return }
@@ -64,7 +65,6 @@ final class LoadingWindowAnchor: UIView {
         didSet { hostingController?.rootView = LoadingView(message: message) }
     }
 
-    private let fadeDuration: TimeInterval = 0.25
     private var hostingController: UIHostingController<LoadingView>?
     private var loadingWindow: UIWindow?
 
