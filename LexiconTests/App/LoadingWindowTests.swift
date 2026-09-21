@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 09/09/26.
 //
 
+import CustomDump
 import SwiftUI
 import Testing
 import UIKit
@@ -66,10 +67,10 @@ extension BaseSuite {
 
             anchor.message = "Signing in…"
             anchor.isLoadingVisible = true
-            #expect(presentedMessage(in: scene) == "Signing in…")
+            expectNoDifference(presentedMessage(in: scene), "Signing in…")
 
             anchor.message = "Deleting your account…"
-            #expect(presentedMessage(in: scene) == "Deleting your account…")
+            expectNoDifference(presentedMessage(in: scene), "Deleting your account…")
             await hide(anchor, in: scene)
         }
 
