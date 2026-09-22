@@ -113,53 +113,44 @@ struct HomeView: View {
     )
 }
 
-#Preview(
-    "Empty",
-    traits: .dependencies {
-        $0.entriesClient.entries = { _ in
-            AsyncThrowingStream { continuation in
-                continuation.yield(.empty)
-            }
-        }
-    }
-) {
+#Preview("Empty") {
     HomeView(
         store: Store(initialState: Home.State(user: .mock)) {
             Home()
+        } withDependencies: {
+            $0.entriesClient.entries = { _ in
+                AsyncThrowingStream { continuation in
+                    continuation.yield(.empty)
+                }
+            }
         }
     )
 }
 
-#Preview(
-    "Syncing",
-    traits: .dependencies {
-        $0.entriesClient.entries = { _ in
-            AsyncThrowingStream { continuation in
-                continuation.yield(.syncing)
-            }
-        }
-    }
-) {
+#Preview("Syncing") {
     HomeView(
         store: Store(initialState: Home.State(user: .mock)) {
             Home()
+        } withDependencies: {
+            $0.entriesClient.entries = { _ in
+                AsyncThrowingStream { continuation in
+                    continuation.yield(.syncing)
+                }
+            }
         }
     )
 }
 
-#Preview(
-    "Offline",
-    traits: .dependencies {
-        $0.networkMonitorClient.connectivityChanges = {
-            AsyncStream { continuation in
-                continuation.yield(false)
-            }
-        }
-    }
-) {
+#Preview("Offline") {
     HomeView(
         store: Store(initialState: Home.State(user: .mock)) {
             Home()
+        } withDependencies: {
+            $0.networkMonitorClient.connectivityChanges = {
+                AsyncStream { continuation in
+                    continuation.yield(false)
+                }
+            }
         }
     )
 }
