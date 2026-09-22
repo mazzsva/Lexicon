@@ -47,11 +47,11 @@ struct EntryFormView: View {
                     .labelStyle(.iconOnly)
                 }
             }
-            .onAppear { focusTermForNewEntry() }
+            .onAppear { appeared() }
         }
     }
 
-    private func focusTermForNewEntry() {
+    private func appeared() {
         guard store.isCreating else { return }
         isTermFocused = true
     }
