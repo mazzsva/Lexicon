@@ -2,68 +2,36 @@
 
 [![CI](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml/badge.svg)](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml)
 
-The iOS app that keeps the words you want to remember.
+A vocabulary app for iOS that never loses a word.
 
-<img src="https://github.com/user-attachments/assets/cc6b2759-f785-4002-ba23-f80965bf176c" alt="signinview" width="32%"> <img src="https://github.com/user-attachments/assets/3c1d0cc2-aea8-45a5-8582-18f3df45cef1" alt="homeview" width="32%"> <img src="https://github.com/user-attachments/assets/1a636cf1-cce9-47ad-91e8-eef0be5f2a11" alt="entrydetailview" width="32%">
-
-## Features
-
-- Write a term with its definition, then edit or delete it later
-- Bookmark the ones that matter most
-- Search as you type, across both terms and definitions
-- See at a glance when your entries are syncing, and when you're offline
-- Sign in with Apple, then sign out or delete your account and its data from Settings
-- Reach every screen with VoiceOver, from the entry cards to the sync status
+<img src="https://github.com/user-attachments/assets/28ce5ec8-3945-4bb9-84c2-1fc7a53645e4" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/c4140c3d-24bc-459e-8d50-6440c17ccb20" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/42c3037b-10ab-4204-aec1-811261fd6bc9" alt="An entry detail screen, with the term and its definition" width="32%">
 
 ## Technologies
 
-| Area | Choice |
-| :--- | :--- |
-| **Platform** | iOS 26 |
-| **Language** | Swift 6 |
-| **Interface** | SwiftUI |
-| **Architecture** | [The Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture) |
-| **Backend** | Firebase |
-| **Database** | Cloud Firestore |
-| **Authentication** | Sign in with Apple |
-| **Testing** | [Swift Testing](https://github.com/swiftlang/swift-testing) with `TestStore` |
-| **Localization** | String Catalog |
-| **Continuous integration** | GitHub Actions |
+<table>
+  <tr><td><b>Platform</b></td><td>iOS 26</td></tr>
+  <tr><td><b>Language</b></td><td>Swift 6</td></tr>
+  <tr><td><b>Interface</b></td><td>SwiftUI</td></tr>
+  <tr><td><b>Architecture</b></td><td><a href="https://github.com/pointfreeco/swift-composable-architecture">The Composable Architecture</a></td></tr>
+  <tr><td><b>Backend</b></td><td>Firebase</td></tr>
+  <tr><td><b>Database</b></td><td>Cloud Firestore</td></tr>
+  <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
+  <tr><td><b>Testing</b></td><td><a href="https://github.com/swiftlang/swift-testing">Swift Testing</a></td></tr>
+</table>
 
-## Structure
+## Engineering
 
-| Folder | Contents |
-| :--- | :--- |
-| `App/` | Entry point, session state machine, root view, welcome sheet, loading window |
-| `Features/` | SignIn, Home, EntryForm, EntryDetail, Settings |
-| `Models/` | Entry, User |
-| `Dependencies/` | Auth, SignInWithApple, Entries, NetworkMonitor, Haptics |
-| `Support/` | Logging, app version, shared view modifier |
-| `LexiconTests/` | A suite for each reducer, plus the loading window |
+**One reducer tree.** Every screen pairs a reducer with a view of the same name, and the app holds them in a single tree instead of scattering state across views. Navigation is a property on that state, not a flag a view owns, so the whole navigation graph can be inspected and tested from one place.
 
-Each screen is a reducer and a view of the same name, and `AppFeature` holds whichever one the session calls for. Navigation comes from state too, so `Home` owns the stack of entry details and each sheet it presents, and no view drives its own presentation.
+**No view touches Firebase.** Every effect crosses a client that has a live implementation and a preview one, so previews render with no network and any effect can be swapped out under test.
 
-Every side effect crosses a client with live and preview values, so no view touches Firebase and previews run without a network. A snapshot listener on `users/{uid}/entries/{id}` is the only source of truth for the list. That listener keeps reading from Firestore's local cache when the connection drops, and writes queue there until it returns, so the list stays readable and editable offline.
+**Offline reads and writes.** The entry list has one source of truth: a live Firestore listener backed by its local cache. Reads keep working when the connection drops, writes queue on-device, and both sync the moment it returns.
 
-## Tests
+**Account deletion.** Deleting an account reauthenticates the user with Apple, revokes the Apple token, then deletes the account and its Firestore data.
 
-85 tests cover every reducer, plus the loading window. Each suite sends the actions a user sends and asserts the state that follows, and `TestStore` fails a test that changes state the test did not declare. Every side effect crosses a client, so no test touches the network. GitHub Actions lints with `swift format --strict` and runs the suite on every push and every pull request.
+## Quality
 
-## Accessibility
-
-Every control carries a label, so VoiceOver announces the icon-only buttons in the toolbars. Each entry card reads as a single element that ends with its bookmark state, in place of three separate stops. The sync status tells a VoiceOver user whether the entries are syncing, which the spinner alone cannot.
-
-## Localization
-
-Every string the app shows is a key in `Localizable.xcstrings`, including the alert text the reducers own and the plural that follows the entry count. The catalog carries the English source and is ready for a translation.
-
-## Requirements
-
-The repository carries the app but not the accounts behind it, so running Lexicon means supplying your own:
-
-- Paid Apple Developer account, since Sign in with Apple rules out a personal team
-- Team and bundle identifier in place of the ones committed in the project
-- Firebase project with Apple enabled as a sign-in provider, plus Firestore
-- Apple sign-in key and Services ID, which Firebase needs to revoke tokens on deletion
-- `GoogleService-Info.plist` added to the `Lexicon/` folder, where git ignores it
-- Firestore rules scoped so a signed-in user reaches only their own `users/{uid}`
+- **Tests:** 86 tests cover every reducer, and none touch the network.
+- **CI:** GitHub Actions lints and runs the full suite on every push and pull request.
+- **Accessibility:** Every control has a VoiceOver label, each entry card reads as one element, and the sync status is announced.
+- **Localization:** Every string the app shows is ready for translation.
