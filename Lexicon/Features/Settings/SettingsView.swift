@@ -34,12 +34,19 @@ struct SettingsView: View {
                 }
                 .disabled(store.isDeletingAccount)
                 #if DEBUG
-                Section("Debug") {
-                    Button("Add Mock Entries") {
+                Section("Developer") {
+                    Button {
                         store.send(.debugAddMockEntriesButtonTapped)
+                    } label: {
+                        Text(verbatim: "Save Entry.mocks")
                     }
-                    Button("Delete All Entries", role: .destructive) {
+                    Button(role: .destructive) {
                         store.send(.debugDeleteAllEntriesButtonTapped)
+                    } label: {
+                        Text(verbatim: "Call deleteAll(uid:)")
+                    }
+                    Toggle(isOn: $store.showsWelcomeAtNextLaunch.sending(\.debugResetWelcomeToggleChanged)) {
+                        Text(verbatim: "Reset hasDismissedWelcome")
                     }
                 }
                 .disabled(store.isDeletingAccount)

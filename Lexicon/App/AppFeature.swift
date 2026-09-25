@@ -23,6 +23,9 @@ struct AppFeature {
         @Shared(.hasDismissedWelcome) var hasDismissedWelcome
         var isSignedOutSettling = false
         var scene: Scene.State?
+        #if DEBUG
+        @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
+        #endif
 
         var isDeletingAccount: Bool { scene?.home?.isDeletingAccount ?? false }
 
@@ -116,6 +119,12 @@ struct AppFeature {
                 return .none
 
             case .task:
+                #if DEBUG
+                if state.showsWelcomeAtNextLaunch {
+                    state.$showsWelcomeAtNextLaunch.withLock { $0 = false }
+                    state.$hasDismissedWelcome.withLock { $0 = false }
+                }
+                #endif
                 return .merge(
                     observeAuthChanges(),
                     observeCredentialRevocations()
@@ -230,6 +239,12 @@ extension SharedKey where Self == AppStorageKey<Bool>.Default {
     static var hasDismissedWelcome: Self {
         Self[.appStorage("hasDismissedWelcome"), default: false]
     }
+
+    #if DEBUG
+    static var showsWelcomeAtNextLaunch: Self {
+        Self[.appStorage("showsWelcomeAtNextLaunch"), default: false]
+    }
+    #endif
 }
 
 private let logger = Logger(category: "AppFeature")

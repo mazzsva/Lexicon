@@ -32,6 +32,9 @@ struct Settings {
     struct State: Equatable {
         @Presents var alert: AlertState<Settings.Alert>?
         var deletionStep: DeletionStep?
+        #if DEBUG
+        @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
+        #endif
         let user: User
 
         var isDeletingAccount: Bool { deletionStep != nil }
@@ -47,6 +50,7 @@ struct Settings {
         #if DEBUG
         case debugAddMockEntriesButtonTapped
         case debugDeleteAllEntriesButtonTapped
+        case debugResetWelcomeToggleChanged(Bool)
         #endif
         case deleteAccountButtonTapped
         case dismissButtonTapped
@@ -102,6 +106,10 @@ struct Settings {
 
             case .debugDeleteAllEntriesButtonTapped:
                 return deleteAllEntries(uid: state.user.uid)
+
+            case .debugResetWelcomeToggleChanged(let isOn):
+                state.$showsWelcomeAtNextLaunch.withLock { $0 = isOn }
+                return .none
             #endif
 
             case .deleteAccountButtonTapped:

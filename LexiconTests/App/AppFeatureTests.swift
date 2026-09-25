@@ -131,6 +131,27 @@ extension BaseSuite {
             #expect(!store.state.isPresentingWelcome)
         }
 
+        #if DEBUG
+        @Test
+        func theDebugFlagBringsTheWelcomeBackAtLaunch() async {
+            @Shared(.hasDismissedWelcome) var hasDismissedWelcome = true
+            @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch = true
+
+            let store = TestStore(initialState: AppFeature.State()) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.authStateChanges = { AsyncStream { $0.finish() } }
+                $0.signInWithAppleClient.credentialRevocations = { AsyncStream { $0.finish() } }
+            }
+
+            await store.send(.task) {
+                $0.$hasDismissedWelcome.withLock { $0 = false }
+                $0.$showsWelcomeAtNextLaunch.withLock { $0 = false }
+            }
+            await store.finish()
+        }
+        #endif
+
         // Firebase reports no user while the sign in is in progress
         @Test
         func aSignedOutUserOnTheSignInIsIgnored() async {

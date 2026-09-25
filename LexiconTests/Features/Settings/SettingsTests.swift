@@ -454,6 +454,20 @@ extension BaseSuite {
                 await store.finish()
             }
         }
+
+        @Test
+        func theDebugResetWelcomeToggleSetsTheFlagForTheNextLaunch() async {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            }
+
+            await store.send(.debugResetWelcomeToggleChanged(true)) {
+                $0.$showsWelcomeAtNextLaunch.withLock { $0 = true }
+            }
+            await store.send(.debugResetWelcomeToggleChanged(false)) {
+                $0.$showsWelcomeAtNextLaunch.withLock { $0 = false }
+            }
+        }
         #endif
 
         private struct DeletionFailure: Error {}
