@@ -237,7 +237,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "swift-format format -i -r .\n";
+			shellScript = "if [ \"$CI\" = \"true\" ]; then\n    exit 0\nfi\n\nxcrun swift-format format --in-place --recursive --parallel \"$SRCROOT/Lexicon\" \"$SRCROOT/LexiconTests\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
