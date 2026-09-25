@@ -1,9 +1,10 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
 
 permissions:
@@ -16,6 +17,7 @@ concurrency:
 jobs:
   test:
     name: Build and Test
+    if: github.event.pull_request.draft != true
     runs-on: macos-26
     timeout-minutes: 30
 

@@ -1,7 +1,5 @@
 # Lexicon
 
-[![CI](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml/badge.svg)](https://github.com/mazzsva/Lexicon/actions/workflows/ci.yml)
-
 A vocabulary app for iOS that never loses a word.
 
 <img src="https://github.com/user-attachments/assets/28ce5ec8-3945-4bb9-84c2-1fc7a53645e4" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/c4140c3d-24bc-459e-8d50-6440c17ccb20" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/42c3037b-10ab-4204-aec1-811261fd6bc9" alt="An entry detail screen, with the term and its definition" width="32%">
@@ -32,6 +30,6 @@ A vocabulary app for iOS that never loses a word.
 ## Quality
 
 - **Tests:** 86 tests cover every reducer, and none touch the network.
-- **CI:** GitHub Actions lints and runs the full suite on every push and pull request.
+- **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
