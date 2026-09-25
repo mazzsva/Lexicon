@@ -23,13 +23,27 @@ jobs:
         run: |
           xcodebuild -version
           swift format --version
-          xcrun simctl list devices available
+
+      - name: Boot the simulator
+        run: |
+          udid=$(xcrun simctl list devices available --json | jq -r '
+            [.devices | to_entries[]
+              | select(.key | contains("SimRuntime.iOS-"))
+              | {version: (.key | split("iOS-")[1] | split("-") | map(tonumber)), device: (.value[] | select(.name == "iPhone Air"))}]
+            | sort_by(.version) | last | .device.udid')
+          echo "Booting iPhone Air ($udid)"
+          xcrun simctl boot "$udid"
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+
+      - name: Hash the package versions
+        id: packages
+        run: echo "hash=$(shasum -a 256 Lexicon.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - name: Restore the Swift packages
         uses: actions/cache@v6
         with:
-          path: ~/Library/Caches/org.swift.swiftpm
-          key: swiftpm-${{ hashFiles('Lexicon.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          path: ${{ runner.temp }}/SourcePackages
+          key: swiftpm-${{ steps.packages.outputs.hash }}
           restore-keys: swiftpm-
 
       - name: Lint the sources
@@ -39,7 +53,9 @@ jobs:
         run: |
           xcodebuild test \
             -scheme Lexicon \
-            -destination 'platform=iOS Simulator,name=iPhone Air,OS=latest' \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -parallel-testing-enabled NO \
             -skipMacroValidation \
             -resultBundlePath TestResults.xcresult
 
