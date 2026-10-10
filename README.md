@@ -1,6 +1,6 @@
 # Lexicon
 
-A vocabulary app for iOS that never loses a word.
+Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 
 <img src="https://github.com/user-attachments/assets/e9d250fa-a8c3-4cdb-9690-edea475f64be" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/4301c0fd-4196-4493-8207-9794eff2f3ee" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/b846a87b-dcd8-4e94-a0f5-5018607b727c" alt="An entry detail screen, with the term and its definition" width="32%">
 
