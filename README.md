@@ -21,7 +21,7 @@ A vocabulary app for iOS that never loses a word.
 
 **One reducer tree.** App state lives in a single tree of reducers instead of scattering across views. Navigation is part of that state, so the whole navigation graph can be inspected and tested from one place.
 
-**No view touches Firebase.** Every effect crosses a client that has a live implementation and a preview one, so previews render with no network and any effect can be swapped out under test.
+**No view touches Firebase.** Every effect crosses a client with live, preview, and test implementations, so previews render with no network and a test fails on any effect it doesn't override.
 
 **Offline reads and writes.** The entry list has one source of truth: a live Firestore listener backed by its local cache. Reads keep working when the connection drops, writes queue on-device, and both sync the moment it returns.
 
