@@ -27,6 +27,8 @@ A vocabulary app for iOS that never loses a word.
 
 **Account deletion.** Deleting an account reauthenticates the user with Apple, deletes their Firestore data, revokes the Apple token, then deletes the account. The whole sequence times out after 60 seconds, and a failure after the revoke signs the user out.
 
+**Apple ID checks.** The app checks the Apple ID credential on launch and each time it becomes active, and it listens for revocations. Any state other than authorized signs the user out.
+
 ## Quality
 
 - **Tests:** 88 tests cover every reducer, and none touch the network.
