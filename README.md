@@ -25,7 +25,7 @@ A vocabulary app for iOS that never loses a word.
 
 **Offline reads and writes.** The entry list has one source of truth: a live Firestore listener backed by its local cache. Reads keep working when the connection drops, writes queue on-device, and both sync the moment it returns.
 
-**Account deletion.** Deleting an account reauthenticates the user with Apple, revokes the Apple token, then deletes the account and its Firestore data.
+**Account deletion.** Deleting an account reauthenticates the user with Apple, deletes their Firestore data, revokes the Apple token, then deletes the account. The whole sequence times out after 60 seconds, and a failure after the revoke signs the user out.
 
 ## Quality
 
