@@ -55,6 +55,7 @@ struct SettingsView: View {
             // Without this the navigation bar shows a back chevron at the root of the stack
             .navigationBarBackButtonHidden()
             .scrollDisabled(true)
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .contentMargins(.top, 8, for: .scrollContent)

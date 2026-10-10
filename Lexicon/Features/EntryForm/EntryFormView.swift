@@ -27,6 +27,7 @@ struct EntryFormView: View {
                         .accessibilityLabel("Definition")
                 }
             }
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
             .navigationTitle(store.isCreating ? "New Entry" : "Edit Entry")
