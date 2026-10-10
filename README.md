@@ -29,7 +29,7 @@ A vocabulary app for iOS that never loses a word.
 
 ## Quality
 
-- **Tests:** 86 tests cover every reducer, and none touch the network.
+- **Tests:** 88 tests cover every reducer, and none touch the network.
 - **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
