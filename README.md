@@ -19,7 +19,7 @@ A vocabulary app for iOS that never loses a word.
 
 ## Engineering
 
-**One reducer tree.** Every screen pairs a reducer with a view of the same name, and the app holds them in a single tree instead of scattering state across views. Navigation is a property on that state, not a flag a view owns, so the whole navigation graph can be inspected and tested from one place.
+**One reducer tree.** App state lives in a single tree of reducers instead of scattering across views. Navigation is part of that state, so the whole navigation graph can be inspected and tested from one place.
 
 **No view touches Firebase.** Every effect crosses a client that has a live implementation and a preview one, so previews render with no network and any effect can be swapped out under test.
 
