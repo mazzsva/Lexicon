@@ -11,6 +11,11 @@ import os
 
 @Reducer
 struct AccountDeletion {
+    enum DeletionError: Error {
+        case missingAuthorizationCode
+        case timedOut
+    }
+
     enum Failure: Equatable {
         case notDeleted
         case notFullyDeleted
@@ -50,11 +55,6 @@ struct AccountDeletion {
 
     enum CancelID {
         case deletion
-    }
-
-    enum DeletionError: Error {
-        case missingAuthorizationCode
-        case timedOut
     }
 
     static let timeout = Duration.seconds(60)
