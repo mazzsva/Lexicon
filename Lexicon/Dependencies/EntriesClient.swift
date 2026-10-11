@@ -116,7 +116,7 @@ private actor FirestoreStorage {
         await waitForClearing()
         while true {
             try Task.checkCancellation()
-            let snapshot = try await entriesCollection(uid: uid).limit(to: 500).getDocuments()
+            let snapshot = try await entriesCollection(uid: uid).limit(to: Entry.maximumBatchCount).getDocuments()
             guard !snapshot.documents.isEmpty else { return }
             let batch = Firestore.firestore().batch()
             for document in snapshot.documents {
@@ -160,19 +160,20 @@ private actor FirestoreStorage {
 
     func saveAll(_ entries: [Entry], uid: String) async throws {
         await waitForClearing()
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for chunk in Entry.writeBatches(for: entries) {
-                group.addTask {
-                    let batch = Firestore.firestore().batch()
-                    for entry in chunk {
-                        let document = entriesCollection(uid: uid).document(entry.id.uuidString)
-                        batch.setData(entry.documentData, forDocument: document)
-                    }
-                    try await batch.commit()
-                }
+        let batches = Entry.writeBatches(for: entries)
+        let (results, continuation) = AsyncStream.makeStream(of: (any Error)?.self)
+        for chunk in batches {
+            let batch = Firestore.firestore().batch()
+            for entry in chunk {
+                batch.setData(
+                    entry.documentData, forDocument: entriesCollection(uid: uid).document(entry.id.uuidString))
             }
-            try await group.waitForAll()
+            batch.commit { continuation.yield($0) }
         }
+        for await error in results.prefix(batches.count) {
+            if let error { throw error }
+        }
+        try Task.checkCancellation()
     }
 
     private func waitForClearing() async {
