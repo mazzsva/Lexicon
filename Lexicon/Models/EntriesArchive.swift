@@ -10,7 +10,7 @@ import Foundation
 import UniformTypeIdentifiers
 
 enum EntriesArchive {
-    enum Error: Swift.Error, Equatable {
+    enum ReadError: Error, Equatable {
         case invalid
         case unsupportedVersion
     }
@@ -31,10 +31,10 @@ enum EntriesArchive {
         return try encoder.encode(Envelope(entries: entries.map(EncodedEntry.init), version: version))
     }
 
-    static func records(from data: Data) throws(Error) -> [Record] {
+    static func records(from data: Data) throws(ReadError) -> [Record] {
         do {
             return try JSONDecoder().decode(DecodedEnvelope.self, from: data).entries.map(\.record)
-        } catch let error as Error {
+        } catch let error as ReadError {
             throw error
         } catch {
             throw .invalid
@@ -94,8 +94,8 @@ extension EntriesArchive {
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let version = try container.decode(Int.self, forKey: .version)
-            guard version >= 1 else { throw Error.invalid }
-            guard version <= EntriesArchive.version else { throw Error.unsupportedVersion }
+            guard version >= 1 else { throw ReadError.invalid }
+            guard version <= EntriesArchive.version else { throw ReadError.unsupportedVersion }
             entries = try container.decode([DecodedEntry].self, forKey: .entries)
         }
     }

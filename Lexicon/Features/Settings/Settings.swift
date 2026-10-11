@@ -413,9 +413,9 @@ extension AlertState where Action == Settings.Alert {
             switch error {
             case FileClient.ReadError.tooLarge:
                 TextState("This file is too large to import.")
-            case EntriesArchive.Error.invalid:
+            case EntriesArchive.ReadError.invalid:
                 TextState("This file isn't a Lexicon export.")
-            case EntriesArchive.Error.unsupportedVersion:
+            case EntriesArchive.ReadError.unsupportedVersion:
                 TextState("This file was made by a newer version of Lexicon.")
             default:
                 TextState("The file couldn't be opened.")
