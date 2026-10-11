@@ -13,6 +13,7 @@ import FirebaseAuth
 struct AuthClient: Sendable {
     var appleUserID: @Sendable () -> String? = { nil }
     var authStateChanges: @Sendable () -> AsyncStream<User?> = { AsyncStream { _ in } }
+    var currentUser: @Sendable () -> User? = { nil }
     var deleteAccount: @Sendable () async throws -> Void
     var reauthenticate: @Sendable (_ credential: AppleCredential) async throws -> Void
     var revokeAppleToken: @Sendable (_ authorizationCode: String) async throws -> Void
@@ -39,11 +40,14 @@ extension AuthClient: DependencyKey {
                     }
                 }
             },
+            currentUser: {
+                Auth.auth().currentUser.map { User(email: $0.email, uid: $0.uid) }
+            },
             deleteAccount: {
-                try await currentUser().delete()
+                try await signedInUser().delete()
             },
             reauthenticate: { credential in
-                try await currentUser().reauthenticate(with: firebaseCredential(from: credential))
+                try await signedInUser().reauthenticate(with: firebaseCredential(from: credential))
             },
             revokeAppleToken: { authorizationCode in
                 try await Auth.auth().revokeToken(withAuthorizationCode: authorizationCode)
@@ -65,6 +69,7 @@ extension AuthClient: DependencyKey {
                     continuation.yield(.mock)
                 }
             },
+            currentUser: { .mock },
             deleteAccount: {},
             reauthenticate: { _ in },
             revokeAppleToken: { _ in },
@@ -89,7 +94,7 @@ private enum AuthClientError: Error {
     case notSignedIn
 }
 
-private func currentUser() throws -> FirebaseAuth.User {
+private func signedInUser() throws -> FirebaseAuth.User {
     guard let user = Auth.auth().currentUser else { throw AuthClientError.notSignedIn }
     return user
 }

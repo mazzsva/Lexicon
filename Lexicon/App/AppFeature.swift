@@ -198,13 +198,13 @@ struct AppFeature {
         case (.home(let home), .some(let user)) where home.user.uid == user.uid:
             return .none
 
-        case (.home, .some(let user)):
+        case (.home, .some):
             logger.notice("Auth changed accounts without signing out first; ending the session before the new one.")
             reportIssue("Auth changed accounts without signing out first.")
             state.scene = nil
             return .concatenate(
                 clearLocalData(),
-                .send(.authUserChanged(user))
+                .run { send in await send(.authUserChanged(authClient.currentUser())) }
             )
 
         case (.home, nil):
