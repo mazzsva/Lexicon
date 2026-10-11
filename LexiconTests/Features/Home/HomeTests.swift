@@ -5,10 +5,13 @@
 //  Created by Lorenzo Mazzarotto on 31/08/26.
 //
 
+import AuthenticationServices
 import ComposableArchitecture
+import CoreTransferable
 import CustomDump
 import Foundation
 import Testing
+import UniformTypeIdentifiers
 
 @testable import Lexicon
 
@@ -36,7 +39,7 @@ extension BaseSuite {
 
             entries.continuation.yield(.mock)
             await store.receive(\.entriesUpdated) {
-                $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+                $0.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
                 $0.isSyncing = false
             }
 
@@ -50,39 +53,7 @@ extension BaseSuite {
             await store.finish()
         }
 
-        // Nil entries mean the first load, and an empty array means an empty list
-        @Test
-        func theEntriesAreEmptyWhileTheFirstLoadRuns() {
-            let state = Home.State(user: .mock)
-
-            #expect(state.isLoadingFirstEntries)
-            expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
-        }
-
-        // A snapshot stops the syncing only when it comes from the server without a local write
-        @Test
-        func anEntriesUpdateStoresThemAndStopsTheSyncing() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
-                Home()
-            }
-
-            await store.send(.entriesUpdated(.mock)) {
-                $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-                $0.isSyncing = false
-            }
-        }
-
-        // The count ignores the search text and the bookmark filter
-        @Test
-        func theEntryCountFollowsTheEntries() {
-            let state = Home.State(user: .mock)
-            expectNoDifference(state.entryCount, 0)
-
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            expectNoDifference(state.entryCount, 3)
-        }
-
-        // An empty array replaces nil, so the list shows the empty state and not the spinner
+        // A failed first load has its own state, so the list does not look like an empty account
         @Test
         func aFailedFirstLoadShowsTheEmptyStateAndRetries() async {
             let clock = TestClock()
@@ -110,8 +81,10 @@ extension BaseSuite {
 
             await store.send(.task)
             await store.receive(\.entriesStreamFailed) {
-                $0.$entries.withLock { $0 = [] }
+                $0.$entries.withLock { $0 = .failed }
             }
+            #expect(!store.state.isLoadingFirstEntries)
+            expectNoDifference(store.state.emptyState, .failed)
 
             await clock.advance(by: .seconds(5))
             await store.receive(\.entriesRetryTimerElapsed)
@@ -123,7 +96,7 @@ extension BaseSuite {
         func aFailedStreamKeepsTheEntriesAndRetriesAfterFiveSeconds() async {
             let clock = TestClock()
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.isSyncing = false
 
             let store = TestStore(initialState: state) {
@@ -160,7 +133,7 @@ extension BaseSuite {
                 }
 
                 await store.send(.entriesUpdated(.mock)) {
-                    $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+                    $0.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
                     $0.isSyncing = false
                 }
                 await store.send(.entriesUpdated(.mock))
@@ -172,6 +145,7 @@ extension BaseSuite {
         @Test
         func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
             let clock = TestClock()
+            let entries = AsyncThrowingStream<EntriesSnapshot, any Error>.makeStream()
             let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
 
             await confirmation("Plays the success haptic") { playsHaptic in
@@ -179,17 +153,23 @@ extension BaseSuite {
                     Home()
                 } withDependencies: {
                     $0.continuousClock = clock
-                    $0.entriesClient.entries = { _ in
-                        AsyncThrowingStream { continuation in continuation.finish() }
-                    }
+                    $0.entriesClient.entries = { _ in entries.stream }
                     $0.hapticsClient.success = { playsHaptic() }
                 }
 
                 await store.send(.entriesStreamFailed) {
-                    $0.$entries.withLock { $0 = [] }
+                    $0.$entries.withLock { $0 = .failed }
                 }
+                #expect(!store.state.isLoadingFirstEntries)
+
                 await clock.advance(by: .seconds(5))
                 await store.receive(\.entriesRetryTimerElapsed)
+                entries.continuation.yield(.mock)
+                entries.continuation.finish()
+                await store.receive(\.entriesUpdated) {
+                    $0.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+                    $0.isSyncing = false
+                }
                 await store.finish()
             }
         }
@@ -198,7 +178,7 @@ extension BaseSuite {
         @Test
         func theConnectivityDrivesTheSyncStatus() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.isSyncing = false
 
             let store = TestStore(initialState: state) {
@@ -227,7 +207,7 @@ extension BaseSuite {
         @Test
         func theBookmarkFilterShowsOnlyBookmarkedEntries() async {
             let state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
 
             let store = TestStore(initialState: state) {
                 Home()
@@ -237,18 +217,6 @@ extension BaseSuite {
                 $0.isShowingBookmarkedOnly = true
             }
             expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
-        }
-
-        // The same button clears the filter, so the list comes back
-        @Test
-        func theBookmarkFilterClearsOnASecondTap() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.isShowingBookmarkedOnly = true
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
 
             await store.send(.bookmarkFilterButtonTapped) {
                 $0.isShowingBookmarkedOnly = false
@@ -260,7 +228,7 @@ extension BaseSuite {
         @Test
         func anEmptyListClearsTheBookmarkFilter() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.isShowingBookmarkedOnly = true
 
             let store = TestStore(initialState: state) {
@@ -270,7 +238,7 @@ extension BaseSuite {
             #expect(store.state.canFilterBookmarks)
 
             await store.send(.entriesUpdated(.empty)) {
-                $0.$entries.withLock { $0 = [] }
+                $0.$entries.withLock { $0 = .loaded([]) }
                 $0.isShowingBookmarkedOnly = false
                 $0.isSyncing = false
             }
@@ -281,7 +249,7 @@ extension BaseSuite {
         @Test
         func theSearchTextMatchesTheTermsAndTheDefinitions() async {
             let state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
 
             let store = TestStore(initialState: state) {
                 Home()
@@ -302,7 +270,7 @@ extension BaseSuite {
         @Test
         func theSearchTextAndTheBookmarkFilterApplyTogether() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.isShowingBookmarkedOnly = true
 
             let store = TestStore(initialState: state) {
@@ -322,31 +290,50 @@ extension BaseSuite {
 
         // An empty list has three reasons, and each one needs its own message
         @Test
-        func theEmptyStateFollowsTheEntriesAndTheFilters() async {
+        func theEntriesPhaseDrivesTheDerivedState() {
             var state = Home.State(user: .mock)
+            #expect(state.isLoadingFirstEntries)
+            #expect(!state.canCreateEntries)
             expectNoDifference(state.emptyState, nil)
+            expectNoDifference(state.entryCount, nil)
+            expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
 
-            state.$entries.withLock { $0 = [] }
+            state.$entries.withLock { $0 = .failed }
+            #expect(!state.isLoadingFirstEntries)
+            #expect(!state.canCreateEntries)
+            expectNoDifference(state.emptyState, .failed)
+            expectNoDifference(state.entryCount, nil)
+            expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
+
+            state.$entries.withLock { $0 = .loaded([]) }
+            #expect(state.canCreateEntries)
             expectNoDifference(state.emptyState, .entries)
+            expectNoDifference(state.entryCount, 0)
 
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             expectNoDifference(state.emptyState, nil)
+            expectNoDifference(state.entryCount, 3)
 
             state.$entries.withLock {
-                $0 = IdentifiedArray(uniqueElements: [Entry.burningCandle, Entry.lowHangingFruit])
+                $0 = .loaded(IdentifiedArray(uniqueElements: [Entry.burningCandle, Entry.lowHangingFruit]))
             }
             state.isShowingBookmarkedOnly = true
             expectNoDifference(state.emptyState, .bookmarks)
+            expectNoDifference(state.entryCount, 2)
 
             state.isShowingBookmarkedOnly = false
             state.searchText = "nothing matches this"
             expectNoDifference(state.emptyState, .search)
+            expectNoDifference(state.entryCount, 2)
         }
 
         // A form without an entry creates one, and a form with an entry edits it
         @Test
         func theNewEntryButtonOpensAnEmptyForm() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
+            let state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded([]) }
+
+            let store = TestStore(initialState: state) {
                 Home()
             }
 
@@ -355,11 +342,23 @@ extension BaseSuite {
             }
         }
 
+        @Test(arguments: [EntriesPhase.loading, .failed])
+        func theNewEntryButtonDoesNothingUntilTheEntriesLoad(phase: EntriesPhase) async {
+            let state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = phase }
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.newEntryButtonTapped)
+        }
+
         // The form only reports the entry, and home writes it to the server
         @Test
-        func creatingAnEntrySavesItAndClosesTheForm() async {
+        func creatingAnEntrySavesItAndClosesTheForm() async throws {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
-            let created = Entry(
+            let created = try Entry(
                 createdAt: now,
                 definition: "The easiest wins, taken first.",
                 id: UUID(0),
@@ -368,7 +367,7 @@ extension BaseSuite {
             )
 
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.destination = .createEntry(EntryForm.State())
 
             await confirmation("Saves the entry") { savesEntry in
@@ -386,16 +385,18 @@ extension BaseSuite {
                         $0.uuid = .incrementing
                     }
 
-                    store.exhaustivity = .off
-
                     await store.send(
                         .destination(.presented(.createEntry(.binding(.set(\.term, "  Low-hanging fruit  ")))))
-                    )
+                    ) {
+                        $0.destination?.modify(\.createEntry) { $0.term = "  Low-hanging fruit  " }
+                    }
                     await store.send(
                         .destination(.presented(.createEntry(.binding(.set(\.definition, created.definition)))))
-                    )
+                    ) {
+                        $0.destination?.modify(\.createEntry) { $0.definition = created.definition }
+                    }
                     await store.send(.destination(.presented(.createEntry(.saveButtonTapped))))
-                    await store.receive(\.destination.presented.createEntry.delegate.didSubmit) {
+                    await store.receive(\.destination.presented.createEntry.delegate.didSubmit, created) {
                         $0.destination = nil
                     }
                     await store.finish()
@@ -407,7 +408,7 @@ extension BaseSuite {
         @Test
         func aNonDelegateDetailActionIsHandledByTheDetail() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -427,7 +428,7 @@ extension BaseSuite {
             bookmarked.isBookmarked = true
 
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .burningCandle)))
             let detailID = Array(state.path.ids)[0]
 
@@ -453,7 +454,7 @@ extension BaseSuite {
         @Test
         func aFailedSaveShowsAnAlert() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -467,29 +468,15 @@ extension BaseSuite {
                 .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
             )
             await store.receive(\.entrySaveFailed) {
-                $0.destination = .alert(.entrySaveFailed)
+                $0.destination = .alert(.failed(.entrySave))
             }
-        }
-
-        // A save that fails in the background must not interrupt the form on screen
-        @Test
-        func aFailedSaveKeepsThePresentedForm() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.destination = .createEntry(EntryForm.State())
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure()))
         }
 
         // The detail leaves the stack first because its entry is about to disappear
         @Test
         func deletingFromTheDetailPopsBackAndDeletesTheEntry() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -518,7 +505,7 @@ extension BaseSuite {
         @Test
         func aFailedDeletionShowsAnAlert() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -535,22 +522,8 @@ extension BaseSuite {
                 $0.path.pop(from: detailID)
             }
             await store.receive(\.entryDeleteFailed) {
-                $0.destination = .alert(.entryDeleteFailed)
+                $0.destination = .alert(.failed(.entryDelete))
             }
-        }
-
-        // The deletion of one entry must not interrupt the creation of a different one
-        @Test
-        func aFailedDeletionKeepsThePresentedForm() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.destination = .createEntry(EntryForm.State())
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.entryDeleteFailed(Entry.blueMoon.id, EntriesFailure()))
         }
 
         // A different device can delete the entry while its detail is on screen
@@ -558,7 +531,7 @@ extension BaseSuite {
         func aDeletedEntryPopsItsDetail() async {
             let remaining = [Entry.burningCandle, Entry.lowHangingFruit]
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -567,7 +540,7 @@ extension BaseSuite {
             }
 
             await store.send(.entriesUpdated(EntriesSnapshot(entries: remaining, isSyncing: false))) {
-                $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: remaining) }
+                $0.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: remaining)) }
                 $0.isSyncing = false
                 $0.path.pop(from: detailID)
             }
@@ -577,7 +550,7 @@ extension BaseSuite {
         @Test
         func aSurvivingEntryKeepsItsDetail() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             state.isSyncing = false
 
@@ -591,54 +564,180 @@ extension BaseSuite {
         // The settings need the user, and home is the scene that holds it
         @Test
         func theSettingsButtonOpensTheSettings() async {
-            let store = TestStore(initialState: Home.State(user: .mock)) {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.isShowingBookmarkedOnly = true
+            state.searchText = "moon"
+
+            let store = TestStore(initialState: state) {
                 Home()
             }
 
             await store.send(.settingsButtonTapped) {
-                $0.destination = .settings(Settings.State(user: .mock))
+                $0.destination = .settings(
+                    Settings.State(
+                        entries: SharedReader(value: .loaded(IdentifiedArray(uniqueElements: Entry.mocks))),
+                        user: .mock
+                    )
+                )
             }
         }
 
         @Test
-        func importingClosesTheSettingsAndSavesOnlyTheNewEntries() async {
-            let new = Entry(
-                createdAt: Date(timeIntervalSince1970: 1_751_000_000),
-                definition: "To start a conversation.",
-                id: UUID(5),
-                isBookmarked: false,
-                term: "Break the ice"
+        func theSettingsOpenWithoutEntriesWhenTheFirstLoadFails() async {
+            let state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .failed }
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.settingsButtonTapped) {
+                $0.destination = .settings(Settings.State(entries: SharedReader(value: .failed), user: .mock))
+            }
+        }
+
+        @Test
+        func theSettingsFollowTheEntriesWhileTheyAreOpen() async {
+            let state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded([]) }
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.settingsButtonTapped) {
+                $0.destination = .settings(Settings.State(entries: SharedReader($0.$entries), user: .mock))
+            }
+            await store.send(.entriesUpdated(.mock)) {
+                $0.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+                $0.isSyncing = false
+            }
+            expectNoDifference(
+                store.state.destination?.settings?.entries,
+                .loaded(IdentifiedArray(uniqueElements: Entry.mocks))
             )
+        }
+
+        @Test
+        func importingClosesTheSettingsAndSavesTheImportedEntries() async throws {
+            let imported = [
+                try Entry(
+                    createdAt: Date(timeIntervalSince1970: 1_751_000_000),
+                    definition: "To start a conversation.",
+                    id: UUID(5),
+                    isBookmarked: false,
+                    term: "Break the ice"
+                )
+            ]
+            let saved = LockIsolated<[Entry]?>(nil)
 
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
 
-            await confirmation("Saves the entries") { savesEntries in
-                await confirmation("Plays the success haptic") { playsHaptic in
-                    let store = TestStore(initialState: state) {
-                        Home()
-                    } withDependencies: {
-                        $0.entriesClient.saveAll = { entries, uid in
-                            expectNoDifference(entries, [new])
-                            expectNoDifference(uid, User.mock.uid)
-                            savesEntries()
-                        }
-                        $0.hapticsClient.success = { playsHaptic() }
+            await confirmation("Plays the success haptic") { playsHaptic in
+                let store = TestStore(initialState: state) {
+                    Home()
+                } withDependencies: {
+                    $0.entriesClient.saveAll = { entries, uid in
+                        expectNoDifference(uid, User.mock.uid)
+                        saved.setValue(entries)
                     }
+                    $0.hapticsClient.success = { playsHaptic() }
+                }
 
-                    await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon, new])))))) {
-                        $0.destination = nil
+                await store.send(.destination(.presented(.settings(.delegate(.didImport(imported)))))) {
+                    $0.destination = nil
+                }
+                await store.finish()
+            }
+            expectNoDifference(saved.value, imported)
+        }
+
+        @Test
+        func anExportRestoresEveryFieldIntoAnEmptyAccount() async throws {
+            let user = User(email: nil, uid: "other-uid")
+            let entries =
+                try [
+                    Entry(
+                        createdAt: Date(timeIntervalSince1970: 1_750_000_000.5),
+                        definition: "First line.\n\n  Indented second line.",
+                        id: UUID(7),
+                        isBookmarked: true,
+                        term: "Héllo wörld 👋 \"quoted\" \\ back/slash"
+                    ),
+                    Entry(
+                        createdAt: Date(timeIntervalSince1970: 1_740_000_000),
+                        definition: "",
+                        id: UUID(8),
+                        isBookmarked: false,
+                        term: "日本語"
+                    ),
+                ] + Entry.mocks
+            let imported = try entries.enumerated()
+                .map { offset, entry in
+                    try Entry(
+                        content: entry.content,
+                        createdAt: entry.createdAt,
+                        id: UUID(100 + offset),
+                        isBookmarked: entry.isBookmarked
+                    )
+                }
+            let entriesImport = EntriesArchive.Import(duplicateCount: 0, entries: imported, invalidCount: 0)
+            let nextID = LockIsolated(100)
+            let saved = LockIsolated<[Entry]?>(nil)
+
+            var state = Home.State(user: user)
+            state.$entries.withLock { $0 = .loaded([]) }
+            state.isSyncing = false
+
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.date.now = Date(timeIntervalSince1970: 1_751_000_000)
+                $0.entriesClient.saveAll = { entries, uid in
+                    expectNoDifference(uid, user.uid)
+                    saved.setValue(entries)
+                }
+                $0.fileClient.read = { _, _ in try await EntriesArchive.Export(entries: entries).exported(as: .json) }
+                $0.hapticsClient.success = {}
+                $0.uuid = UUIDGenerator {
+                    nextID.withValue { id in
+                        defer { id += 1 }
+                        return UUID(id)
                     }
-                    await store.finish()
                 }
             }
+
+            await store.send(.settingsButtonTapped) {
+                $0.destination = .settings(Settings.State(entries: SharedReader(value: .loaded([])), user: user))
+            }
+            await store.send(
+                .destination(.presented(.settings(.importFilePicked(.success(URL(filePath: "/a.json"))))))
+            ) {
+                $0.destination?.modify(\.settings) { $0.destination = .loadingImportFile }
+            }
+            await store.receive(\.destination.presented.settings.importFileLoaded) {
+                $0.destination?.modify(\.settings) { $0.destination = .alert(.confirmImport(entriesImport)) }
+            }
+            await store.send(
+                .destination(.presented(.settings(.destination(.presented(.alert(.confirmImport(imported)))))))
+            ) {
+                $0.destination?.modify(\.settings) { $0.destination = nil }
+            }
+            await store.receive(\.destination.presented.settings.delegate.didImport, imported) {
+                $0.destination = nil
+            }
+            await store.finish()
+            expectNoDifference(saved.value, imported)
         }
 
         @Test
         func aFailedImportShowsAnAlert() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = [] }
+            state.$entries.withLock { $0 = .loaded([]) }
             state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
 
             let store = TestStore(initialState: state) {
@@ -652,98 +751,33 @@ extension BaseSuite {
                 $0.destination = nil
             }
             await store.receive(\.entriesImportFailed) {
-                $0.destination = .alert(.entriesImportFailed)
+                $0.destination = .alert(.failed(.entryImport))
             }
         }
 
-        @Test
-        func importingOnlyDuplicatesSavesNothing() async {
+        @Test(arguments: Home.Failure.allCases)
+        func aFailureWaitsForThePresentedDestinationToClose(failure: Home.Failure) async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
-
-            let store = TestStore(initialState: state) {
-                Home()
-            } withDependencies: {
-                $0.hapticsClient.success = {}
-            }
-
-            await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon, .burningCandle])))))) {
-                $0.destination = nil
-            }
-            await store.finish()
-        }
-
-        @Test
-        func importingSavesARepeatedEntryOnce() async {
-            var renamed = Entry.blueMoon
-            renamed.term = "Renamed"
-
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = [] }
-            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
-
-            await confirmation("Saves the entries") { savesEntries in
-                let store = TestStore(initialState: state) {
-                    Home()
-                } withDependencies: {
-                    $0.entriesClient.saveAll = { entries, _ in
-                        expectNoDifference(entries, [.blueMoon])
-                        savesEntries()
-                    }
-                    $0.hapticsClient.success = {}
-                }
-
-                await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon, renamed])))))) {
-                    $0.destination = nil
-                }
-                await store.finish()
-            }
-        }
-
-        @Test
-        func importingKeepsTheDetailOnScreen() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
-            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
-
-            let store = TestStore(initialState: state) {
-                Home()
-            } withDependencies: {
-                $0.entriesClient.saveAll = { _, _ in }
-                $0.hapticsClient.success = {}
-            }
-
-            await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon])))))) {
-                $0.destination = nil
-            }
-            #expect(store.state.path.count == 1)
-        }
-
-        @Test
-        func aFailedImportWaitsForThePresentedDestinationToClose() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = [] }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.destination = .createEntry(EntryForm.State())
 
             let store = TestStore(initialState: state) {
                 Home()
             }
 
-            await store.send(.entriesImportFailed(EntriesFailure())) {
-                $0.isImportFailurePending = true
+            await store.send(Self.failedAction(failure)) {
+                $0.pendingFailures = [failure]
             }
             await store.send(.destination(.dismiss)) {
-                $0.destination = .alert(.entriesImportFailed)
-                $0.isImportFailurePending = false
+                $0.destination = .alert(.failed(failure))
+                $0.pendingFailures = []
             }
         }
 
         @Test
-        func aFailedImportWaitsForTheDetailAlertToClose() async {
+        func aFailedDeletionWaitsForTheDetailAlertToClose() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -754,88 +788,119 @@ extension BaseSuite {
             await store.send(.path(.element(id: detailID, action: .deleteButtonTapped))) {
                 $0.path[id: detailID]?.destination = .alert(.confirmDeletion)
             }
-            await store.send(.entriesImportFailed(EntriesFailure())) {
-                $0.isImportFailurePending = true
+            await store.send(.entryDeleteFailed(Entry.burningCandle.id, EntriesFailure())) {
+                $0.pendingFailures = [.entryDelete]
             }
             await store.send(.path(.element(id: detailID, action: .destination(.dismiss)))) {
-                $0.destination = .alert(.entriesImportFailed)
-                $0.isImportFailurePending = false
+                $0.destination = .alert(.failed(.entryDelete))
+                $0.pendingFailures = []
                 $0.path[id: detailID]?.destination = nil
             }
         }
 
         @Test
-        func theSettingsFollowTheSyncStatus() async {
+        func theFailuresThatWaitForTheSettingsShowOneAfterTheOther() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = [] }
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
 
             let store = TestStore(initialState: state) {
                 Home()
             }
 
-            await store.send(.entriesUpdated(.empty)) {
-                $0.isSyncing = false
-                $0.destination?.modify(\.settings) { $0.isEntriesSynced = true }
+            await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure())) {
+                $0.pendingFailures = [.entrySave]
             }
-            await store.send(.connectivityChanged(false)) {
-                $0.isOnline = false
-                $0.destination?.modify(\.settings) { $0.isEntriesSynced = false }
+            await store.send(.entrySaveFailed(Entry.burningCandle.id, EntriesFailure()))
+            await store.send(.entryDeleteFailed(Entry.lowHangingFruit.id, EntriesFailure())) {
+                $0.pendingFailures = [.entryDelete, .entrySave]
             }
-            await store.send(.connectivityChanged(true)) {
-                $0.isOnline = true
-                $0.destination?.modify(\.settings) { $0.isEntriesSynced = true }
+            await store.send(.destination(.dismiss)) {
+                $0.destination = .alert(.failed(.entryDelete))
+                $0.pendingFailures = [.entrySave]
             }
-            await store.send(.entriesUpdated(.syncing)) {
-                $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-                $0.isSyncing = true
-                $0.destination?.modify(\.settings) { $0.isEntriesSynced = false }
+            await store.send(.destination(.dismiss)) {
+                $0.destination = .alert(.failed(.entrySave))
+                $0.pendingFailures = []
             }
-        }
-
-        @Test
-        func theSettingsOpenWithTheSyncStatus() async {
-            var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = [] }
-            state.isSyncing = false
-
-            let store = TestStore(initialState: state) {
-                Home()
-            }
-
-            await store.send(.settingsButtonTapped) {
-                $0.destination = .settings(
-                    Settings.State(entries: SharedReader(value: []), isEntriesSynced: true, user: .mock)
-                )
+            await store.send(.destination(.dismiss)) {
+                $0.destination = nil
             }
         }
 
         @Test
-        func aFailedStreamStopsTheImportInTheOpenSettings() async {
+        func confirmingTheAccountDeletionClosesTheSettingsAndCancelingReopensThem() async {
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
-            state.isSyncing = false
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.destination = .settings(
-                Settings.State(entries: SharedReader(state.$entries), isEntriesSynced: true, user: .mock)
+                Settings.State(
+                    destination: .alert(.confirmAccountDeletion),
+                    entries: SharedReader(state.$entries),
+                    user: .mock
+                )
             )
 
-            let clock = TestClock()
             let store = TestStore(initialState: state) {
                 Home()
             } withDependencies: {
-                $0.continuousClock = clock
-                $0.entriesClient.entries = { _ in
-                    AsyncThrowingStream { continuation in continuation.finish() }
-                }
+                $0.signInWithAppleClient.requestCredential = { throw ASAuthorizationError(.canceled) }
             }
 
-            await store.send(.entriesStreamFailed) {
-                $0.isSyncing = true
-                $0.destination?.modify(\.settings) { $0.isEntriesSynced = false }
+            await store.send(
+                .destination(.presented(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
+            ) {
+                $0.destination?.modify(\.settings) { $0.destination = nil }
             }
-            await clock.advance(by: .seconds(5))
-            await store.receive(\.entriesRetryTimerElapsed)
+            await store.receive(\.destination.presented.settings.delegate.didConfirmAccountDeletion) {
+                $0.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid))
+            }
+            await store.receive(\.destination.presented.accountDeletion.deletionConfirmed)
+            await store.receive(\.destination.presented.accountDeletion.deletionFailed)
+            await store.receive(\.destination.presented.accountDeletion.delegate.didCancel) {
+                $0.destination = .settings(
+                    Settings.State(
+                        entries: SharedReader(value: .loaded(IdentifiedArray(uniqueElements: Entry.mocks))),
+                        user: .mock
+                    )
+                )
+            }
             await store.finish()
+        }
+
+        @Test
+        func aFailureWaitsForTheAccountDeletionToEnd() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.destination = .accountDeletion(AccountDeletion.State(step: .deleting, uid: User.mock.uid))
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.entrySaveFailed(Entry.blueMoon.id, EntriesFailure())) {
+                $0.pendingFailures = [.entrySave]
+            }
+            await store.send(.destination(.presented(.accountDeletion(.delegate(.didFail(.notFullyDeleted)))))) {
+                $0.destination = .settings(
+                    Settings.State(
+                        destination: .alert(.accountDeletionFailed(.notFullyDeleted)),
+                        entries: SharedReader(value: .loaded(IdentifiedArray(uniqueElements: Entry.mocks))),
+                        user: .mock
+                    )
+                )
+            }
+            await store.send(.destination(.dismiss)) {
+                $0.destination = .alert(.failed(.entrySave))
+                $0.pendingFailures = []
+            }
+        }
+
+        private static func failedAction(_ failure: Home.Failure) -> Home.Action {
+            switch failure {
+            case .entryDelete: .entryDeleteFailed(Entry.blueMoon.id, EntriesFailure())
+            case .entryImport: .entriesImportFailed(EntriesFailure())
+            case .entrySave: .entrySaveFailed(Entry.blueMoon.id, EntriesFailure())
+            }
         }
 
         private struct EntriesFailure: Error {}
