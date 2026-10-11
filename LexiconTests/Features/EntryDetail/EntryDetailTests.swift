@@ -70,7 +70,15 @@ extension BaseSuite {
 
         // The detail closes the form itself, and home receives the entry to save
         @Test
-        func savingTheEditedEntryClosesTheFormAndTellsTheParent() async {
+        func savingTheEditedEntryClosesTheFormAndTellsTheParent() async throws {
+            let edited = try Entry(
+                createdAt: Entry.blueMoon.createdAt,
+                definition: "Something that almost never happens.",
+                id: Entry.blueMoon.id,
+                isBookmarked: Entry.blueMoon.isBookmarked,
+                term: Entry.blueMoon.term
+            )
+
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(
                     initialState: EntryDetail.State(
@@ -82,18 +90,18 @@ extension BaseSuite {
                 } withDependencies: {
                     $0.hapticsClient.success = { playsHaptic() }
                 }
-                store.exhaustivity = .off
-
-                var edited = Entry.blueMoon
-                edited.definition = "Something that almost never happens."
 
                 await store.send(
                     .destination(.presented(.editEntry(.binding(.set(\.definition, edited.definition)))))
-                )
+                ) {
+                    $0.destination?.modify(\.editEntry) { $0.definition = edited.definition }
+                }
                 await store.send(.destination(.presented(.editEntry(.saveButtonTapped))))
-                await store.receive(\.delegate.didUpdate, edited) {
+                await store.receive(\.destination.presented.editEntry.delegate.didSubmit, edited) {
                     $0.destination = nil
                 }
+                await store.receive(\.delegate.didUpdate, edited)
+                await store.finish()
             }
         }
 
