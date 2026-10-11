@@ -191,6 +191,11 @@ struct Settings {
             }
         }
         .ifLet(\.$destination, action: \.destination)
+        .onChange(of: \.isLoadingImportFile) { _, isLoading in
+            Reduce { _, _ in
+                isLoading ? .none : .cancel(id: CancelID.importFileLoad)
+            }
+        }
     }
 
     #if DEBUG
