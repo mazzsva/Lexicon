@@ -21,15 +21,21 @@ struct Home {
 
     enum Alert: Equatable {}
 
+    enum Failure: CaseIterable, Hashable {
+        case entryDelete
+        case entryImport
+        case entrySave
+    }
+
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Shared var entries: EntriesPhase
-        var isImportFailurePending = false
         var isOnline = true
         var isShowingBookmarkedOnly = false
         var isSyncing = true
         var path = StackState<EntryDetail.State>()
+        var pendingFailures: Set<Failure> = []
         var searchText = ""
         let sessionOrigin: SessionOrigin
         let user: User
@@ -89,6 +95,10 @@ struct Home {
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
             return isSyncing ? .syncing : .synced
+        }
+
+        fileprivate var canPresentFailure: Bool {
+            destination == nil && path.allSatisfy { $0.destination == nil }
         }
 
         private func isVisible(_ entry: Entry) -> Bool {
@@ -172,7 +182,7 @@ struct Home {
 
             case .entriesImportFailed(let error):
                 logger.error("Importing the entries failed: \(error, privacy: .public)")
-                state.isImportFailurePending = true
+                state.pendingFailures.insert(.entryImport)
                 return .none
 
             case .entriesRetryTimerElapsed:
@@ -210,14 +220,12 @@ struct Home {
 
             case .entryDeleteFailed(let id, let error):
                 logger.error("Deleting entry \(id, privacy: .public) failed: \(error, privacy: .public)")
-                guard state.destination == nil else { return .none }
-                state.destination = .alert(.entryDeleteFailed)
+                state.pendingFailures.insert(.entryDelete)
                 return .none
 
             case .entrySaveFailed(let id, let error):
                 logger.error("Saving entry \(id, privacy: .public) failed: \(error, privacy: .public)")
-                guard state.destination == nil else { return .none }
-                state.destination = .alert(.entrySaveFailed)
+                state.pendingFailures.insert(.entrySave)
                 return .none
 
             case .newEntryButtonTapped:
@@ -255,12 +263,11 @@ struct Home {
         }
         Reduce { state, _ in
             guard
-                state.isImportFailurePending,
-                state.destination == nil,
-                state.path.allSatisfy({ $0.destination == nil })
+                state.canPresentFailure,
+                let failure = Failure.allCases.first(where: state.pendingFailures.contains)
             else { return .none }
-            state.isImportFailurePending = false
-            state.destination = .alert(.entriesImportFailed)
+            state.pendingFailures.remove(failure)
+            state.destination = .alert(.failed(failure))
             return .none
         }
     }
@@ -330,22 +337,19 @@ struct Home {
 extension Home.Destination.State: Equatable {}
 
 extension AlertState where Action == Home.Alert {
-    static let entriesImportFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Some entries couldn't be imported.")
-    }
-
-    static let entryDeleteFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your entry couldn't be deleted.")
-    }
-
-    static let entrySaveFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your entry couldn't be saved.")
+    static func failed(_ failure: Home.Failure) -> AlertState {
+        AlertState {
+            TextState("Something Went Wrong")
+        } message: {
+            switch failure {
+            case .entryDelete:
+                TextState("Your entry couldn't be deleted.")
+            case .entryImport:
+                TextState("Some entries couldn't be imported.")
+            case .entrySave:
+                TextState("Your entry couldn't be saved.")
+            }
+        }
     }
 }
 
