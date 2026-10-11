@@ -6,6 +6,7 @@
 //
 
 import CoreTransferable
+import Dependencies
 import Foundation
 import UniformTypeIdentifiers
 
@@ -93,7 +94,9 @@ extension EntriesArchive {
                 try EntriesArchive.data(for: export.entries)
             }
             .suggestedFileName { _ in
-                fileName(date: .now, timeZone: .current)
+                @Dependency(\.date.now) var now
+                @Dependency(\.timeZone) var timeZone
+                return fileName(date: now, timeZone: timeZone)
             }
         }
 
