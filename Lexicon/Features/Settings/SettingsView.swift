@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Bindable var store: StoreOf<Settings>
@@ -24,6 +25,20 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
                 }
+                Section {
+                    ShareLink(
+                        item: EntriesArchive.Export(entries: Array(store.entries ?? [])),
+                        preview: SharePreview("Lexicon Entries")
+                    ) {
+                        Text("Export Entries")
+                    }
+                    .disabled(!store.canExportEntries)
+                    Button("Import Entries") {
+                        store.send(.importEntriesButtonTapped)
+                    }
+                    .disabled(!store.canImportEntries)
+                }
+                .disabled(store.isDeletingAccount)
                 Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
@@ -77,6 +92,12 @@ struct SettingsView: View {
                 }
             }
             .alert($store.scope(state: \.alert, action: \.alert))
+            .fileImporter(
+                isPresented: $store.isFileImporterPresented.sending(\.fileImporterPresentationChanged),
+                allowedContentTypes: [.json]
+            ) { result in
+                store.send(.importFilePicked(result))
+            }
         }
         .safeAreaBar(edge: .bottom) {
             Text("Version \(Bundle.main.appVersion)")
@@ -92,7 +113,12 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView(
-        store: Store(initialState: Settings.State(user: .mock)) {
+        store: Store(
+            initialState: Settings.State(
+                entries: SharedReader(value: IdentifiedArray(uniqueElements: Entry.mocks)),
+                user: .mock
+            )
+        ) {
             Settings()
         }
     )

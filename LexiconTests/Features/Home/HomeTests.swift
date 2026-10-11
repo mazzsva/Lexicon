@@ -600,6 +600,244 @@ extension BaseSuite {
             }
         }
 
+        @Test
+        func importingClosesTheSettingsAndSavesOnlyTheNewEntries() async {
+            let new = Entry(
+                createdAt: Date(timeIntervalSince1970: 1_751_000_000),
+                definition: "To start a conversation.",
+                id: UUID(5),
+                isBookmarked: false,
+                term: "Break the ice"
+            )
+
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+
+            await confirmation("Saves the entries") { savesEntries in
+                await confirmation("Plays the success haptic") { playsHaptic in
+                    let store = TestStore(initialState: state) {
+                        Home()
+                    } withDependencies: {
+                        $0.entriesClient.saveAll = { entries, uid in
+                            expectNoDifference(entries, [new])
+                            expectNoDifference(uid, User.mock.uid)
+                            savesEntries()
+                        }
+                        $0.hapticsClient.success = { playsHaptic() }
+                    }
+
+                    await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon, new])))))) {
+                        $0.destination = nil
+                    }
+                    await store.finish()
+                }
+            }
+        }
+
+        @Test
+        func aFailedImportShowsAnAlert() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = [] }
+            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.entriesClient.saveAll = { _, _ in throw EntriesFailure() }
+                $0.hapticsClient.success = {}
+            }
+
+            await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon])))))) {
+                $0.destination = nil
+            }
+            await store.receive(\.entriesImportFailed) {
+                $0.destination = .alert(.entriesImportFailed)
+            }
+        }
+
+        @Test
+        func importingOnlyDuplicatesSavesNothing() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.hapticsClient.success = {}
+            }
+
+            await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon, .burningCandle])))))) {
+                $0.destination = nil
+            }
+            await store.finish()
+        }
+
+        @Test
+        func importingSavesARepeatedEntryOnce() async {
+            var renamed = Entry.blueMoon
+            renamed.term = "Renamed"
+
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = [] }
+            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+
+            await confirmation("Saves the entries") { savesEntries in
+                let store = TestStore(initialState: state) {
+                    Home()
+                } withDependencies: {
+                    $0.entriesClient.saveAll = { entries, _ in
+                        expectNoDifference(entries, [.blueMoon])
+                        savesEntries()
+                    }
+                    $0.hapticsClient.success = {}
+                }
+
+                await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon, renamed])))))) {
+                    $0.destination = nil
+                }
+                await store.finish()
+            }
+        }
+
+        @Test
+        func importingKeepsTheDetailOnScreen() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.entriesClient.saveAll = { _, _ in }
+                $0.hapticsClient.success = {}
+            }
+
+            await store.send(.destination(.presented(.settings(.delegate(.didImport([.blueMoon])))))) {
+                $0.destination = nil
+            }
+            #expect(store.state.path.count == 1)
+        }
+
+        @Test
+        func aFailedImportWaitsForThePresentedDestinationToClose() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = [] }
+            state.destination = .createEntry(EntryForm.State())
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.entriesImportFailed(EntriesFailure())) {
+                $0.isImportFailurePending = true
+            }
+            await store.send(.destination(.dismiss)) {
+                $0.destination = .alert(.entriesImportFailed)
+                $0.isImportFailurePending = false
+            }
+        }
+
+        @Test
+        func aFailedImportWaitsForTheDetailAlertToClose() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            let detailID = Array(state.path.ids)[0]
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.path(.element(id: detailID, action: .deleteButtonTapped))) {
+                $0.path[id: detailID]?.destination = .alert(.confirmDeletion)
+            }
+            await store.send(.entriesImportFailed(EntriesFailure())) {
+                $0.isImportFailurePending = true
+            }
+            await store.send(.path(.element(id: detailID, action: .destination(.dismiss)))) {
+                $0.destination = .alert(.entriesImportFailed)
+                $0.isImportFailurePending = false
+                $0.path[id: detailID]?.destination = nil
+            }
+        }
+
+        @Test
+        func theSettingsFollowTheSyncStatus() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = [] }
+            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.entriesUpdated(.empty)) {
+                $0.isSyncing = false
+                $0.destination?.modify(\.settings) { $0.isEntriesSynced = true }
+            }
+            await store.send(.connectivityChanged(false)) {
+                $0.isOnline = false
+                $0.destination?.modify(\.settings) { $0.isEntriesSynced = false }
+            }
+            await store.send(.connectivityChanged(true)) {
+                $0.isOnline = true
+                $0.destination?.modify(\.settings) { $0.isEntriesSynced = true }
+            }
+            await store.send(.entriesUpdated(.syncing)) {
+                $0.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+                $0.isSyncing = true
+                $0.destination?.modify(\.settings) { $0.isEntriesSynced = false }
+            }
+        }
+
+        @Test
+        func theSettingsOpenWithTheSyncStatus() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = [] }
+            state.isSyncing = false
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.settingsButtonTapped) {
+                $0.destination = .settings(
+                    Settings.State(entries: SharedReader(value: []), isEntriesSynced: true, user: .mock)
+                )
+            }
+        }
+
+        @Test
+        func aFailedStreamStopsTheImportInTheOpenSettings() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = IdentifiedArray(uniqueElements: Entry.mocks) }
+            state.isSyncing = false
+            state.destination = .settings(
+                Settings.State(entries: SharedReader(state.$entries), isEntriesSynced: true, user: .mock)
+            )
+
+            let clock = TestClock()
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.continuousClock = clock
+                $0.entriesClient.entries = { _ in
+                    AsyncThrowingStream { continuation in continuation.finish() }
+                }
+            }
+
+            await store.send(.entriesStreamFailed) {
+                $0.isSyncing = true
+                $0.destination?.modify(\.settings) { $0.isEntriesSynced = false }
+            }
+            await clock.advance(by: .seconds(5))
+            await store.receive(\.entriesRetryTimerElapsed)
+            await store.finish()
+        }
+
         private struct EntriesFailure: Error {}
     }
 }

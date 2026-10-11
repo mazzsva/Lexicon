@@ -7,6 +7,15 @@
     "^[%lld Entry](inflect: true)" : {
 
     },
+    "^[%lld entry](inflect: true) already in Lexicon will be skipped." : {
+
+    },
+    "^[%lld entry](inflect: true) can't be imported and will be skipped." : {
+
+    },
+    "All the entries in this file are already in Lexicon." : {
+
+    },
     "Are you sure you want to delete this entry?" : {
 
     },
@@ -22,7 +31,13 @@
     "Bookmarked" : {
 
     },
+    "Can't Import Right Now" : {
+
+    },
     "Cancel" : {
+
+    },
+    "Connect to the internet and wait for your entries to sync, then try again." : {
 
     },
     "Continue" : {
@@ -61,8 +76,23 @@
     "Email" : {
 
     },
+    "Export Entries" : {
+
+    },
+    "Import" : {
+
+    },
+    "Import ^[%lld Entry](inflect: true)?" : {
+
+    },
+    "Import Entries" : {
+
+    },
     "Lexicon" : {
       "shouldTranslate" : false
+    },
+    "Lexicon Entries" : {
+
     },
     "Make every word yours." : {
 
@@ -77,6 +107,9 @@
 
     },
     "No Internet" : {
+
+    },
+    "Nothing to Import" : {
 
     },
     "Remove Bookmark" : {
@@ -109,6 +142,9 @@
     "Signing in…" : {
 
     },
+    "Some entries couldn't be imported." : {
+
+    },
     "Something Went Wrong" : {
 
     },
@@ -119,6 +155,21 @@
 
     },
     "Term" : {
+
+    },
+    "The file couldn't be opened." : {
+
+    },
+    "There are no entries to import." : {
+
+    },
+    "This file is too large to import." : {
+
+    },
+    "This file isn't a Lexicon export." : {
+
+    },
+    "This file was made by a newer version of Lexicon." : {
 
     },
     "Unknown" : {

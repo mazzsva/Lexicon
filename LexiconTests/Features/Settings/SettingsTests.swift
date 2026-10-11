@@ -470,6 +470,216 @@ extension BaseSuite {
         }
         #endif
 
+        @Test
+        func theImportButtonOpensTheFileImporter() async {
+            let store = TestStore(
+                initialState: Settings.State(entries: SharedReader(value: []), isEntriesSynced: true, user: .mock)
+            ) {
+                Settings()
+            }
+
+            await store.send(.importEntriesButtonTapped) {
+                $0.isFileImporterPresented = true
+            }
+            await store.send(.fileImporterPresentationChanged(false)) {
+                $0.isFileImporterPresented = false
+            }
+        }
+
+        @Test
+        func theImportButtonWaitsForTheFirstLoad() async {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            }
+
+            #expect(!store.state.canExportEntries)
+            #expect(!store.state.canImportEntries)
+            await store.send(.importEntriesButtonTapped)
+        }
+
+        @Test
+        func onlyAListWithEntriesCanBeExported() {
+            #expect(!Settings.State(entries: SharedReader(value: []), user: .mock).canExportEntries)
+            #expect(Settings.State(entries: SharedReader(value: [.blueMoon]), user: .mock).canExportEntries)
+        }
+
+        @Test
+        func aPickedFileAsksToImportOnlyTheNewValidEntries() async {
+            let now = Date(timeIntervalSince1970: 1_791_711_000)
+            let file = Data(
+                """
+                {
+                  "version": 1,
+                  "entries": [
+                    { "id": "\(Entry.blueMoon.id)", "term": "Once in a blue moon" },
+                    {
+                      "id": "\(UUID(5))",
+                      "term": "  Break the ice  ",
+                      "definition": "  To start a conversation.  ",
+                      "isBookmarked": true,
+                      "createdAt": "2025-06-15T15:06:40.000Z"
+                    },
+                    { "id": "\(UUID(5))", "term": "Break the ice again" },
+                    { "term": "Spill the beans" },
+                    { "term": "   " }
+                  ]
+                }
+                """
+                .utf8
+            )
+            let imported = [
+                Entry(
+                    createdAt: Date(timeIntervalSince1970: 1_750_000_000),
+                    definition: "To start a conversation.",
+                    id: UUID(5),
+                    isBookmarked: true,
+                    term: "Break the ice"
+                ),
+                Entry(createdAt: now, definition: "", id: UUID(9), isBookmarked: false, term: "Spill the beans"),
+            ]
+
+            let store = TestStore(
+                initialState: Settings.State(
+                    entries: SharedReader(value: IdentifiedArray(uniqueElements: Entry.mocks)),
+                    isEntriesSynced: true,
+                    user: .mock
+                )
+            ) {
+                Settings()
+            } withDependencies: {
+                $0.date.now = now
+                $0.fileClient.read = { url, maximumSize in
+                    expectNoDifference(url, URL(filePath: "/Entries.json"))
+                    expectNoDifference(maximumSize, Settings.maximumImportFileSize)
+                    return file
+                }
+                $0.uuid = .constant(UUID(9))
+            }
+
+            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
+            await store.receive(\.importFileLoaded) {
+                $0.alert = .confirmImport(imported, duplicateCount: 1, invalidCount: 1)
+            }
+            await store.send(.alert(.presented(.confirmImport(imported)))) {
+                $0.alert = nil
+            }
+            await store.receive(\.delegate.didImport, imported)
+        }
+
+        @Test
+        func theImportButtonWaitsForTheEntriesToSync() async {
+            let store = TestStore(initialState: Settings.State(entries: SharedReader(value: []), user: .mock)) {
+                Settings()
+            }
+
+            await store.send(.importEntriesButtonTapped) {
+                $0.alert = .importNeedsSync
+            }
+        }
+
+        @Test
+        func aConfirmationAfterTheSyncStopsDoesNotImport() async {
+            var state = Settings.State(entries: SharedReader(value: []), user: .mock)
+            state.alert = .confirmImport([.blueMoon], duplicateCount: 0, invalidCount: 0)
+
+            let store = TestStore(initialState: state) {
+                Settings()
+            }
+
+            await store.send(.alert(.presented(.confirmImport([.blueMoon])))) {
+                $0.alert = .importNeedsSync
+            }
+        }
+
+        @Test
+        func aFileWithOnlyDuplicatesHasNothingToImport() async {
+            let store = TestStore(
+                initialState: Settings.State(
+                    entries: SharedReader(value: IdentifiedArray(uniqueElements: Entry.mocks)),
+                    isEntriesSynced: true,
+                    user: .mock
+                )
+            ) {
+                Settings()
+            } withDependencies: {
+                $0.fileClient.read = { _, _ in try EntriesArchive.data(for: [.blueMoon]) }
+            }
+
+            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
+            await store.receive(\.importFileLoaded) {
+                $0.alert = .importHasOnlyDuplicates
+            }
+        }
+
+        @Test
+        func aFileWithoutValidEntriesHasNothingToImport() async {
+            let store = TestStore(
+                initialState: Settings.State(entries: SharedReader(value: []), isEntriesSynced: true, user: .mock)
+            ) {
+                Settings()
+            } withDependencies: {
+                $0.fileClient.read = { _, _ in Data(#"{ "version": 1, "entries": [{ "term": "" }] }"#.utf8) }
+            }
+
+            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
+            await store.receive(\.importFileLoaded) {
+                $0.alert = .importHasNoEntries
+            }
+        }
+
+        @Test
+        func aFileThatFailsToLoadShowsAnAlert() async {
+            let store = TestStore(initialState: Settings.State(entries: SharedReader(value: []), user: .mock)) {
+                Settings()
+            } withDependencies: {
+                $0.fileClient.read = { _, _ in throw FileClient.ReadError.tooLarge }
+            }
+
+            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
+            await store.receive(\.importFileLoaded) {
+                $0.alert = .importFailed(FileClient.ReadError.tooLarge)
+            }
+        }
+
+        @Test
+        func aFailedPickShowsAnAlert() async {
+            let store = TestStore(initialState: Settings.State(entries: SharedReader(value: []), user: .mock)) {
+                Settings()
+            }
+
+            await store.send(.importFilePicked(.failure(CocoaError(.fileReadNoPermission)))) {
+                $0.alert = .importFailed(CocoaError(.fileReadNoPermission))
+            }
+        }
+
+        @Test(
+            arguments: [
+                (FileClient.ReadError.tooLarge as any Error, "This file is too large to import."),
+                (EntriesArchive.Error.invalid, "This file isn't a Lexicon export."),
+                (EntriesArchive.Error.unsupportedVersion, "This file was made by a newer version of Lexicon."),
+                (CocoaError(.fileReadNoPermission), "The file couldn't be opened."),
+            ]
+        )
+        func eachImportFailureHasItsOwnMessage(error: any Error, message: String) {
+            expectNoDifference(AlertState<Settings.Alert>.importFailed(error).message, TextState(message))
+        }
+
+        @Test
+        func theConfirmationListsTheSkippedEntries() {
+            expectNoDifference(
+                AlertState<Settings.Alert>.confirmImport([.blueMoon], duplicateCount: 0, invalidCount: 0).message,
+                nil
+            )
+            expectNoDifference(
+                AlertState<Settings.Alert>.confirmImport([.blueMoon], duplicateCount: 2, invalidCount: 0).message,
+                TextState("^[\(2) entry](inflect: true) already in Lexicon will be skipped.")
+            )
+            expectNoDifference(
+                AlertState<Settings.Alert>.confirmImport([.blueMoon], duplicateCount: 0, invalidCount: 1).message,
+                TextState("^[\(1) entry](inflect: true) can't be imported and will be skipped.")
+            )
+        }
+
         private struct DeletionFailure: Error {}
 
         private struct SignOutFailure: Error {}

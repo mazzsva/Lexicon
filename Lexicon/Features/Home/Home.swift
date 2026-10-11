@@ -24,6 +24,7 @@ struct Home {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Shared var entries: IdentifiedArrayOf<Entry>?
+        var isImportFailurePending = false
         var isOnline = true
         var isShowingBookmarkedOnly = false
         var isSyncing = true
@@ -94,6 +95,7 @@ struct Home {
         case bookmarkFilterButtonTapped
         case connectivityChanged(Bool)
         case destination(PresentationAction<Destination.Action>)
+        case entriesImportFailed(any Error)
         case entriesRetryTimerElapsed
         case entriesStreamFailed
         case entriesUpdated(EntriesSnapshot)
@@ -128,6 +130,7 @@ struct Home {
 
             case .connectivityChanged(let isOnline):
                 state.isOnline = isOnline
+                updateSettingsSyncStatus(&state)
                 return .none
 
             case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
@@ -137,7 +140,23 @@ struct Home {
                     save(entry, uid: state.user.uid)
                 )
 
+            case .destination(.presented(.settings(.delegate(.didImport(let entries))))):
+                state.destination = nil
+                var newEntries = IdentifiedArrayOf<Entry>()
+                for entry in entries where state.entries?[id: entry.id] == nil && newEntries[id: entry.id] == nil {
+                    newEntries.append(entry)
+                }
+                return .merge(
+                    .run { _ in await hapticsClient.success() },
+                    newEntries.isEmpty ? .none : importEntries(Array(newEntries), uid: state.user.uid)
+                )
+
             case .destination:
+                return .none
+
+            case .entriesImportFailed(let error):
+                logger.error("Importing the entries failed: \(error, privacy: .public)")
+                state.isImportFailurePending = true
                 return .none
 
             case .entriesRetryTimerElapsed:
@@ -145,6 +164,7 @@ struct Home {
 
             case .entriesStreamFailed:
                 state.isSyncing = true
+                updateSettingsSyncStatus(&state)
                 let retry: Effect<Action> =
                     .run { send in
                         try await clock.sleep(for: .seconds(5))
@@ -158,6 +178,7 @@ struct Home {
             case .entriesUpdated(let snapshot):
                 let isFirstLoad = state.entries == nil
                 state.isSyncing = snapshot.isSyncing
+                updateSettingsSyncStatus(&state)
                 let entries = IdentifiedArray(uniqueElements: snapshot.entries)
                 state.$entries.withLock { $0 = entries }
                 if entries.isEmpty {
@@ -203,7 +224,13 @@ struct Home {
                 return .none
 
             case .settingsButtonTapped:
-                state.destination = .settings(Settings.State(user: state.user))
+                state.destination = .settings(
+                    Settings.State(
+                        entries: SharedReader(state.$entries),
+                        isEntriesSynced: state.syncStatus == .synced,
+                        user: state.user
+                    )
+                )
                 return .none
 
             case .task:
@@ -217,6 +244,16 @@ struct Home {
         .forEach(\.path, action: \.path) {
             EntryDetail()
         }
+        Reduce { state, _ in
+            guard
+                state.isImportFailurePending,
+                state.destination == nil,
+                state.path.allSatisfy({ $0.destination == nil })
+            else { return .none }
+            state.isImportFailurePending = false
+            state.destination = .alert(.entriesImportFailed)
+            return .none
+        }
     }
 
     // The haptic welcomes the user into the app, so it plays even when the entries fail to load
@@ -229,6 +266,14 @@ struct Home {
             try await entriesClient.delete(id: id, uid: uid)
         } catch: { error, send in
             await send(.entryDeleteFailed(id, error))
+        }
+    }
+
+    private func importEntries(_ entries: [Entry], uid: String) -> Effect<Action> {
+        .run { _ in
+            try await entriesClient.saveAll(entries: entries, uid: uid)
+        } catch: { error, send in
+            await send(.entriesImportFailed(error))
         }
     }
 
@@ -265,11 +310,22 @@ struct Home {
             }
             .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
     }
+
+    private func updateSettingsSyncStatus(_ state: inout State) {
+        let isSynced = state.syncStatus == .synced
+        state.destination?.modify(\.settings) { $0.isEntriesSynced = isSynced }
+    }
 }
 
 extension Home.Destination.State: Equatable {}
 
 extension AlertState where Action == Home.Alert {
+    static let entriesImportFailed = AlertState {
+        TextState("Something Went Wrong")
+    } message: {
+        TextState("Some entries couldn't be imported.")
+    }
+
     static let entryDeleteFailed = AlertState {
         TextState("Something Went Wrong")
     } message: {
