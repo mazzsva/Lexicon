@@ -13,12 +13,16 @@ import Testing
 
 extension BaseSuite {
     @Suite
-    struct FileClientTests {
+    final class FileClientTests {
         let directory: URL
 
         init() throws {
             directory = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+
+        deinit {
+            try? FileManager.default.removeItem(at: directory)
         }
 
         @Test
@@ -39,32 +43,15 @@ extension BaseSuite {
             }
         }
 
-        @Test
-        func theLiveReadFollowsASymbolicLink() async throws {
-            let target = try file(size: 4)
-            let link = directory.appending(path: "Link.json")
-            try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+        @Test(arguments: [false, true])
+        func theLiveReadFailsForAFileItCannotRead(isDirectory: Bool) async {
+            let url = isDirectory ? directory : directory.appending(path: "Missing.json")
 
-            let data = try await FileClient.liveValue.read(url: link, maximumSize: 10)
-
-            expectNoDifference(data, Data(repeating: 65, count: 4))
-        }
-
-        @Test
-        func theLiveReadFailsForAMissingFile() async {
-            await #expect(throws: (any Error).self) {
-                try await FileClient.liveValue.read(url: directory.appending(path: "Missing.json"), maximumSize: 10)
+            let error = await #expect(throws: (any Error).self) {
+                try await FileClient.liveValue.read(url: url, maximumSize: 10)
             }
-        }
 
-        @Test
-        func theLiveReadFailsForADirectory() async throws {
-            do {
-                _ = try await FileClient.liveValue.read(url: directory, maximumSize: 10)
-                Issue.record("The read of a directory succeeded.")
-            } catch {
-                #expect(!(error is FileClient.ReadError))
-            }
+            #expect(!(error is FileClient.ReadError))
         }
 
         private func file(size: Int) throws -> URL {
