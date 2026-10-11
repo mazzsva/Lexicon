@@ -226,6 +226,7 @@ extension Entry {
             let createdAt = data["createdAt"] as? Timestamp,
             let definition = data["definition"] as? String,
             let id = UUID(uuidString: document.documentID),
+            id.uuidString == document.documentID,
             let isBookmarked = data["isBookmarked"] as? Bool,
             let term = data["term"] as? String,
             let content = try? Entry.Content(storedTerm: term, definition: definition),
