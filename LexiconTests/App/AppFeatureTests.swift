@@ -309,21 +309,48 @@ extension BaseSuite {
                 $0.continuousClock = TestClock()
                 $0.signInWithAppleClient.requestCredential = { .mock }
             }
-            store.exhaustivity = .off
 
-            await store.send(\.scene.home.settingsButtonTapped)
-            await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped)
+            await store.send(\.scene.home.settingsButtonTapped) {
+                $0.scene?
+                    .modify(\.home) { home in
+                        home.destination = .settings(Settings.State(entries: SharedReader(home.$entries), user: .mock))
+                    }
+            }
+            await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped) {
+                $0.scene?
+                    .modify(\.home) { home in
+                        home.destination?.modify(\.settings) { $0.destination = .alert(.confirmAccountDeletion) }
+                    }
+            }
             await store.send(
                 .scene(
                     .home(
                         .destination(.presented(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
                     )
                 )
-            )
+            ) {
+                $0.scene?
+                    .modify(\.home) { home in
+                        home.destination?.modify(\.settings) { $0.destination = nil }
+                    }
+            }
+            await store.receive(\.scene.home.destination.presented.settings.delegate.didConfirmAccountDeletion) {
+                $0.scene?
+                    .modify(\.home) { $0.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid)) }
+            }
+            await store.receive(\.scene.home.destination.presented.accountDeletion.deletionConfirmed)
             expectNoDifference(store.state.loadingMessage, nil)
 
-            await store.receive(\.scene.home.destination.presented.accountDeletion.appleCredentialReceived)
+            await store.receive(\.scene.home.destination.presented.accountDeletion.appleCredentialReceived) {
+                $0.scene?
+                    .modify(\.home) { home in
+                        home.destination?.modify(\.accountDeletion) { $0.step = .deleting }
+                    }
+            }
             expectNoDifference(store.state.loadingMessage, "Deleting your account…")
+            await store.send(\.scene.home.destination.dismiss) {
+                $0.scene?.modify(\.home) { $0.destination = nil }
+            }
         }
 
         // Auth must not change accounts without a sign out, so the app also reports an issue
