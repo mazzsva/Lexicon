@@ -246,10 +246,8 @@ extension BaseSuite {
         // The deletion revokes the credential itself, and a sign out would stop it
         @Test
         func theCredentialChecksAreIgnoredWhileDeletingTheAccount() async {
-            var settings = Settings.State(user: .mock)
-            settings.deletionStep = .credentialRevoked
             var home = Home.State(user: .mock)
-            home.destination = .settings(settings)
+            home.destination = .accountDeletion(AccountDeletion.State(step: .credentialRevoked, uid: User.mock.uid))
             var state = AppFeature.State()
             state.scene = .home(home)
 
@@ -277,18 +275,13 @@ extension BaseSuite {
             state.scene?.modify(\.signIn) { $0.step = .signingIn(isNewAccount: true) }
             expectNoDifference(state.loadingMessage, "Creating your account…")
 
-            var settings = Settings.State(user: .mock)
-            settings.deletionStep = .reauthenticating
             var home = Home.State(user: .mock)
-            home.destination = .settings(settings)
+            home.destination = .accountDeletion(AccountDeletion.State(step: .reauthenticating, uid: User.mock.uid))
             state.scene = .home(home)
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, nil)
 
-            state.scene?
-                .modify(\.home) {
-                    $0.destination?.modify(\.settings) { $0.deletionStep = .deleting }
-                }
+            state.scene?.modify(\.home) { $0.destination?.modify(\.accountDeletion) { $0.step = .deleting } }
             expectNoDifference(state.loadingMessage, "Deleting your account…")
 
             state.scene = .home(
@@ -321,11 +314,15 @@ extension BaseSuite {
             await store.send(\.scene.home.settingsButtonTapped)
             await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped)
             await store.send(
-                .scene(.home(.destination(.presented(.settings(.alert(.presented(.confirmAccountDeletion)))))))
+                .scene(
+                    .home(
+                        .destination(.presented(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
+                    )
+                )
             )
             expectNoDifference(store.state.loadingMessage, nil)
 
-            await store.receive(\.scene.home.destination.settings.appleCredentialReceived)
+            await store.receive(\.scene.home.destination.presented.accountDeletion.appleCredentialReceived)
             expectNoDifference(store.state.loadingMessage, "Deleting your account…")
         }
 
@@ -340,18 +337,47 @@ extension BaseSuite {
                 AppFeature()
             } withDependencies: {
                 $0.authClient.appleUserID = { nil }
+                $0.authClient.currentUser = { other }
                 $0.entriesClient.clearLocalData = {}
             }
 
-            await withExpectedIssue {
+            await withKnownIssue {
                 await store.send(.authUserChanged(other)) {
                     $0.scene = nil
                 }
             }
-            await store.receive(\.authUserChanged) {
+            await store.receive(\.authUserChanged, other) {
                 $0.scene = .home(Home.State(user: other))
             }
             await store.finish()
+        }
+
+        @Test
+        func aSignOutDuringTheAccountSwitchEndsAtTheSignIn() async {
+            let events = LockIsolated<[String]>([])
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.currentUser = {
+                    events.withValue { $0.append("currentUser") }
+                    return nil
+                }
+                $0.entriesClient.clearLocalData = { events.withValue { $0.append("clearLocalData") } }
+            }
+
+            await withKnownIssue {
+                await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
+                    $0.scene = nil
+                }
+            }
+            await store.receive(\.authUserChanged, nil) {
+                $0.scene = .signIn(SignIn.State())
+            }
+            await store.finish()
+            expectNoDifference(events.value, ["clearLocalData", "currentUser", "clearLocalData"])
         }
 
         // The loading state hides the sign in controls while the local data disappears
