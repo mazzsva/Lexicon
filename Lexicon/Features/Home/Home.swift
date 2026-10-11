@@ -138,7 +138,7 @@ struct Home {
                 return .none
 
             case .destination(.presented(.accountDeletion(.delegate(.didFail(let failure))))):
-                presentSettings(&state, alert: .accountDeletionFailed(failure))
+                presentSettings(&state, destination: .alert(.accountDeletionFailed(failure)))
                 return .none
 
             case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
@@ -286,9 +286,9 @@ struct Home {
         .cancellable(id: CancelID.connectivitySubscription, cancelInFlight: true)
     }
 
-    private func presentSettings(_ state: inout State, alert: AlertState<Settings.Alert>? = nil) {
+    private func presentSettings(_ state: inout State, destination: Settings.Destination.State? = nil) {
         state.destination = .settings(
-            Settings.State(alert: alert, entries: SharedReader(state.$entries), user: state.user)
+            Settings.State(destination: destination, entries: SharedReader(state.$entries), user: state.user)
         )
     }
 

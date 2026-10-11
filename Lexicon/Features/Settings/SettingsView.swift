@@ -33,8 +33,16 @@ struct SettingsView: View {
                         Text("Export Entries")
                     }
                     .disabled(!store.canExportEntries)
-                    Button("Import Entries") {
+                    Button {
                         store.send(.importEntriesButtonTapped)
+                    } label: {
+                        HStack {
+                            Text("Import Entries")
+                            Spacer()
+                            if store.isLoadingImportFile {
+                                ProgressView()
+                            }
+                        }
                     }
                     .disabled(!store.canImportEntries)
                 }
@@ -87,7 +95,7 @@ struct SettingsView: View {
                     .labelStyle(.iconOnly)
                 }
             }
-            .alert($store.scope(state: \.alert, action: \.alert))
+            .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
             .fileImporter(
                 isPresented: $store.isFileImporterPresented.sending(\.fileImporterPresentationChanged),
                 allowedContentTypes: [.json]

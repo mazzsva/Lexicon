@@ -17,9 +17,16 @@ struct Settings {
         case confirmSignOut
     }
 
+    @Reducer
+    enum Destination {
+        case alert(AlertState<Settings.Alert>)
+        @ReducerCaseIgnored
+        case loadingImportFile
+    }
+
     @ObservableState
     struct State: Equatable {
-        @Presents var alert: AlertState<Settings.Alert>?
+        @Presents var destination: Destination.State?
         @SharedReader var entries: IdentifiedArrayOf<Entry>?
         var isFileImporterPresented = false
         #if DEBUG
@@ -28,22 +35,23 @@ struct Settings {
         let user: User
 
         init(
-            alert: AlertState<Settings.Alert>? = nil,
+            destination: Destination.State? = nil,
             entries: SharedReader<IdentifiedArrayOf<Entry>?>,
             user: User
         ) {
-            self.alert = alert
+            self.destination = destination
             _entries = entries
             self.user = user
         }
 
         var canExportEntries: Bool { !(entries?.isEmpty ?? true) }
 
-        var canImportEntries: Bool { entries != nil }
+        var canImportEntries: Bool { entries != nil && !isLoadingImportFile }
+
+        var isLoadingImportFile: Bool { destination.is(\.loadingImportFile) }
     }
 
     enum Action {
-        case alert(PresentationAction<Alert>)
         #if DEBUG
         case debugAddMockEntriesButtonTapped
         case debugDeleteAllEntriesButtonTapped
@@ -51,6 +59,7 @@ struct Settings {
         #endif
         case delegate(Delegate)
         case deleteAccountButtonTapped
+        case destination(PresentationAction<Destination.Action>)
         case dismissButtonTapped
         case fileImporterPresentationChanged(Bool)
         case importEntriesButtonTapped
@@ -80,25 +89,6 @@ struct Settings {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .alert(.presented(.confirmAccountDeletion)):
-                return .send(.delegate(.didConfirmAccountDeletion))
-
-            case .alert(.presented(.confirmImport(let entries))):
-                return .send(.delegate(.didImport(entries)))
-
-            case .alert(.presented(.confirmSignOut)):
-                return .merge(
-                    .cancel(id: CancelID.importFileLoad),
-                    .run { _ in
-                        try await authClient.signOut()
-                    } catch: { error, send in
-                        await send(.signOutFailed(error))
-                    }
-                )
-
-            case .alert:
-                return .none
-
             #if DEBUG
             case .debugAddMockEntriesButtonTapped:
                 return addMockEntries(uid: state.user.uid)
@@ -115,7 +105,23 @@ struct Settings {
                 return .none
 
             case .deleteAccountButtonTapped:
-                state.alert = .confirmAccountDeletion
+                state.destination = .alert(.confirmAccountDeletion)
+                return .none
+
+            case .destination(.presented(.alert(.confirmAccountDeletion))):
+                return .send(.delegate(.didConfirmAccountDeletion))
+
+            case .destination(.presented(.alert(.confirmImport(let entries)))):
+                return .send(.delegate(.didImport(entries)))
+
+            case .destination(.presented(.alert(.confirmSignOut))):
+                return .run { _ in
+                    try await authClient.signOut()
+                } catch: { error, send in
+                    await send(.signOutFailed(error))
+                }
+
+            case .destination:
                 return .none
 
             case .dismissButtonTapped:
@@ -130,31 +136,39 @@ struct Settings {
                 state.isFileImporterPresented = true
                 return .none
 
-            case .importFileLoaded(.failure(let error)):
-                logger.error("Loading the import file failed: \(error, privacy: .public)")
-                state.alert = .importFailed(error)
-                return .none
-
-            case .importFileLoaded(.success(let records)):
-                guard let existing = state.entries else { return .none }
-                let entriesImport = EntriesArchive.Import(
-                    records: records,
-                    existing: existing.elements,
-                    now: now,
-                    uuid: { uuid() }
-                )
-                state.alert =
-                    entriesImport.entries.isEmpty
-                    ? entriesImport.duplicateCount > 0 ? .importHasOnlyDuplicates : .importHasNoEntries
-                    : .confirmImport(entriesImport)
+            case .importFileLoaded(let result):
+                guard state.isLoadingImportFile else { return .none }
+                switch result {
+                case .failure(let error):
+                    logger.error("Loading the import file failed: \(error, privacy: .public)")
+                    state.destination = .alert(.importFailed(error))
+                case .success(let records):
+                    guard let existing = state.entries else {
+                        reportIssue("The import file loaded while the entries were not loaded.")
+                        state.destination = nil
+                        return .none
+                    }
+                    let entriesImport = EntriesArchive.Import(
+                        records: records,
+                        existing: existing.elements,
+                        now: now,
+                        uuid: { uuid() }
+                    )
+                    state.destination = .alert(
+                        entriesImport.entries.isEmpty
+                            ? entriesImport.duplicateCount > 0 ? .importHasOnlyDuplicates : .importHasNoEntries
+                            : .confirmImport(entriesImport)
+                    )
+                }
                 return .none
 
             case .importFilePicked(.failure(let error)):
                 logger.error("Picking the import file failed: \(error, privacy: .public)")
-                state.alert = .importFailed(error)
+                state.destination = .alert(.importFailed(error))
                 return .none
 
             case .importFilePicked(.success(let url)):
+                state.destination = .loadingImportFile
                 return
                     .run { send in
                         do {
@@ -167,16 +181,16 @@ struct Settings {
                     .cancellable(id: CancelID.importFileLoad, cancelInFlight: true)
 
             case .signOutButtonTapped:
-                state.alert = .confirmSignOut
+                state.destination = .alert(.confirmSignOut)
                 return .none
 
             case .signOutFailed(let error):
                 logger.error("Sign out failed: \(error, privacy: .public)")
-                state.alert = .signOutFailed
+                state.destination = .alert(.signOutFailed)
                 return .none
             }
         }
-        .ifLet(\.$alert, action: \.alert)
+        .ifLet(\.$destination, action: \.destination)
     }
 
     #if DEBUG
@@ -199,6 +213,8 @@ struct Settings {
     }
     #endif
 }
+
+extension Settings.Destination.State: Equatable {}
 
 extension AlertState where Action == Settings.Alert {
     static func accountDeletionFailed(_ failure: AccountDeletion.Failure) -> AlertState {
