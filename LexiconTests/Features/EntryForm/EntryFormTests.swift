@@ -31,9 +31,9 @@ extension BaseSuite {
 
         // The form gives the entry an identity, so the save does not wait for the server
         @Test
-        func creatingAnEntryGeneratesItsIdentityAndDate() async {
+        func creatingAnEntryGeneratesItsIdentityAndDate() async throws {
             let now = Date(timeIntervalSince1970: 1_751_000_000)
-            let created = Entry(
+            let created = try Entry(
                 createdAt: now,
                 definition: "The easiest wins, taken first.",
                 id: UUID(0),
@@ -60,9 +60,14 @@ extension BaseSuite {
 
         // The identity and the date come from the original, so the save replaces it
         @Test
-        func editingAnEntryKeepsItsIdentity() async {
-            var edited = Entry.blueMoon
-            edited.definition = "A rare event."
+        func editingAnEntryKeepsItsIdentity() async throws {
+            let edited = try Entry(
+                createdAt: Entry.blueMoon.createdAt,
+                definition: "A rare event.",
+                id: Entry.blueMoon.id,
+                isBookmarked: Entry.blueMoon.isBookmarked,
+                term: Entry.blueMoon.term
+            )
 
             let store = TestStore(initialState: EntryForm.State(entry: .blueMoon)) {
                 EntryForm()
@@ -85,6 +90,26 @@ extension BaseSuite {
             await store.send(.binding(.set(\.term, "   "))) {
                 $0.term = "   "
             }
+            await store.send(.saveButtonTapped)
+        }
+
+        @Test
+        func savingAnEntryOverTheSizeLimitDoesNothing() async {
+            let term = String(repeating: "a", count: Entry.Content.maximumSize / 2)
+            let definition = String(repeating: "é", count: Entry.Content.maximumSize / 4 + 1)
+
+            let store = TestStore(initialState: EntryForm.State()) {
+                EntryForm()
+            }
+
+            await store.send(.binding(.set(\.term, term))) {
+                $0.term = term
+            }
+            await store.send(.binding(.set(\.definition, definition))) {
+                $0.definition = definition
+            }
+            #expect(!store.state.isSubmittable)
+
             await store.send(.saveButtonTapped)
         }
 
