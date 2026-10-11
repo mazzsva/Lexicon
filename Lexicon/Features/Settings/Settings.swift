@@ -11,28 +11,15 @@ import os
 
 @Reducer
 struct Settings {
-    enum AccountDeletionError: Error {
-        case missingAuthorizationCode
-        case timedOut
-    }
-
     enum Alert: Equatable {
         case confirmAccountDeletion
         case confirmImport([Entry])
         case confirmSignOut
     }
 
-    enum DeletionStep: Equatable {
-        case credentialRevoked
-        case deleting
-        case entriesDeleted
-        case reauthenticating
-    }
-
     @ObservableState
     struct State: Equatable {
         @Presents var alert: AlertState<Settings.Alert>?
-        var deletionStep: DeletionStep?
         @SharedReader var entries: IdentifiedArrayOf<Entry>?
         var isFileImporterPresented = false
         #if DEBUG
@@ -41,9 +28,11 @@ struct Settings {
         let user: User
 
         init(
-            entries: SharedReader<IdentifiedArrayOf<Entry>?> = SharedReader(value: nil),
+            alert: AlertState<Settings.Alert>? = nil,
+            entries: SharedReader<IdentifiedArrayOf<Entry>?>,
             user: User
         ) {
+            self.alert = alert
             _entries = entries
             self.user = user
         }
@@ -51,17 +40,10 @@ struct Settings {
         var canExportEntries: Bool { !(entries?.isEmpty ?? true) }
 
         var canImportEntries: Bool { entries != nil }
-
-        var isDeletingAccount: Bool { deletionStep != nil }
-
-        var isReauthenticating: Bool { deletionStep == .reauthenticating }
     }
 
     enum Action {
-        case accountDeletionFailed(any Error)
         case alert(PresentationAction<Alert>)
-        case appleCredentialReceived
-        case appleCredentialRevoked
         #if DEBUG
         case debugAddMockEntriesButtonTapped
         case debugDeleteAllEntriesButtonTapped
@@ -70,7 +52,6 @@ struct Settings {
         case delegate(Delegate)
         case deleteAccountButtonTapped
         case dismissButtonTapped
-        case entriesDeleted
         case fileImporterPresentationChanged(Bool)
         case importEntriesButtonTapped
         case importFileLoaded(Result<[EntriesArchive.Record], any Error>)
@@ -80,6 +61,7 @@ struct Settings {
 
         @CasePathable
         enum Delegate {
+            case didConfirmAccountDeletion
             case didImport([Entry])
         }
     }
@@ -89,57 +71,32 @@ struct Settings {
     }
 
     @Dependency(\.authClient) var authClient
-    @Dependency(\.continuousClock) var clock
     @Dependency(\.date.now) var now
     @Dependency(\.dismiss) var dismiss
     @Dependency(\.entriesClient) var entriesClient
     @Dependency(\.fileClient) var fileClient
-    @Dependency(\.signInWithAppleClient) var signInWithAppleClient
     @Dependency(\.uuid) var uuid
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .accountDeletionFailed(let error):
-                guard state.deletionStep != .credentialRevoked else {
-                    logger.error(
-                        "Account deletion failed after the revoke attempt; signing out: \(error, privacy: .public)")
-                    return signOut()
-                }
-                let hasDeletedEntries = state.deletionStep == .entriesDeleted
-                state.deletionStep = nil
-                if !error.isSignInWithAppleCancellation {
-                    logger.error("Account deletion failed: \(error, privacy: .public)")
-                    state.alert = hasDeletedEntries ? .accountDeletionUnfinished : .accountDeletionFailed
-                }
-                return .none
-
             case .alert(.presented(.confirmAccountDeletion)):
-                state.deletionStep = .reauthenticating
-                return .merge(
-                    .cancel(id: CancelID.importFileLoad),
-                    deleteAccount(uid: state.user.uid)
-                )
+                return .send(.delegate(.didConfirmAccountDeletion))
 
             case .alert(.presented(.confirmImport(let entries))):
-                guard !state.isDeletingAccount else { return .none }
                 return .send(.delegate(.didImport(entries)))
 
             case .alert(.presented(.confirmSignOut)):
                 return .merge(
                     .cancel(id: CancelID.importFileLoad),
-                    signOut()
+                    .run { _ in
+                        try await authClient.signOut()
+                    } catch: { error, send in
+                        await send(.signOutFailed(error))
+                    }
                 )
 
             case .alert:
-                return .none
-
-            case .appleCredentialReceived:
-                state.deletionStep = .deleting
-                return .none
-
-            case .appleCredentialRevoked:
-                state.deletionStep = .credentialRevoked
                 return .none
 
             #if DEBUG
@@ -158,35 +115,28 @@ struct Settings {
                 return .none
 
             case .deleteAccountButtonTapped:
-                guard !state.isDeletingAccount else { return .none }
                 state.alert = .confirmAccountDeletion
                 return .none
 
             case .dismissButtonTapped:
-                guard !state.isDeletingAccount else { return .none }
                 return .run { _ in await dismiss() }
-
-            case .entriesDeleted:
-                state.deletionStep = .entriesDeleted
-                return .none
 
             case .fileImporterPresentationChanged(let isPresented):
                 state.isFileImporterPresented = isPresented
                 return .none
 
             case .importEntriesButtonTapped:
-                guard state.canImportEntries, !state.isDeletingAccount else { return .none }
+                guard state.canImportEntries else { return .none }
                 state.isFileImporterPresented = true
                 return .none
 
             case .importFileLoaded(.failure(let error)):
                 logger.error("Loading the import file failed: \(error, privacy: .public)")
-                guard !state.isDeletingAccount else { return .none }
                 state.alert = .importFailed(error)
                 return .none
 
             case .importFileLoaded(.success(let records)):
-                guard !state.isDeletingAccount, let existing = state.entries else { return .none }
+                guard let existing = state.entries else { return .none }
                 let entriesImport = EntriesArchive.Import(
                     records: records,
                     existing: existing.elements,
@@ -205,16 +155,22 @@ struct Settings {
                 return .none
 
             case .importFilePicked(.success(let url)):
-                guard !state.isDeletingAccount else { return .none }
-                return loadImportFile(url)
+                return
+                    .run { send in
+                        do {
+                            let data = try await fileClient.read(url: url, maximumSize: EntriesArchive.maximumFileSize)
+                            await send(.importFileLoaded(.success(try EntriesArchive.records(from: data))))
+                        } catch {
+                            await send(.importFileLoaded(.failure(error)))
+                        }
+                    }
+                    .cancellable(id: CancelID.importFileLoad, cancelInFlight: true)
 
             case .signOutButtonTapped:
-                guard !state.isDeletingAccount else { return .none }
                 state.alert = .confirmSignOut
                 return .none
 
             case .signOutFailed(let error):
-                state.deletionStep = nil
                 logger.error("Sign out failed: \(error, privacy: .public)")
                 state.alert = .signOutFailed
                 return .none
@@ -242,70 +198,22 @@ struct Settings {
         }
     }
     #endif
-
-    private func deleteAccount(uid: String) -> Effect<Action> {
-        .run { send in
-            let credential = try await signInWithAppleClient.requestCredential()
-            guard let authorizationCode = credential.authorizationCode else {
-                throw AccountDeletionError.missingAuthorizationCode
-            }
-            await send(.appleCredentialReceived)
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    try await clock.sleep(for: .seconds(60))
-                    throw AccountDeletionError.timedOut
-                }
-                group.addTask {
-                    try await authClient.reauthenticate(credential: credential)
-                    try Task.checkCancellation()
-                    try await entriesClient.deleteAll(uid: uid)
-                    await send(.entriesDeleted)
-                    try Task.checkCancellation()
-                    try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
-                    await send(.appleCredentialRevoked)
-                    try Task.checkCancellation()
-                    try await authClient.deleteAccount()
-                }
-                try await group.next()
-                group.cancelAll()
-            }
-        } catch: { error, send in
-            await send(.accountDeletionFailed(error))
-        }
-    }
-
-    private func loadImportFile(_ url: URL) -> Effect<Action> {
-        .run { send in
-            do {
-                let data = try await fileClient.read(url: url, maximumSize: EntriesArchive.maximumFileSize)
-                await send(.importFileLoaded(.success(try EntriesArchive.records(from: data))))
-            } catch {
-                await send(.importFileLoaded(.failure(error)))
-            }
-        }
-        .cancellable(id: CancelID.importFileLoad, cancelInFlight: true)
-    }
-
-    private func signOut() -> Effect<Action> {
-        .run { _ in
-            try await authClient.signOut()
-        } catch: { error, send in
-            await send(.signOutFailed(error))
-        }
-    }
 }
 
 extension AlertState where Action == Settings.Alert {
-    static let accountDeletionFailed = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your account couldn't be deleted.")
-    }
-
-    static let accountDeletionUnfinished = AlertState {
-        TextState("Something Went Wrong")
-    } message: {
-        TextState("Your account couldn't be fully deleted.")
+    static func accountDeletionFailed(_ failure: AccountDeletion.Failure) -> AlertState {
+        AlertState {
+            TextState("Something Went Wrong")
+        } message: {
+            switch failure {
+            case .notDeleted:
+                TextState("Your account couldn't be deleted.")
+            case .notFullyDeleted:
+                TextState("Your account couldn't be fully deleted.")
+            case .notSignedOut:
+                TextState("You couldn't be signed out.")
+            }
+        }
     }
 
     static let confirmAccountDeletion = AlertState {

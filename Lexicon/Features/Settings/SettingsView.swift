@@ -38,7 +38,6 @@ struct SettingsView: View {
                     }
                     .disabled(!store.canImportEntries)
                 }
-                .disabled(store.isDeletingAccount)
                 Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
@@ -47,7 +46,6 @@ struct SettingsView: View {
                         store.send(.deleteAccountButtonTapped)
                     }
                 }
-                .disabled(store.isDeletingAccount)
                 #if DEBUG
                 Section("Developer") {
                     Button {
@@ -64,7 +62,6 @@ struct SettingsView: View {
                         Text(verbatim: "Reset hasDismissedWelcome")
                     }
                 }
-                .disabled(store.isDeletingAccount)
                 #endif
             }
             // Without this the navigation bar shows a back chevron at the root of the stack
@@ -88,7 +85,6 @@ struct SettingsView: View {
                     }
                     .foregroundStyle(.secondary)
                     .labelStyle(.iconOnly)
-                    .disabled(store.isDeletingAccount)
                 }
             }
             .alert($store.scope(state: \.alert, action: \.alert))

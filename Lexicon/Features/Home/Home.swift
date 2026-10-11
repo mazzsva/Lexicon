@@ -13,6 +13,7 @@ import os
 struct Home {
     @Reducer
     enum Destination {
+        case accountDeletion(AccountDeletion)
         case alert(AlertState<Home.Alert>)
         case createEntry(EntryForm)
         case settings(Settings)
@@ -69,13 +70,13 @@ struct Home {
                 .map { SharedReader($0) }
         }
 
-        var isDeletingAccount: Bool { destination?.settings?.isDeletingAccount ?? false }
+        var isDeletingAccount: Bool { destination.is(\.accountDeletion) }
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
         var isLoadingFirstEntries: Bool { entries == nil }
 
-        var isReauthenticating: Bool { destination?.settings?.isReauthenticating ?? false }
+        var isReauthenticating: Bool { destination?.accountDeletion?.step == .reauthenticating }
 
         var syncStatus: SyncStatus {
             guard isOnline else { return .offline }
@@ -132,12 +133,24 @@ struct Home {
                 state.isOnline = isOnline
                 return .none
 
+            case .destination(.presented(.accountDeletion(.delegate(.didCancel)))):
+                presentSettings(&state)
+                return .none
+
+            case .destination(.presented(.accountDeletion(.delegate(.didFail(let failure))))):
+                presentSettings(&state, alert: .accountDeletionFailed(failure))
+                return .none
+
             case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },
                     save(entry, uid: state.user.uid)
                 )
+
+            case .destination(.presented(.settings(.delegate(.didConfirmAccountDeletion)))):
+                state.destination = .accountDeletion(AccountDeletion.State(uid: state.user.uid))
+                return .send(.destination(.presented(.accountDeletion(.deletionConfirmed))))
 
             case .destination(.presented(.settings(.delegate(.didImport(let entries))))):
                 state.destination = nil
@@ -217,12 +230,7 @@ struct Home {
                 return .none
 
             case .settingsButtonTapped:
-                state.destination = .settings(
-                    Settings.State(
-                        entries: SharedReader(state.$entries),
-                        user: state.user
-                    )
-                )
+                presentSettings(&state)
                 return .none
 
             case .task:
@@ -276,6 +284,12 @@ struct Home {
             }
         }
         .cancellable(id: CancelID.connectivitySubscription, cancelInFlight: true)
+    }
+
+    private func presentSettings(_ state: inout State, alert: AlertState<Settings.Alert>? = nil) {
+        state.destination = .settings(
+            Settings.State(alert: alert, entries: SharedReader(state.$entries), user: state.user)
+        )
     }
 
     private func save(_ entry: Entry, uid: String) -> Effect<Action> {
