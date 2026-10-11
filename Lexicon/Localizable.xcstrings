@@ -7,6 +7,9 @@
     "^[%lld Entry](inflect: true)" : {
 
     },
+    "^[%lld entry](inflect: true) already in Lexicon and ^[%lld entry](inflect: true) that can't be imported will be skipped." : {
+
+    },
     "^[%lld entry](inflect: true) already in Lexicon will be skipped." : {
 
     },

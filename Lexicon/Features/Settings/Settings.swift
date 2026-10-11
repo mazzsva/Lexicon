@@ -325,14 +325,18 @@ extension AlertState where Action == Settings.Alert {
         let duplicateCount = entriesImport.duplicateCount
         let entries = entriesImport.entries
         let invalidCount = entriesImport.invalidCount
-        let duplicates = TextState("^[\(duplicateCount) entry](inflect: true) already in Lexicon will be skipped.")
-        let invalid = TextState("^[\(invalidCount) entry](inflect: true) can't be imported and will be skipped.")
         let message: TextState? =
             switch (duplicateCount > 0, invalidCount > 0) {
-            case (true, true): duplicates + TextState(verbatim: " ") + invalid
-            case (true, false): duplicates
-            case (false, true): invalid
-            case (false, false): nil
+            case (true, true):
+                TextState(
+                    "^[\(duplicateCount) entry](inflect: true) already in Lexicon and ^[\(invalidCount) entry](inflect: true) that can't be imported will be skipped."
+                )
+            case (true, false):
+                TextState("^[\(duplicateCount) entry](inflect: true) already in Lexicon will be skipped.")
+            case (false, true):
+                TextState("^[\(invalidCount) entry](inflect: true) can't be imported and will be skipped.")
+            case (false, false):
+                nil
             }
         return AlertState(
             title: {
