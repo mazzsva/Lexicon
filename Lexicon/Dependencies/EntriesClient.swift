@@ -184,19 +184,14 @@ private actor FirestoreStorage {
 extension Entry {
     static let maximumBatchCount = 500
     static let maximumBatchSize = 5_000_000
-    static let maximumDocumentSize = 1_000_000
 
     static func writeBatches(for entries: [Entry]) -> [[Entry]] {
         var batches: [[Entry]] = []
         var batch: [Entry] = []
         var batchSize = 0
         for entry in entries {
-            let size = entry.estimatedDocumentSize
-            guard size <= maximumDocumentSize else {
-                batches.append([entry])
-                continue
-            }
-            if batch.count == maximumBatchCount || batchSize + size > maximumBatchSize {
+            let size = entry.content.size
+            if !batch.isEmpty, batch.count == maximumBatchCount || batchSize + size > maximumBatchSize {
                 batches.append(batch)
                 batch = []
                 batchSize = 0
@@ -208,10 +203,6 @@ extension Entry {
             batches.append(batch)
         }
         return batches
-    }
-
-    var estimatedDocumentSize: Int {
-        term.utf8.count + definition.utf8.count + 512
     }
 }
 
