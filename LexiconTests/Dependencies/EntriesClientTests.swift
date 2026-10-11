@@ -19,14 +19,14 @@ extension BaseSuite {
             arguments: [
                 (0, [Int]()),
                 (1, [1]),
-                (500, [500]),
-                (501, [500, 1]),
-                (1_000, [500, 500]),
-                (1_001, [500, 500, 1]),
+                (Entry.maximumBatchCount, [Entry.maximumBatchCount]),
+                (Entry.maximumBatchCount + 1, [Entry.maximumBatchCount, 1]),
+                (Entry.maximumBatchCount * 2, [Entry.maximumBatchCount, Entry.maximumBatchCount]),
+                (Entry.maximumBatchCount * 2 + 1, [Entry.maximumBatchCount, Entry.maximumBatchCount, 1]),
             ]
         )
-        func theWriteBatchesHoldAtMost500Entries(count: Int, batchCounts: [Int]) {
-            let entries = (0 ..< count).map { entry(id: $0, size: 0) }
+        func theWriteBatchesHoldAtMostTheMaximumCount(count: Int, batchCounts: [Int]) throws {
+            let entries = try (0 ..< count).map { try entry(id: $0, size: 10) }
 
             let batches = Entry.writeBatches(for: entries)
 
@@ -35,71 +35,41 @@ extension BaseSuite {
         }
 
         @Test
-        func theWriteBatchesStayUnderTheRequestSize() {
-            let entries = (0 ..< 12).map { entry(id: $0, size: 900_000) }
+        func aWriteBatchFillsUpToTheRequestSize() throws {
+            let entries = try (0 ..< 11).map { try entry(id: $0, size: Entry.maximumBatchSize / 5) }
 
             let batches = Entry.writeBatches(for: entries)
 
-            #expect(batches.allSatisfy { $0.map(\.estimatedDocumentSize).reduce(0, +) <= Entry.maximumBatchSize })
-            expectNoDifference(batches.map(\.count), [5, 5, 2])
+            expectNoDifference(batches.map(\.count), [5, 5, 1])
             expectNoDifference(batches.flatMap { $0 }, entries)
         }
 
         @Test
-        func anOversizeEntryGetsItsOwnWriteBatch() {
-            let entries = [entry(id: 0, size: 10), entry(id: 1, size: 2_000_000), entry(id: 2, size: 10)]
-
-            let batches = Entry.writeBatches(for: entries)
-
-            expectNoDifference(batches, [[entries[1]], [entries[0], entries[2]]])
-        }
-
-        @Test
-        func theSizeEstimateCoversTheFirestoreDocumentSize() {
+        func theLargestEntryFitsInAWriteBatchAndAFirestoreDocument() {
             let uid = String(repeating: "u", count: 128)
-            let entry = entry(id: 0, size: 1_000)
-            let nameSize = ["users", uid, "entries", entry.id.uuidString].map { $0.utf8.count + 1 }.reduce(16, +)
+            let nameSize = ["users", uid, "entries", UUID(0).uuidString].map { $0.utf8.count + 1 }.reduce(16, +)
             let fieldsSize =
                 ("createdAt".utf8.count + 1 + 8)
-                + ("definition".utf8.count + 1 + entry.definition.utf8.count + 1)
+                + ("definition".utf8.count + 1 + 1)
                 + ("isBookmarked".utf8.count + 1 + 1)
-                + ("term".utf8.count + 1 + entry.term.utf8.count + 1)
-            let firestoreSize = nameSize + fieldsSize + 32
+                + ("term".utf8.count + 1 + 1)
+            let firestoreSize = nameSize + fieldsSize + Entry.Content.maximumSize + 32
 
-            #expect(entry.estimatedDocumentSize >= firestoreSize)
-            #expect(Entry.maximumDocumentSize + entry.estimatedDocumentSize - firestoreSize < 1_048_576)
+            #expect(Entry.maximumBatchSize >= Entry.Content.maximumSize)
+            #expect(firestoreSize < 1_048_576)
         }
 
-        @Test
-        func anEntryAtTheSizeLimitSharesAWriteBatch() {
-            let small = entry(id: 0, size: 10)
-            let base = entry(id: 1, size: 0).estimatedDocumentSize
-            let atLimit = entry(id: 1, size: Entry.maximumDocumentSize - base)
-            #expect(atLimit.estimatedDocumentSize == Entry.maximumDocumentSize)
-
-            expectNoDifference(Entry.writeBatches(for: [small, atLimit]), [[small, atLimit]])
-        }
-
-        @Test
-        func aWriteBatchFillsUpToTheRequestSize() {
-            let base = entry(id: 0, size: 0).estimatedDocumentSize
-            let entries = (0 ..< 6).map { entry(id: $0, size: Entry.maximumDocumentSize - base) }
-            #expect(entries.allSatisfy { $0.estimatedDocumentSize == Entry.maximumDocumentSize })
-
-            let batches = Entry.writeBatches(for: entries)
-
-            expectNoDifference(batches.map(\.count), [5, 1])
-            expectNoDifference(batches.flatMap { $0 }, entries)
-        }
-
-        private func entry(id: Int, size: Int) -> Entry {
-            Entry(
+        private func entry(id: Int, size: Int) throws -> Entry {
+            let term = "Term \(id)"
+            let entry = try Entry(
                 createdAt: Date(timeIntervalSince1970: 1_750_000_000),
-                definition: String(repeating: "a", count: size),
+                definition: String(repeating: "a", count: size - term.utf8.count),
                 id: UUID(id),
                 isBookmarked: false,
-                term: "Term \(id)"
+                term: term
             )
+            try #require(entry.content.size == size)
+            return entry
         }
     }
 }
