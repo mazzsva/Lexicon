@@ -27,7 +27,7 @@ struct SettingsView: View {
                 }
                 Section {
                     ShareLink(
-                        item: EntriesArchive.Export(entries: Array(store.entries ?? [])),
+                        item: EntriesArchive.Export(entries: store.entries.loaded?.elements ?? []),
                         preview: SharePreview("Lexicon Entries")
                     ) {
                         Text("Export Entries")
@@ -119,7 +119,7 @@ struct SettingsView: View {
     SettingsView(
         store: Store(
             initialState: Settings.State(
-                entries: SharedReader(value: IdentifiedArray(uniqueElements: Entry.mocks)),
+                entries: SharedReader(value: .loaded(IdentifiedArray(uniqueElements: Entry.mocks))),
                 user: .mock
             )
         ) {

@@ -65,6 +65,7 @@ struct HomeView: View {
                         store.send(.newEntryButtonTapped)
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(!store.canCreateEntries)
                 }
             }
             .overlay {
@@ -80,6 +81,12 @@ struct HomeView: View {
                         "No Entries",
                         systemImage: "tray.fill",
                         description: Text("Tap the plus button to add an entry.")
+                    )
+                case .failed:
+                    ContentUnavailableView(
+                        "Can't Load Entries",
+                        systemImage: "exclamationmark.triangle.fill",
+                        description: Text("Lexicon will try again shortly.")
                     )
                 case .search:
                     ContentUnavailableView.search(text: store.searchText)

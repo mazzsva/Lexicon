@@ -34,7 +34,13 @@
     "Bookmarked" : {
 
     },
+    "Can't Load Entries" : {
+
+    },
     "Cancel" : {
+
+    },
+    "Connecting…" : {
 
     },
     "Continue" : {
@@ -89,6 +95,9 @@
       "shouldTranslate" : false
     },
     "Lexicon Entries" : {
+
+    },
+    "Lexicon will try again shortly." : {
 
     },
     "Make every word yours." : {

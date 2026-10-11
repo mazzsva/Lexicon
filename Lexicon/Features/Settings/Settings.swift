@@ -27,7 +27,7 @@ struct Settings {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        @SharedReader var entries: IdentifiedArrayOf<Entry>?
+        @SharedReader var entries: EntriesPhase
         var isFileImporterPresented = false
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
@@ -36,7 +36,7 @@ struct Settings {
 
         init(
             destination: Destination.State? = nil,
-            entries: SharedReader<IdentifiedArrayOf<Entry>?>,
+            entries: SharedReader<EntriesPhase>,
             user: User
         ) {
             self.destination = destination
@@ -44,9 +44,9 @@ struct Settings {
             self.user = user
         }
 
-        var canExportEntries: Bool { !(entries?.isEmpty ?? true) }
+        var canExportEntries: Bool { !(entries.loaded?.isEmpty ?? true) }
 
-        var canImportEntries: Bool { entries != nil && !isLoadingImportFile }
+        var canImportEntries: Bool { entries.is(\.loaded) && !isLoadingImportFile }
 
         var isLoadingImportFile: Bool { destination.is(\.loadingImportFile) }
     }
@@ -143,7 +143,7 @@ struct Settings {
                     logger.error("Loading the import file failed: \(error, privacy: .public)")
                     state.destination = .alert(.importFailed(error))
                 case .success(let records):
-                    guard let existing = state.entries else {
+                    guard case .loaded(let existing) = state.entries else {
                         reportIssue("The import file loaded while the entries were not loaded.")
                         state.destination = nil
                         return .none

@@ -24,7 +24,7 @@ struct Home {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        @Shared var entries: IdentifiedArrayOf<Entry>?
+        @Shared var entries: EntriesPhase
         var isImportFailurePending = false
         var isOnline = true
         var isShowingBookmarkedOnly = false
@@ -37,6 +37,7 @@ struct Home {
         enum EmptyState: Equatable {
             case bookmarks
             case entries
+            case failed
             case search
         }
 
@@ -48,33 +49,40 @@ struct Home {
         }
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
-            _entries = Shared(value: nil)
+            _entries = Shared(value: .loading)
             self.sessionOrigin = sessionOrigin
             self.user = user
         }
 
-        var canFilterBookmarks: Bool { entryCount > 0 }
+        var canCreateEntries: Bool { entries.is(\.loaded) }
+
+        var canFilterBookmarks: Bool { (entryCount ?? 0) > 0 }
 
         var emptyState: EmptyState? {
-            guard entries != nil, filteredEntries.isEmpty else { return nil }
-            if entryCount == 0 { return .entries }
-            return searchText.isEmpty ? .bookmarks : .search
+            switch entries {
+            case .failed:
+                return .failed
+            case .loaded:
+                guard filteredEntries.isEmpty else { return nil }
+                if entryCount == 0 { return .entries }
+                return searchText.isEmpty ? .bookmarks : .search
+            case .loading:
+                return nil
+            }
         }
 
-        var entryCount: Int { entries?.count ?? 0 }
+        var entryCount: Int? { entries.loaded?.count }
 
         var filteredEntries: [SharedReader<Entry>] {
-            guard let entries = Shared($entries) else { return [] }
-            return Array(entries)
-                .filter { isVisible($0.wrappedValue) }
-                .map { SharedReader($0) }
+            guard let entries = SharedReader(SharedReader($entries).loaded) else { return [] }
+            return Array(entries).filter { isVisible($0.wrappedValue) }
         }
 
         var isDeletingAccount: Bool { destination.is(\.accountDeletion) }
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
-        var isLoadingFirstEntries: Bool { entries == nil }
+        var isLoadingFirstEntries: Bool { entries.is(\.loading) }
 
         var isReauthenticating: Bool { destination?.accountDeletion?.step == .reauthenticating }
 
@@ -178,15 +186,15 @@ struct Home {
                         await send(.entriesRetryTimerElapsed)
                     }
                     .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
-                guard state.entries == nil else { return retry }
-                state.$entries.withLock { $0 = [] }
+                guard state.isLoadingFirstEntries else { return retry }
+                state.$entries.withLock { $0 = .failed }
                 return .merge(retry, celebrateFirstLoad(state))
 
             case .entriesUpdated(let snapshot):
-                let isFirstLoad = state.entries == nil
+                let isFirstLoad = state.isLoadingFirstEntries
                 state.isSyncing = snapshot.isSyncing
                 let entries = IdentifiedArray(uniqueElements: snapshot.entries)
-                state.$entries.withLock { $0 = entries }
+                state.$entries.withLock { $0 = .loaded(entries) }
                 if entries.isEmpty {
                     state.isShowingBookmarkedOnly = false
                 }
@@ -213,6 +221,7 @@ struct Home {
                 return .none
 
             case .newEntryButtonTapped:
+                guard state.canCreateEntries else { return .none }
                 state.destination = .createEntry(EntryForm.State())
                 return .none
 

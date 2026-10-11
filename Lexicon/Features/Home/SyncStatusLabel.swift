@@ -14,7 +14,7 @@ enum SyncStatus: Equatable {
 }
 
 struct SyncStatusLabel: View {
-    let entryCount: Int
+    let entryCount: Int?
     let status: SyncStatus
 
     var body: some View {
@@ -33,7 +33,7 @@ struct SyncStatusLabel: View {
     }
 
     private var accessibilityLabel: Text {
-        guard status == .syncing else { return Text(text) }
+        guard status == .syncing, entryCount != nil else { return Text(text) }
         return Text("Syncing, \(Text(text))")
     }
 
@@ -42,7 +42,14 @@ struct SyncStatusLabel: View {
         case .offline:
             "No Internet"
         case .synced, .syncing:
-            entryCount == 0 ? "No Entries" : "^[\(entryCount) Entry](inflect: true)"
+            switch entryCount {
+            case nil:
+                "Connecting…"
+            case 0:
+                "No Entries"
+            case let entryCount?:
+                "^[\(entryCount) Entry](inflect: true)"
+            }
         }
     }
 }
