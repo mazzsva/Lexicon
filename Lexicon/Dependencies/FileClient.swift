@@ -28,22 +28,27 @@ extension FileClient: DependencyKey {
                         url.stopAccessingSecurityScopedResource()
                     }
                 }
-                var coordinationError: NSError?
-                var result: Result<Data, any Error> = .failure(CocoaError(.fileReadUnknown))
-                NSFileCoordinator()
-                    .coordinate(readingItemAt: url, error: &coordinationError) { url in
-                        result = Result {
-                            let handle = try FileHandle(forReadingFrom: url)
-                            defer { try? handle.close() }
-                            let data = try handle.read(upToCount: maximumSize + 1) ?? Data()
-                            guard data.count <= maximumSize else { throw ReadError.tooLarge }
-                            return data
+                nonisolated(unsafe) let coordinator = NSFileCoordinator()
+                let intent = NSFileAccessIntent.readingIntent(with: url)
+                return try await withTaskCancellationHandler {
+                    try Task.checkCancellation()
+                    return try await withCheckedThrowingContinuation { continuation in
+                        coordinator.coordinate(with: [intent], queue: OperationQueue()) { error in
+                            continuation.resume(
+                                with: Result {
+                                    if let error { throw error }
+                                    let handle = try FileHandle(forReadingFrom: intent.url)
+                                    defer { try? handle.close() }
+                                    let data = try handle.read(upToCount: maximumSize + 1) ?? Data()
+                                    guard data.count <= maximumSize else { throw ReadError.tooLarge }
+                                    return data
+                                }
+                            )
                         }
                     }
-                if let coordinationError {
-                    throw coordinationError
+                } onCancel: {
+                    coordinator.cancel()
                 }
-                return try result.get()
             }
         )
     }
