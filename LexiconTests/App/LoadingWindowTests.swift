@@ -52,10 +52,10 @@ extension BaseSuite {
             anchor.isLoadingVisible = true
 
             let window = try #require(loadingWindow(in: scene))
-            #expect(window.windowLevel == UIWindow.Level(UIWindow.Level.normal.rawValue + 1))
+            expectNoDifference(window.windowLevel, UIWindow.Level(UIWindow.Level.normal.rawValue + 1))
             #expect(window.isUserInteractionEnabled)
             await wait(until: { window.alpha == 1 })
-            #expect(window.alpha == 1)
+            expectNoDifference(window.alpha, 1)
             await hide(anchor, in: scene)
         }
 
