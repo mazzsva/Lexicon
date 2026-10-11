@@ -23,6 +23,7 @@ struct EntriesClient: Sendable {
     }
 
     var save: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
+    var saveAll: @Sendable (_ entries: [Entry], _ uid: String) async throws -> Void
 }
 
 struct EntriesSnapshot: Equatable, Sendable {
@@ -53,6 +54,9 @@ extension EntriesClient: DependencyKey {
             },
             save: { entry, uid in
                 try await FirestoreStorage.shared.save(entry, uid: uid)
+            },
+            saveAll: { entries, uid in
+                try await FirestoreStorage.shared.saveAll(entries, uid: uid)
             }
         )
     }
@@ -67,7 +71,8 @@ extension EntriesClient: DependencyKey {
                     continuation.yield(.mock)
                 }
             },
-            save: { _, _ in }
+            save: { _, _ in },
+            saveAll: { _, _ in }
         )
     }
 
@@ -153,8 +158,59 @@ private actor FirestoreStorage {
         try await entriesCollection(uid: uid).document(entry.id.uuidString).setData(entry.documentData)
     }
 
+    func saveAll(_ entries: [Entry], uid: String) async throws {
+        await waitForClearing()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for chunk in Entry.writeBatches(for: entries) {
+                group.addTask {
+                    let batch = Firestore.firestore().batch()
+                    for entry in chunk {
+                        let document = entriesCollection(uid: uid).document(entry.id.uuidString)
+                        batch.setData(entry.documentData, forDocument: document)
+                    }
+                    try await batch.commit()
+                }
+            }
+            try await group.waitForAll()
+        }
+    }
+
     private func waitForClearing() async {
         _ = try? await clearing?.value
+    }
+}
+
+extension Entry {
+    static let maximumBatchCount = 500
+    static let maximumBatchSize = 5_000_000
+    static let maximumDocumentSize = 1_000_000
+
+    static func writeBatches(for entries: [Entry]) -> [[Entry]] {
+        var batches: [[Entry]] = []
+        var batch: [Entry] = []
+        var batchSize = 0
+        for entry in entries {
+            let size = entry.estimatedDocumentSize
+            guard size <= maximumDocumentSize else {
+                batches.append([entry])
+                continue
+            }
+            if batch.count == maximumBatchCount || batchSize + size > maximumBatchSize {
+                batches.append(batch)
+                batch = []
+                batchSize = 0
+            }
+            batch.append(entry)
+            batchSize += size
+        }
+        if !batch.isEmpty {
+            batches.append(batch)
+        }
+        return batches
+    }
+
+    var estimatedDocumentSize: Int {
+        term.utf8.count + definition.utf8.count + 512
     }
 }
 
