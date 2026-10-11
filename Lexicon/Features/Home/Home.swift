@@ -142,13 +142,9 @@ struct Home {
 
             case .destination(.presented(.settings(.delegate(.didImport(let entries))))):
                 state.destination = nil
-                var newEntries = IdentifiedArrayOf<Entry>()
-                for entry in entries where state.entries?[id: entry.id] == nil && newEntries[id: entry.id] == nil {
-                    newEntries.append(entry)
-                }
                 return .merge(
                     .run { _ in await hapticsClient.success() },
-                    newEntries.isEmpty ? .none : importEntries(Array(newEntries), uid: state.user.uid)
+                    importEntries(entries, uid: state.user.uid)
                 )
 
             case .destination:

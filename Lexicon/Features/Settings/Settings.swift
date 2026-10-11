@@ -202,7 +202,16 @@ struct Settings {
                     state.alert = .importNeedsSync
                     return .none
                 }
-                state.alert = importAlert(for: records, existing: existing)
+                let entriesImport = EntriesArchive.Import(
+                    records: records,
+                    existing: existing.elements,
+                    now: now,
+                    uuid: { uuid() }
+                )
+                state.alert =
+                    entriesImport.entries.isEmpty
+                    ? entriesImport.duplicateCount > 0 ? .importHasOnlyDuplicates : .importHasNoEntries
+                    : .confirmImport(entriesImport)
                 return .none
 
             case .importFilePicked(.failure(let error)):
@@ -280,44 +289,6 @@ struct Settings {
         }
     }
 
-    private func importAlert(
-        for records: [EntriesArchive.Record],
-        existing: IdentifiedArrayOf<Entry>
-    ) -> AlertState<Alert> {
-        var duplicateCount = 0
-        var entries = IdentifiedArrayOf<Entry>()
-        var invalidCount = 0
-        for record in records {
-            guard let content = try? Entry.Content(term: record.term ?? "", definition: record.definition ?? "")
-            else {
-                invalidCount += 1
-                continue
-            }
-            let id = record.id ?? uuid()
-            guard existing[id: id] == nil else {
-                duplicateCount += 1
-                continue
-            }
-            guard entries[id: id] == nil else { continue }
-            guard
-                let entry = try? Entry(
-                    content: content,
-                    createdAt: record.createdAt ?? now,
-                    id: id,
-                    isBookmarked: record.isBookmarked ?? false
-                )
-            else {
-                invalidCount += 1
-                continue
-            }
-            entries.append(entry)
-        }
-        guard !entries.isEmpty else {
-            return duplicateCount > 0 ? .importHasOnlyDuplicates : .importHasNoEntries
-        }
-        return .confirmImport(Array(entries), duplicateCount: duplicateCount, invalidCount: invalidCount)
-    }
-
     private func loadImportFile(_ url: URL) -> Effect<Action> {
         .run { send in
             do {
@@ -365,7 +336,10 @@ extension AlertState where Action == Settings.Alert {
         TextState("Your account and all your entries will be permanently deleted. Are you sure?")
     }
 
-    static func confirmImport(_ entries: [Entry], duplicateCount: Int, invalidCount: Int) -> AlertState {
+    static func confirmImport(_ entriesImport: EntriesArchive.Import) -> AlertState {
+        let duplicateCount = entriesImport.duplicateCount
+        let entries = entriesImport.entries
+        let invalidCount = entriesImport.invalidCount
         let duplicates = TextState("^[\(duplicateCount) entry](inflect: true) already in Lexicon will be skipped.")
         let invalid = TextState("^[\(invalidCount) entry](inflect: true) can't be imported and will be skipped.")
         let message: TextState? =

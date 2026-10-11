@@ -44,6 +44,47 @@ enum EntriesArchive {
 }
 
 extension EntriesArchive {
+    struct Import: Equatable, Sendable {
+        var duplicateCount = 0
+        var entries: [Entry] = []
+        var invalidCount = 0
+
+        init(records: [Record], existing: [Entry], now: Date, uuid: () -> UUID) {
+            let existingIDs = Set(existing.map(\.id))
+            var contents = Set(existing.map(\.content))
+            for record in records {
+                if let id = record.id, existingIDs.contains(id) {
+                    duplicateCount += 1
+                    continue
+                }
+                guard let content = try? Entry.Content(term: record.term ?? "", definition: record.definition ?? "")
+                else {
+                    invalidCount += 1
+                    continue
+                }
+                guard !contents.contains(content) else {
+                    duplicateCount += 1
+                    continue
+                }
+                guard
+                    let entry = try? Entry(
+                        content: content,
+                        createdAt: record.createdAt ?? now,
+                        id: uuid(),
+                        isBookmarked: record.isBookmarked ?? false
+                    )
+                else {
+                    invalidCount += 1
+                    continue
+                }
+                contents.insert(content)
+                entries.append(entry)
+            }
+        }
+    }
+}
+
+extension EntriesArchive {
     struct Export: Transferable {
         let entries: [Entry]
 
