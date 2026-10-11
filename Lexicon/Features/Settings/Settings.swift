@@ -290,8 +290,8 @@ struct Settings {
         var entries = IdentifiedArrayOf<Entry>()
         var invalidCount = 0
         for record in records {
-            let term = record.term?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            guard !term.isEmpty else {
+            guard let content = try? Entry.Content(term: record.term ?? "", definition: record.definition ?? "")
+            else {
                 invalidCount += 1
                 continue
             }
@@ -301,14 +301,14 @@ struct Settings {
                 continue
             }
             guard entries[id: id] == nil else { continue }
-            let entry = Entry(
-                createdAt: record.createdAt ?? now,
-                definition: record.definition?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
-                id: id,
-                isBookmarked: record.isBookmarked ?? false,
-                term: term
-            )
-            guard entry.estimatedDocumentSize <= Entry.maximumDocumentSize else {
+            guard
+                let entry = try? Entry(
+                    content: content,
+                    createdAt: record.createdAt ?? now,
+                    id: id,
+                    isBookmarked: record.isBookmarked ?? false
+                )
+            else {
                 invalidCount += 1
                 continue
             }

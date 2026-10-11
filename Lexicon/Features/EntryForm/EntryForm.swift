@@ -22,12 +22,16 @@ struct EntryForm {
             term = entry?.term ?? ""
         }
 
+        var content: Entry.Content? {
+            try? Entry.Content(term: term, definition: definition)
+        }
+
         var isCreating: Bool {
             entry == nil
         }
 
         var isSubmittable: Bool {
-            !term.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            content != nil
         }
     }
 
@@ -61,18 +65,20 @@ struct EntryForm {
                 return .run { _ in await dismiss() }
 
             case .saveButtonTapped:
-                guard state.isSubmittable else { return .none }
-                let term = state.term.trimmingCharacters(in: .whitespacesAndNewlines)
-                let definition = state.definition.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let content = state.content else { return .none }
                 let original = state.entry
-                let entry = Entry(
-                    createdAt: original?.createdAt ?? now,
-                    definition: definition,
-                    id: original?.id ?? uuid(),
-                    isBookmarked: original?.isBookmarked ?? false,
-                    term: term
-                )
-                return .send(.delegate(.didSubmit(entry)))
+                do {
+                    let entry = try Entry(
+                        content: content,
+                        createdAt: original?.createdAt ?? now,
+                        id: original?.id ?? uuid(),
+                        isBookmarked: original?.isBookmarked ?? false
+                    )
+                    return .send(.delegate(.didSubmit(entry)))
+                } catch {
+                    reportIssue(error)
+                    return .none
+                }
             }
         }
     }
