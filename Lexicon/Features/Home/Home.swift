@@ -130,7 +130,6 @@ struct Home {
 
             case .connectivityChanged(let isOnline):
                 state.isOnline = isOnline
-                updateSettingsSyncStatus(&state)
                 return .none
 
             case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
@@ -160,7 +159,6 @@ struct Home {
 
             case .entriesStreamFailed:
                 state.isSyncing = true
-                updateSettingsSyncStatus(&state)
                 let retry: Effect<Action> =
                     .run { send in
                         try await clock.sleep(for: .seconds(5))
@@ -174,7 +172,6 @@ struct Home {
             case .entriesUpdated(let snapshot):
                 let isFirstLoad = state.entries == nil
                 state.isSyncing = snapshot.isSyncing
-                updateSettingsSyncStatus(&state)
                 let entries = IdentifiedArray(uniqueElements: snapshot.entries)
                 state.$entries.withLock { $0 = entries }
                 if entries.isEmpty {
@@ -223,7 +220,6 @@ struct Home {
                 state.destination = .settings(
                     Settings.State(
                         entries: SharedReader(state.$entries),
-                        isEntriesSynced: state.syncStatus == .synced,
                         user: state.user
                     )
                 )
@@ -305,11 +301,6 @@ struct Home {
                 }
             }
             .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
-    }
-
-    private func updateSettingsSyncStatus(_ state: inout State) {
-        let isSynced = state.syncStatus == .synced
-        state.destination?.modify(\.settings) { $0.isEntriesSynced = isSynced }
     }
 }
 

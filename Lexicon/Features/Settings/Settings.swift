@@ -34,7 +34,6 @@ struct Settings {
         @Presents var alert: AlertState<Settings.Alert>?
         var deletionStep: DeletionStep?
         @SharedReader var entries: IdentifiedArrayOf<Entry>?
-        var isEntriesSynced: Bool
         var isFileImporterPresented = false
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
@@ -43,11 +42,9 @@ struct Settings {
 
         init(
             entries: SharedReader<IdentifiedArrayOf<Entry>?> = SharedReader(value: nil),
-            isEntriesSynced: Bool = false,
             user: User
         ) {
             _entries = entries
-            self.isEntriesSynced = isEntriesSynced
             self.user = user
         }
 
@@ -126,10 +123,6 @@ struct Settings {
 
             case .alert(.presented(.confirmImport(let entries))):
                 guard !state.isDeletingAccount else { return .none }
-                guard state.isEntriesSynced else {
-                    state.alert = .importNeedsSync
-                    return .none
-                }
                 return .send(.delegate(.didImport(entries)))
 
             case .alert(.presented(.confirmSignOut)):
@@ -183,10 +176,6 @@ struct Settings {
 
             case .importEntriesButtonTapped:
                 guard state.canImportEntries, !state.isDeletingAccount else { return .none }
-                guard state.isEntriesSynced else {
-                    state.alert = .importNeedsSync
-                    return .none
-                }
                 state.isFileImporterPresented = true
                 return .none
 
@@ -198,10 +187,6 @@ struct Settings {
 
             case .importFileLoaded(.success(let records)):
                 guard !state.isDeletingAccount, let existing = state.entries else { return .none }
-                guard state.isEntriesSynced else {
-                    state.alert = .importNeedsSync
-                    return .none
-                }
                 let entriesImport = EntriesArchive.Import(
                     records: records,
                     existing: existing.elements,
@@ -405,12 +390,6 @@ extension AlertState where Action == Settings.Alert {
         TextState("Nothing to Import")
     } message: {
         TextState("All the entries in this file are already in Lexicon.")
-    }
-
-    static let importNeedsSync = AlertState {
-        TextState("Can't Import Right Now")
-    } message: {
-        TextState("Connect to the internet and wait for your entries to sync, then try again.")
     }
 
     static let signOutFailed = AlertState {
