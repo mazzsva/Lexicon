@@ -91,8 +91,6 @@ struct Settings {
         case importFileLoad
     }
 
-    static let maximumImportFileSize = 100_000_000
-
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.date.now) var now
@@ -323,7 +321,7 @@ struct Settings {
     private func loadImportFile(_ url: URL) -> Effect<Action> {
         .run { send in
             do {
-                let data = try await fileClient.read(url: url, maximumSize: Self.maximumImportFileSize)
+                let data = try await fileClient.read(url: url, maximumSize: EntriesArchive.maximumFileSize)
                 await send(.importFileLoaded(.success(try EntriesArchive.records(from: data))))
             } catch {
                 await send(.importFileLoaded(.failure(error)))

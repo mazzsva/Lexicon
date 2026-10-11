@@ -23,6 +23,7 @@ enum EntriesArchive {
         var term: String?
     }
 
+    static let maximumFileSize = 100_000_000
     static let version = 1
 
     static func data(for entries: [Entry]) throws -> Data {
