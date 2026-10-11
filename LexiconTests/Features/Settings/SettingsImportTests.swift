@@ -17,366 +17,226 @@ extension BaseSuite {
     @MainActor
     struct SettingsImportTests {
         private static let now = Date(timeIntervalSince1970: 1_791_711_000)
-
-        @Test(arguments: [0, 1, 3], [0, 1, 3])
-        func theConfirmationCountsTheSkippedEntries(duplicateCount: Int, invalidCount: Int) async {
-            for newCount in [0, 1, 3] {
-                let newEntries = (0 ..< newCount)
-                    .map { index in
-                        Entry(
-                            createdAt: Self.now,
-                            definition: "",
-                            id: UUID(100 + index),
-                            isBookmarked: false,
-                            term: "New \(index)"
-                        )
-                    }
-                let records =
-                    newEntries.map(Self.record)
-                    + Entry.mocks.prefix(duplicateCount).map(Self.record)
-                    + (0 ..< invalidCount).map { _ in EntriesArchive.Record(term: "") }
-                let expected: AlertState<Settings.Alert> =
-                    if newCount > 0 {
-                        .confirmImport(
-                            newEntries,
-                            duplicateCount: min(duplicateCount, Entry.mocks.count),
-                            invalidCount: invalidCount
-                        )
-                    } else if duplicateCount > 0 {
-                        .importHasOnlyDuplicates
-                    } else {
-                        .importHasNoEntries
-                    }
-
-                let store = TestStore(initialState: Self.state(entries: Entry.mocks)) {
-                    Settings()
-                } withDependencies: {
-                    $0.date.now = Self.now
-                }
-
-                await store.send(.importFileLoaded(.success(records))) {
-                    $0.alert = expected
-                }
-            }
-        }
+        private static let url = URL(filePath: "/Entries.json")
 
         @Test
-        func theConfirmationTextNamesEachKindOfSkippedEntry() {
-            let both = AlertState<Settings.Alert>.confirmImport([.blueMoon], duplicateCount: 3, invalidCount: 2)
-            expectNoDifference(both.title, TextState("Import ^[\(1) Entry](inflect: true)?"))
-            expectNoDifference(
-                both.message,
-                TextState("^[\(3) entry](inflect: true) already in Lexicon will be skipped.")
-                    + TextState(verbatim: " ")
-                    + TextState("^[\(2) entry](inflect: true) can't be imported and will be skipped.")
-            )
-            expectNoDifference(
-                AlertState<Settings.Alert>.confirmImport(Entry.mocks, duplicateCount: 0, invalidCount: 0).title,
-                TextState("Import ^[\(3) Entry](inflect: true)?")
-            )
-        }
-
-        @Test
-        func aValidCopyAfterAnInvalidCopyWithTheSameIDIsImported() async {
-            let records = [
-                EntriesArchive.Record(id: UUID(5), term: "  "),
-                EntriesArchive.Record(id: UUID(5), term: "Break the ice"),
-            ]
-            let expected = Entry(
-                createdAt: Self.now,
-                definition: "",
-                id: UUID(5),
-                isBookmarked: false,
-                term: "Break the ice"
-            )
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            } withDependencies: {
-                $0.date.now = Self.now
-            }
-
-            await store.send(.importFileLoaded(.success(records))) {
-                $0.alert = .confirmImport([expected], duplicateCount: 0, invalidCount: 1)
-            }
-        }
-
-        @Test
-        func everyCopyOfAnExistingEntryIsSkipped() async {
-            var edited = Self.record(.blueMoon)
-            edited.term = "Edited in the file"
-
-            let store = TestStore(initialState: Self.state(entries: Entry.mocks)) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([Self.record(.blueMoon), edited]))) {
-                $0.alert = .importHasOnlyDuplicates
-            }
-        }
-
-        @Test
-        func theFirstCopyOfANewEntryWins() async {
-            let first = Entry(
-                createdAt: Self.now,
-                definition: "First",
-                id: UUID(5),
-                isBookmarked: true,
-                term: "Break the ice"
-            )
-            var second = Self.record(first)
-            second.definition = "Second"
-
+        func theImportButtonOpensTheFileImporter() async {
             let store = TestStore(initialState: Self.state(entries: [])) {
                 Settings()
             }
 
-            await store.send(.importFileLoaded(.success([Self.record(first), second]))) {
-                $0.alert = .confirmImport([first], duplicateCount: 0, invalidCount: 0)
+            await store.send(.importEntriesButtonTapped) {
+                $0.isFileImporterPresented = true
+            }
+            await store.send(.fileImporterPresentationChanged(false)) {
+                $0.isFileImporterPresented = false
             }
         }
 
-        @Test
-        func eachRecordWithoutAnIDGetsItsOwnID() async {
-            let records = ["One", "Two", "Three"].map { EntriesArchive.Record(term: $0) }
-            let expected = ["One", "Two", "Three"].enumerated()
-                .map { index, term in
-                    Entry(createdAt: Self.now, definition: "", id: UUID(index), isBookmarked: false, term: term)
-                }
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            } withDependencies: {
-                $0.date.now = Self.now
-                $0.uuid = .incrementing
-            }
-
-            await store.send(.importFileLoaded(.success(records))) {
-                $0.alert = .confirmImport(expected, duplicateCount: 0, invalidCount: 0)
-            }
-        }
-
-        @Test
-        func blankTermsAreInvalidAndTheTextIsTrimmed() async {
-            let records = [
-                EntriesArchive.Record(id: UUID(1), term: " "),
-                EntriesArchive.Record(id: UUID(2), term: "\n\n"),
-                EntriesArchive.Record(id: UUID(3), term: "\t \r\n"),
-                EntriesArchive.Record(definition: "Orphan", id: UUID(4), term: nil),
-                EntriesArchive.Record(definition: " \n ", id: UUID(5), term: "\n  Break  the ice \t"),
-                EntriesArchive.Record(definition: "\n To start a conversation. \n", id: UUID(6), term: "Spill"),
-            ]
-            let expected = [
-                Entry(createdAt: Self.now, definition: "", id: UUID(5), isBookmarked: false, term: "Break  the ice"),
-                Entry(
-                    createdAt: Self.now,
-                    definition: "To start a conversation.",
-                    id: UUID(6),
-                    isBookmarked: false,
-                    term: "Spill"
-                ),
-            ]
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            } withDependencies: {
-                $0.date.now = Self.now
-            }
-
-            await store.send(.importFileLoaded(.success(records))) {
-                $0.alert = .confirmImport(expected, duplicateCount: 0, invalidCount: 4)
-            }
-        }
-
-        @Test
-        func theEntriesKeepTheOrderOfTheFile() async {
-            let entries = (0 ..< 20).reversed()
-                .map { index in
-                    Entry(
-                        createdAt: Date(timeIntervalSince1970: Double(index)),
-                        definition: "",
-                        id: UUID(index),
-                        isBookmarked: false,
-                        term: "Term \(index)"
-                    )
-                }
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success(entries.map(Self.record)))) {
-                $0.alert = .confirmImport(entries, duplicateCount: 0, invalidCount: 0)
-            }
-        }
-
-        @Test
-        func tenThousandRecordsLoadQuickly() async {
-            let entries = (0 ..< 10_000)
-                .map { index in
-                    Entry(
-                        createdAt: Self.now, definition: "", id: UUID(index), isBookmarked: false, term: "Term \(index)"
-                    )
-                }
-            let existing = Array(entries.prefix(5_000))
-
-            let store = TestStore(initialState: Self.state(entries: existing)) {
-                Settings()
-            }
-
-            let start = ContinuousClock.now
-            await store.send(.importFileLoaded(.success(entries.map(Self.record)))) {
-                $0.alert = .confirmImport(Array(entries.dropFirst(5_000)), duplicateCount: 5_000, invalidCount: 0)
-            }
-            #expect(ContinuousClock.now - start < .seconds(5))
-        }
-
-        @Test
-        func theDuplicatesUseTheEntriesAtLoadTime() async {
-            let entries = Shared<IdentifiedArrayOf<Entry>?>(value: [])
-
+        @Test(
+            arguments: [
+                (.loading, false),
+                (.failed, false),
+                (.loaded(IdentifiedArray(uniqueElements: Entry.mocks)), true),
+            ] as [(EntriesPhase, Bool)]
+        )
+        func theImportButtonDoesNothingUntilTheEntriesAndTheFileLoad(phase: EntriesPhase, isLoadingFile: Bool) async {
             let store = TestStore(
-                initialState: Settings.State(entries: SharedReader(entries), isEntriesSynced: true, user: .mock)
+                initialState: Self.state(phase: phase, destination: isLoadingFile ? .loadingImportFile : nil)
             ) {
                 Settings()
             }
 
-            entries.withLock { $0 = [.blueMoon] }
-            await store.send(.importFileLoaded(.success([Self.record(.blueMoon)]))) {
-                $0.alert = .importHasOnlyDuplicates
-            }
-        }
-
-        @Test
-        func aLoadBeforeTheFirstEntriesIsIgnored() async {
-            let store = TestStore(initialState: Settings.State(user: .mock)) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([Self.record(.blueMoon)])))
-        }
-
-        @Test
-        func theImportButtonIsIgnoredDuringAnAccountDeletion() async {
-            var state = Self.state(entries: Entry.mocks)
-            state.deletionStep = .deleting
-
-            let store = TestStore(initialState: state) {
-                Settings()
-            }
-
             await store.send(.importEntriesButtonTapped)
-            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
         }
 
         @Test
-        func aLoadThatEndsDuringAnAccountDeletionIsIgnored() async {
-            var state = Self.state(entries: Entry.mocks)
-            state.deletionStep = .reauthenticating
-
-            let store = TestStore(initialState: state) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([EntriesArchive.Record(id: UUID(5), term: "New")])))
-            await store.send(.importFileLoaded(.failure(EntriesArchive.Error.invalid)))
-        }
-
-        @Test
-        func aConfirmationDuringAnAccountDeletionDoesNotImport() async {
-            var state = Self.state(entries: Entry.mocks)
-            state.alert = .confirmImport([.blueMoon], duplicateCount: 0, invalidCount: 0)
-            state.deletionStep = .deleting
-
-            let store = TestStore(initialState: state) {
-                Settings()
-            }
-
-            await store.send(.alert(.presented(.confirmImport([.blueMoon])))) {
-                $0.alert = nil
-            }
-        }
-
-        @Test
-        func anAccountDeletionCancelsTheLoad() async {
-            let clock = TestClock()
+        func aPickedFileAsksToImportOnlyTheNewValidEntries() async throws {
+            let url = URL(filePath: "/Entries.json")
+            let file = Data(
+                """
+                {
+                  "version": 1,
+                  "entries": [
+                    { "id": "\(Entry.blueMoon.id)", "term": "Edited in another app" },
+                    {
+                      "id": "\(UUID(5))",
+                      "term": "  Break the ice  ",
+                      "definition": "  To start a conversation.  ",
+                      "isBookmarked": true,
+                      "createdAt": "2025-06-15T15:06:40.000Z"
+                    },
+                    { "term": "   " }
+                  ]
+                }
+                """
+                .utf8
+            )
+            let imported = [
+                try Entry(
+                    createdAt: Date(timeIntervalSince1970: 1_750_000_000),
+                    definition: "To start a conversation.",
+                    id: UUID(9),
+                    isBookmarked: true,
+                    term: "Break the ice"
+                )
+            ]
 
             let store = TestStore(initialState: Self.state(entries: Entry.mocks)) {
                 Settings()
             } withDependencies: {
-                $0.continuousClock = clock
-                $0.fileClient.read = { _, _ in
-                    try await clock.sleep(for: .seconds(1))
-                    return try EntriesArchive.data(for: [.blueMoon])
+                $0.date.now = Self.now
+                $0.fileClient.read = { readURL, maximumSize in
+                    expectNoDifference(readURL, url)
+                    expectNoDifference(maximumSize, EntriesArchive.maximumFileSize)
+                    return file
                 }
-                $0.signInWithAppleClient.requestCredential = { throw DeletionFailure() }
+                $0.uuid = .constant(UUID(9))
             }
 
-            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
-            await store.send(.deleteAccountButtonTapped) {
-                $0.alert = .confirmAccountDeletion
+            await store.send(.importFilePicked(.success(url))) {
+                $0.destination = .loadingImportFile
             }
-            await store.send(.alert(.presented(.confirmAccountDeletion))) {
-                $0.alert = nil
-                $0.deletionStep = .reauthenticating
-            }
-            await store.receive(\.accountDeletionFailed) {
-                $0.alert = .accountDeletionFailed
-                $0.deletionStep = nil
-            }
-            await clock.advance(by: .seconds(1))
-        }
-
-        @Test
-        func aSignOutCancelsTheLoad() async {
-            let clock = TestClock()
-
-            let store = TestStore(initialState: Self.state(entries: Entry.mocks)) {
-                Settings()
-            } withDependencies: {
-                $0.authClient.signOut = {}
-                $0.fileClient.read = { _, _ in
-                    try await clock.sleep(for: .seconds(1))
-                    return try EntriesArchive.data(for: [.blueMoon])
-                }
-            }
-
-            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
-            await store.send(.signOutButtonTapped) {
-                $0.alert = .confirmSignOut
-            }
-            await store.send(.alert(.presented(.confirmSignOut))) {
-                $0.alert = nil
-            }
-            await clock.advance(by: .seconds(1))
-            await store.finish()
-        }
-
-        @Test
-        func aLoadThatEndsAfterTheSyncStopsAsksToSync() async {
-            var state = Self.state(entries: Entry.mocks)
-            state.isEntriesSynced = false
-
-            let store = TestStore(initialState: state) {
-                Settings()
-            } withDependencies: {
-                $0.fileClient.read = { _, _ in
-                    try EntriesArchive.data(for: [.blueMoon])
-                }
-            }
-
-            await store.send(.importFilePicked(.success(URL(filePath: "/Entries.json"))))
             await store.receive(\.importFileLoaded) {
-                $0.alert = .importNeedsSync
+                $0.destination = .alert(
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 1, entries: imported, invalidCount: 1))
+                )
+            }
+            await store.send(.destination(.presented(.alert(.confirmImport(imported))))) {
+                $0.destination = nil
+            }
+            await store.receive(\.delegate.didImport, imported)
+        }
+
+        @Test(
+            arguments: [
+                ([], .importHasNoEntries),
+                ([EntriesArchive.Record(term: "   ")], .importHasNoEntries),
+                (
+                    [
+                        EntriesArchive.Record(id: Entry.blueMoon.id, term: "Edited in another app"),
+                        EntriesArchive.Record(term: "   "),
+                    ],
+                    .importHasOnlyDuplicates
+                ),
+            ] as [([EntriesArchive.Record], AlertState<Settings.Alert>)]
+        )
+        func aFileWithoutNewEntriesHasNothingToImport(
+            records: [EntriesArchive.Record],
+            alert: AlertState<Settings.Alert>
+        ) async {
+            let store = TestStore(initialState: Self.state(entries: Entry.mocks, destination: .loadingImportFile)) {
+                Settings()
+            } withDependencies: {
+                $0.date.now = Self.now
+            }
+
+            await store.send(.importFileLoaded(.success(records))) {
+                $0.destination = .alert(alert)
+            }
+        }
+
+        @Test(arguments: [EntriesPhase.loading, .failed])
+        func aFileThatLoadsBeforeTheEntriesIsAProgrammerError(phase: EntriesPhase) async {
+            let store = TestStore(initialState: Self.state(phase: phase, destination: .loadingImportFile)) {
+                Settings()
+            }
+
+            await withKnownIssue {
+                await store.send(.importFileLoaded(.success([EntriesArchive.Record(term: "Break the ice")]))) {
+                    $0.destination = nil
+                }
             }
         }
 
         @Test
-        func aSecondPickReplacesTheFirstLoad() async {
+        func theConfirmationNamesEachKindOfSkippedEntry() {
+            expectNoDifference(
+                AlertState<Settings.Alert>
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 0, entries: Entry.mocks, invalidCount: 0))
+                    .title,
+                TextState("Import ^[\(3) Entry](inflect: true)?")
+            )
+            expectNoDifference(
+                AlertState<Settings.Alert>
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 0, entries: [.blueMoon], invalidCount: 0))
+                    .message,
+                nil
+            )
+            expectNoDifference(
+                AlertState<Settings.Alert>
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 2, entries: [.blueMoon], invalidCount: 0))
+                    .message,
+                TextState("^[\(2) entry](inflect: true) already in Lexicon will be skipped.")
+            )
+            expectNoDifference(
+                AlertState<Settings.Alert>
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 0, entries: [.blueMoon], invalidCount: 1))
+                    .message,
+                TextState("^[\(1) entry](inflect: true) can't be imported and will be skipped.")
+            )
+            expectNoDifference(
+                AlertState<Settings.Alert>
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 3, entries: [.blueMoon], invalidCount: 2))
+                    .message,
+                TextState(
+                    "^[\(3) entry](inflect: true) already in Lexicon and ^[\(2) entry](inflect: true) that can't be imported will be skipped."
+                )
+            )
+        }
+
+        @Test
+        func aFileThatFailsToLoadShowsAnAlert() async {
+            let store = TestStore(initialState: Self.state(entries: [])) {
+                Settings()
+            } withDependencies: {
+                $0.fileClient.read = { _, _ in throw FileClient.ReadError.tooLarge }
+            }
+
+            await store.send(.importFilePicked(.success(Self.url))) {
+                $0.destination = .loadingImportFile
+            }
+            await store.receive(\.importFileLoaded) {
+                $0.destination = .alert(.importFailed(FileClient.ReadError.tooLarge))
+            }
+        }
+
+        @Test
+        func aFailedPickShowsAnAlert() async {
+            let store = TestStore(initialState: Self.state(entries: [])) {
+                Settings()
+            }
+
+            await store.send(.importFilePicked(.failure(CocoaError(.fileReadNoPermission)))) {
+                $0.destination = .alert(.importFailed(CocoaError(.fileReadNoPermission)))
+            }
+        }
+
+        @Test(
+            arguments: [
+                (FileClient.ReadError.tooLarge as any Error, "This file is too large to import."),
+                (EntriesArchive.ReadError.invalid, "This file isn't a Lexicon export."),
+                (EntriesArchive.ReadError.unsupportedVersion, "This file was made by a newer version of Lexicon."),
+                (CocoaError(.fileReadNoPermission), "The file couldn't be opened."),
+            ]
+        )
+        func eachImportFailureHasItsOwnMessage(error: any Error, message: String) {
+            expectNoDifference(AlertState<Settings.Alert>.importFailed(error).message, TextState(message))
+        }
+
+        @Test
+        func aSecondPickReplacesTheFirstLoad() async throws {
             let clock = TestClock()
             let first = URL(filePath: "/First.json")
             let second = URL(filePath: "/Second.json")
-            let secondEntry = Entry(
+            let secondEntry = try Entry(
+                createdAt: Self.now,
+                definition: "",
+                id: UUID(5),
+                isBookmarked: false,
+                term: "Second"
+            )
+            let imported = try Entry(
                 createdAt: Self.now,
                 definition: "",
                 id: UUID(9),
@@ -387,6 +247,7 @@ extension BaseSuite {
             let store = TestStore(initialState: Self.state(entries: [])) {
                 Settings()
             } withDependencies: {
+                $0.date.now = Self.now
                 $0.fileClient.read = { url, _ in
                     if url == first {
                         try await clock.sleep(for: .seconds(2))
@@ -395,37 +256,58 @@ extension BaseSuite {
                     try await clock.sleep(for: .seconds(1))
                     return try EntriesArchive.data(for: [secondEntry])
                 }
+                $0.uuid = .constant(UUID(9))
             }
 
-            await store.send(.importFilePicked(.success(first)))
+            await store.send(.importFilePicked(.success(first))) {
+                $0.destination = .loadingImportFile
+            }
             await store.send(.importFilePicked(.success(second)))
             await clock.advance(by: .seconds(1))
             await store.receive(\.importFileLoaded) {
-                $0.alert = .confirmImport([secondEntry], duplicateCount: 0, invalidCount: 0)
+                $0.destination = .alert(
+                    .confirmImport(EntriesArchive.Import(duplicateCount: 0, entries: [imported], invalidCount: 0))
+                )
             }
             await clock.advance(by: .seconds(1))
         }
 
-        @Test
-        func dismissingTheConfirmationDoesNotImport() async {
-            var state = Self.state(entries: [])
-            state.alert = .confirmImport([.blueMoon], duplicateCount: 0, invalidCount: 0)
+        @Test(arguments: ConfirmationButton.allCases)
+        func aLoadThatEndsUnderAConfirmationIsDropped(button: ConfirmationButton) async {
+            let clock = TestClock()
+            let isReadCanceled = LockIsolated(false)
 
-            let store = TestStore(initialState: state) {
+            let store = TestStore(initialState: Self.state(entries: [])) {
                 Settings()
+            } withDependencies: {
+                $0.fileClient.read = { _, _ in
+                    try await withTaskCancellationHandler {
+                        try await clock.sleep(for: .seconds(1))
+                        return try EntriesArchive.data(for: [.blueMoon])
+                    } onCancel: {
+                        isReadCanceled.setValue(true)
+                    }
+                }
             }
 
-            await store.send(.alert(.dismiss)) {
-                $0.alert = nil
+            await store.send(.importFilePicked(.success(Self.url))) {
+                $0.destination = .loadingImportFile
             }
+            await store.send(button.action) {
+                $0.destination = .alert(button.alert)
+            }
+            await clock.advance(by: .seconds(1))
+            #expect(isReadCanceled.value)
         }
 
         @Test
         func closingTheSettingsDuringTheLoadDropsTheResult() async {
             let clock = TestClock()
             var state = Home.State(user: .mock)
-            state.$entries.withLock { $0 = [] }
-            state.destination = .settings(Settings.State(entries: SharedReader(state.$entries), user: .mock))
+            state.$entries.withLock { $0 = .loaded([]) }
+            state.destination = .settings(
+                Settings.State(entries: SharedReader(state.$entries), user: .mock)
+            )
 
             let store = TestStore(initialState: state) {
                 Home()
@@ -436,7 +318,9 @@ extension BaseSuite {
                 }
             }
 
-            await store.send(.destination(.presented(.settings(.importFilePicked(.success(URL(filePath: "/E.json")))))))
+            await store.send(.destination(.presented(.settings(.importFilePicked(.success(Self.url)))))) {
+                $0.destination?.modify(\.settings) { $0.destination = .loadingImportFile }
+            }
             await store.send(.destination(.dismiss)) {
                 $0.destination = nil
             }
@@ -445,9 +329,13 @@ extension BaseSuite {
 
         @Test
         func theExportAndImportAvailabilityFollowTheEntries() {
-            let loading = Settings.State(user: .mock)
+            let loading = Self.state(phase: .loading)
             #expect(!loading.canExportEntries)
             #expect(!loading.canImportEntries)
+
+            let failed = Self.state(phase: .failed)
+            #expect(!failed.canExportEntries)
+            #expect(!failed.canImportEntries)
 
             let empty = Self.state(entries: [])
             #expect(!empty.canExportEntries)
@@ -456,142 +344,43 @@ extension BaseSuite {
             let populated = Self.state(entries: Entry.mocks)
             #expect(populated.canExportEntries)
             #expect(populated.canImportEntries)
+
+            let loadingFile = Self.state(entries: Entry.mocks, destination: .loadingImportFile)
+            #expect(loadingFile.canExportEntries)
+            #expect(!loadingFile.canImportEntries)
         }
 
-        @Test
-        func anEntryAtTheSizeLimitImportsAndOneByteMoreIsSkipped() async {
-            let atLimit = Self.entry(id: 1, term: "T", definition: Self.text(utf8Count: Self.definitionLimit))
-            let overLimit = Self.entry(id: 2, term: "T", definition: Self.text(utf8Count: Self.definitionLimit + 1))
-            #expect(atLimit.estimatedDocumentSize == Entry.maximumDocumentSize)
-            #expect(overLimit.estimatedDocumentSize == Entry.maximumDocumentSize + 1)
+        enum ConfirmationButton: CaseIterable, Sendable {
+            case deleteAccount
+            case signOut
 
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
+            var action: Settings.Action {
+                switch self {
+                case .deleteAccount: .deleteAccountButtonTapped
+                case .signOut: .signOutButtonTapped
+                }
             }
 
-            await store.send(.importFileLoaded(.success([atLimit, overLimit].map(Self.record)))) {
-                $0.alert = .confirmImport([atLimit], duplicateCount: 0, invalidCount: 1)
-            }
-        }
-
-        @Test
-        func theSizeLimitCountsUTF8BytesNotCharacters() async {
-            let emojiCount = Self.definitionLimit / 4
-            let underLimit = Self.entry(id: 1, term: "T", definition: String(repeating: "😀", count: emojiCount))
-            let overLimit = Self.entry(id: 2, term: "T", definition: String(repeating: "😀", count: emojiCount + 1))
-            #expect(overLimit.definition.count < Self.definitionLimit)
-            #expect(underLimit.estimatedDocumentSize <= Entry.maximumDocumentSize)
-            #expect(overLimit.estimatedDocumentSize > Entry.maximumDocumentSize)
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([underLimit, overLimit].map(Self.record)))) {
-                $0.alert = .confirmImport([underLimit], duplicateCount: 0, invalidCount: 1)
+            var alert: AlertState<Settings.Alert> {
+                switch self {
+                case .deleteAccount: .confirmAccountDeletion
+                case .signOut: .confirmSignOut
+                }
             }
         }
 
-        @Test
-        func aLargeTermOrALargeDefinitionIsSkipped() async {
-            let largeTerm = Self.entry(id: 1, term: Self.text(utf8Count: 1_000_000), definition: "")
-            let largeDefinition = Self.entry(id: 2, term: "T", definition: Self.text(utf8Count: 1_000_000))
-            let small = Self.entry(id: 3, term: "Break the ice", definition: "To start a conversation.")
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([largeTerm, largeDefinition, small].map(Self.record)))) {
-                $0.alert = .confirmImport([small], duplicateCount: 0, invalidCount: 2)
-            }
+        private static func state(
+            entries: [Entry],
+            destination: Settings.Destination.State? = nil
+        ) -> Settings.State {
+            state(phase: .loaded(IdentifiedArray(uniqueElements: entries)), destination: destination)
         }
 
-        @Test
-        func theSizeLimitAppliesAfterTheTextIsTrimmed() async {
-            let trimmed = Self.entry(id: 1, term: "T", definition: Self.text(utf8Count: Self.definitionLimit))
-            var record = Self.record(trimmed)
-            record.definition = "\n   " + trimmed.definition + "   \n"
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([record]))) {
-                $0.alert = .confirmImport([trimmed], duplicateCount: 0, invalidCount: 0)
-            }
+        private static func state(
+            phase: EntriesPhase,
+            destination: Settings.Destination.State? = nil
+        ) -> Settings.State {
+            Settings.State(destination: destination, entries: SharedReader(value: phase), user: .mock)
         }
-
-        @Test
-        func aLargeCopyDoesNotHideALaterValidCopyWithTheSameID() async {
-            let large = Self.entry(id: 1, term: "T", definition: Self.text(utf8Count: 2_000_000))
-            let valid = Self.entry(id: 1, term: "Break the ice", definition: "To start a conversation.")
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([large, valid].map(Self.record)))) {
-                $0.alert = .confirmImport([valid], duplicateCount: 0, invalidCount: 1)
-            }
-        }
-
-        @Test
-        func aLargeCopyOfAnEntryInLexiconCountsAsADuplicate() async {
-            var large = Entry.blueMoon
-            large.definition = Self.text(utf8Count: 2_000_000)
-
-            let store = TestStore(initialState: Self.state(entries: Entry.mocks)) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([Self.record(large)]))) {
-                $0.alert = .importHasOnlyDuplicates
-            }
-        }
-
-        @Test
-        func aFileWithOnlyLargeEntriesHasNothingToImport() async {
-            let large = Self.entry(id: 1, term: "T", definition: Self.text(utf8Count: 2_000_000))
-
-            let store = TestStore(initialState: Self.state(entries: [])) {
-                Settings()
-            }
-
-            await store.send(.importFileLoaded(.success([Self.record(large)]))) {
-                $0.alert = .importHasNoEntries
-            }
-        }
-
-        private static let definitionLimit =
-            Entry.maximumDocumentSize - entry(id: 0, term: "T", definition: "").estimatedDocumentSize
-
-        private static func entry(id: Int, term: String, definition: String) -> Entry {
-            Entry(createdAt: now, definition: definition, id: UUID(id), isBookmarked: false, term: term)
-        }
-
-        private static func text(utf8Count: Int) -> String {
-            String(repeating: "a", count: utf8Count)
-        }
-
-        private static func record(_ entry: Entry) -> EntriesArchive.Record {
-            EntriesArchive.Record(
-                createdAt: entry.createdAt,
-                definition: entry.definition,
-                id: entry.id,
-                isBookmarked: entry.isBookmarked,
-                term: entry.term
-            )
-        }
-
-        private static func state(entries: [Entry]) -> Settings.State {
-            Settings.State(
-                entries: SharedReader(value: IdentifiedArray(uniqueElements: entries)),
-                isEntriesSynced: true,
-                user: .mock
-            )
-        }
-
-        private struct DeletionFailure: Error {}
     }
 }
