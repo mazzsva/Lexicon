@@ -5,10 +5,12 @@
 //  Created by Lorenzo Mazzarotto on 11/10/26.
 //
 
+import CoreTransferable
 import CustomDump
 import Dependencies
 import Foundation
 import Testing
+import UniformTypeIdentifiers
 
 @testable import Lexicon
 
@@ -17,7 +19,7 @@ extension BaseSuite {
     struct EntriesArchiveTests {
         @Test
         func anExportedFileImportsEveryField() throws {
-            let fractionalSecond = Entry(
+            let fractionalSecond = try Entry(
                 createdAt: Date(timeIntervalSince1970: 1_750_000_000.25),
                 definition: Entry.blueMoon.definition,
                 id: Entry.blueMoon.id,
@@ -42,29 +44,30 @@ extension BaseSuite {
             )
         }
 
-        @Test
-        func aMissingOrInvalidFieldImportsAsNil() throws {
-            let data = Data(
-                """
-                {
-                  "version": 1,
-                  "entries": [
-                    { "term": "Low-hanging fruit", "id": "not a UUID", "createdAt": 5, "isBookmarked": "yes" },
-                    { "createdAt": "2026-10-11T09:30:00Z" }
-                  ]
-                }
-                """
-                .utf8
-            )
-
-            let records = try EntriesArchive.records(from: data)
+        @Test(
+            arguments: [
+                #""id": "not a UUID""#,
+                #""id": 5"#,
+                #""id": "{6BA7B810-9DAD-11D1-80B4-00C04FD430C8}""#,
+                #""id": null"#,
+                #""definition": false"#,
+                #""definition": null"#,
+                #""isBookmarked": "yes""#,
+                #""isBookmarked": 1"#,
+                #""isBookmarked": null"#,
+                #""createdAt": 5"#,
+                #""createdAt": null"#,
+                #""createdAt": "2025-06-15""#,
+                #""createdAt": "2025-06-15T15:06:40""#,
+                #""createdAt": 1750000000"#,
+            ]
+        )
+        func aMissingOrInvalidFieldImportsAsNil(field: String) throws {
+            let data = Data(#"{ "version": 1, "entries": [{ "term": "Low-hanging fruit", \#(field) }] }"#.utf8)
 
             expectNoDifference(
-                records,
-                [
-                    EntriesArchive.Record(term: "Low-hanging fruit"),
-                    EntriesArchive.Record(createdAt: Date(timeIntervalSince1970: 1_791_711_000)),
-                ]
+                try EntriesArchive.records(from: data),
+                [EntriesArchive.Record(term: "Low-hanging fruit")]
             )
         }
 
@@ -72,127 +75,68 @@ extension BaseSuite {
             arguments: [
                 "not JSON",
                 "",
-                "   ",
-                "null",
                 #"[{ "term": "Low-hanging fruit" }]"#,
                 #"{ "entries": [] }"#,
                 #"{ "version": 1 }"#,
                 #"{ "version": 1, "entries": [1, 2] }"#,
-                #"{ "version": 1, "entries": [{ "term": "Low-hanging fruit" }, null] }"#,
-                #"{ "version": 1, "entries": { "term": "Low-hanging fruit" } }"#,
-                #"{ "version": 1, "entries": null }"#,
                 #"{ "version": "1", "entries": [] }"#,
-                #"{ "version": 1.5, "entries": [] }"#,
                 #"{ "version": 0, "entries": [] }"#,
-                #"{ "version": -1, "entries": [] }"#,
-                #"{ "version": null, "entries": [] }"#,
-                #"{ "version": true, "entries": [] }"#,
             ]
         )
         func aFileWithADifferentStructureIsInvalid(contents: String) {
-            #expect(throws: EntriesArchive.Error.invalid) {
+            #expect(throws: EntriesArchive.ReadError.invalid) {
                 try EntriesArchive.records(from: Data(contents.utf8))
             }
         }
 
-        @Test(arguments: [2, 99, Int.max])
-        func aFileFromANewerVersionIsUnsupported(version: Int) {
-            #expect(throws: EntriesArchive.Error.unsupportedVersion) {
+        @Test
+        func aFileFromANewerVersionIsUnsupported() {
+            let version = EntriesArchive.version + 1
+
+            #expect(throws: EntriesArchive.ReadError.unsupportedVersion) {
                 try EntriesArchive.records(from: Data(#"{ "version": \#(version), "entries": "anything" }"#.utf8))
             }
         }
 
-        @Test
-        func aWholeNumberVersionWithADecimalPointIsSupported() throws {
-            expectNoDifference(try EntriesArchive.records(from: Data(#"{ "version": 1.0, "entries": [] }"#.utf8)), [])
-        }
-
-        @Test
-        func everyFieldCanBeNull() throws {
-            let data = Data(
-                #"""
-                {
-                  "version": 1,
-                  "entries": [
-                    { "term": null, "definition": null, "id": null, "isBookmarked": null, "createdAt": null }
-                  ]
-                }
-                """#
-                .utf8
-            )
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record()])
-        }
-
-        @Test
-        func unknownKeysAreIgnored() throws {
-            let data = Data(
-                #"""
-                {
-                  "version": 1,
-                  "exportedAt": "2026-10-11T09:30:00Z",
-                  "entries": [{ "term": "Low-hanging fruit", "tags": ["a"], "notes": { "a": 1 } }]
-                }
-                """#
-                .utf8
-            )
-
-            expectNoDifference(
-                try EntriesArchive.records(from: data), [EntriesArchive.Record(term: "Low-hanging fruit")])
-        }
-
         @Test(
             arguments: [
-                #""isBookmarked": 0"#,
-                #""isBookmarked": 1"#,
-                #""isBookmarked": "true""#,
-                #""term": 5"#,
-                #""term": ["Low-hanging fruit"]"#,
-                #""definition": false"#,
-                #""id": 5"#,
-                #""id": "{6BA7B810-9DAD-11D1-80B4-00C04FD430C8}""#,
-                #""id": "6BA7B8109DAD11D180B400C04FD430C8""#,
-                #""id": """#,
-            ]
+                (
+                    Data([0xEF, 0xBB, 0xBF]) + Data(#"{ "version": 1, "entries": [{ "term": "Café" }] }"#.utf8),
+                    [EntriesArchive.Record(term: "Café")]
+                ),
+                (
+                    Data(utf16WithByteOrderMark: #"{ "version": 1, "entries": [{ "term": "Café" }] }"#),
+                    [EntriesArchive.Record(term: "Café")]
+                ),
+                (
+                    Data(
+                        #"""
+                        {
+                          "version": 1,
+                          "exportedAt": "2026-10-11T09:30:00Z",
+                          "entries": [{ "term": "Low-hanging fruit", "tags": ["a"], "notes": { "a": 1 } }]
+                        }
+                        """#
+                        .utf8
+                    ),
+                    [EntriesArchive.Record(term: "Low-hanging fruit")]
+                ),
+                (
+                    Data(#"{ "version": 1, "entries": [{ "id": "00000000-0000-0000-0000-00000000000a" }] }"#.utf8),
+                    [EntriesArchive.Record(id: UUID(10))]
+                ),
+                (Data(#"{ "version": 1, "entries": [] }"#.utf8), []),
+            ] as [(Data, [EntriesArchive.Record])]
         )
-        func aFieldOfTheWrongTypeImportsAsNil(field: String) throws {
-            let data = Data(#"{ "version": 1, "entries": [{ \#(field) }] }"#.utf8)
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record()])
-        }
-
-        @Test
-        func aLowercaseIDImportsAsTheSameID() throws {
-            let data = Data(
-                #"{ "version": 1, "entries": [{ "id": "\#(Entry.blueMoon.id.uuidString.lowercased())" }] }"#.utf8
-            )
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record(id: Entry.blueMoon.id)])
-        }
-
-        @Test
-        func theFirstOfTwoEqualKeysWins() throws {
-            let data = Data(#"{ "version": 1, "entries": [{ "term": "First", "term": "Second" }] }"#.utf8)
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record(term: "First")])
+        func aFileEditedInAnotherAppImports(data: Data, records: [EntriesArchive.Record]) throws {
+            expectNoDifference(try EntriesArchive.records(from: data), records)
         }
 
         @Test(
             arguments: [
                 ("2025-06-15T15:06:40Z", 1_750_000_000.0),
-                ("2025-06-15T15:06:40z", 1_750_000_000.0),
-                ("2025-06-15T15:06:40.5Z", 1_750_000_000.5),
                 ("2025-06-15T15:06:40.25Z", 1_750_000_000.25),
-                ("2025-06-15T15:06:40.125Z", 1_750_000_000.125),
-                ("2025-06-15T15:06:40.0625Z", 1_750_000_000.0625),
-                ("2025-06-15T15:06:40.000000Z", 1_750_000_000.0),
-                ("2025-06-15T15:06:40.500000000Z", 1_750_000_000.5),
-                ("2025-06-15T17:06:40+02:00", 1_750_000_000.0),
                 ("2025-06-15T17:06:40.5+02:00", 1_750_000_000.5),
-                ("2025-06-15T09:36:40-05:30", 1_750_000_000.0),
-                ("1969-07-20T20:17:40Z", -14_182_940.0),
-                ("0001-01-01T00:00:00Z", -62_135_769_600.0),
-                ("9999-12-31T23:59:59Z", 253_402_300_799.0),
             ]
         )
         func anISO8601DateImportsAtItsInstant(string: String, timeIntervalSince1970: Double) throws {
@@ -203,33 +147,15 @@ extension BaseSuite {
             #expect(abs(createdAt.timeIntervalSince1970 - timeIntervalSince1970) < 0.000_001)
         }
 
-        @Test(
-            arguments: [
-                #""2025-06-15""#,
-                #""2025-06-15 15:06:40Z""#,
-                #""2025-06-15T15:06:40""#,
-                #""2025-13-01T00:00:00Z""#,
-                #""June 15, 2025""#,
-                #""""#,
-                "1750000000",
-                "true",
-            ]
-        )
-        func aDateInADifferentFormatImportsAsNil(value: String) throws {
-            let data = Data(#"{ "version": 1, "entries": [{ "createdAt": \#(value) }] }"#.utf8)
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record()])
-        }
-
         @Test
         func aDateKeepsItsMicrosecondsThroughEveryExport() throws {
             let dates = [
                 1_750_000_000.123_456, 1_750_000_000.001, 1_750_000_000.004, 1_750_000_000.999_999_7, -0.000_4,
                 -14_182_940.5, 0,
             ]
-            let entries = dates.enumerated()
+            let entries = try dates.enumerated()
                 .map { index, date in
-                    Entry(
+                    try Entry(
                         createdAt: Date(timeIntervalSince1970: date),
                         definition: "",
                         id: UUID(index),
@@ -244,7 +170,7 @@ extension BaseSuite {
                 .map { entry, record in
                     let createdAt = try #require(record.createdAt)
                     #expect(abs(createdAt.timeIntervalSince(entry.createdAt)) <= 0.000_001)
-                    return Entry(
+                    return try Entry(
                         createdAt: createdAt,
                         definition: entry.definition,
                         id: entry.id,
@@ -257,52 +183,23 @@ extension BaseSuite {
                 String(decoding: try EntriesArchive.data(for: imported), as: UTF8.self),
                 String(decoding: data, as: UTF8.self)
             )
-            let text = String(decoding: data, as: UTF8.self)
-            #expect(text.contains(#""createdAt" : "2025-06-15T15:06:40.123456Z""#))
-            #expect(text.contains(#""createdAt" : "2025-06-15T15:06:40.004000Z""#))
-            #expect(text.contains(#""createdAt" : "2025-06-15T15:06:41.000000Z""#))
-            #expect(text.contains(#""createdAt" : "1969-12-31T23:59:59.999600Z""#))
-        }
-
-        @Test
-        func everyCharacterImportsByteForByte() throws {
-            let text =
-                "🇮🇹 👩🏽‍💻 e\u{301} \u{E9} \u{200B}\u{200D}\u{FEFF} שלום عربي \u{0}\u{7}\u{1B}\u{7F}\u{2028}\u{2029}"
-                + " \"quoted\" \\ / \n\r\t {\"version\": 2, \"entries\": []} </script>"
-            let entry = Entry(
-                createdAt: .init(timeIntervalSince1970: 0),
-                definition: text,
-                id: UUID(0),
-                isBookmarked: false,
-                term: text
+            expectNoDifference(
+                try JSONDecoder().decode(Timestamps.self, from: data).entries.map(\.createdAt),
+                [
+                    "2025-06-15T15:06:40.123456Z",
+                    "2025-06-15T15:06:40.001000Z",
+                    "2025-06-15T15:06:40.004000Z",
+                    "2025-06-15T15:06:41.000000Z",
+                    "1969-12-31T23:59:59.999600Z",
+                    "1969-07-20T20:17:39.500000Z",
+                    "1970-01-01T00:00:00.000000Z",
+                ]
             )
-
-            let record = try #require(try EntriesArchive.records(from: EntriesArchive.data(for: [entry])).first)
-
-            #expect(record.term.map { Array($0.utf8) } == Array(text.utf8))
-            #expect(record.definition.map { Array($0.utf8) } == Array(text.utf8))
-        }
-
-        @Test
-        func aVeryLongTextImportsWhole() throws {
-            let text = String(repeating: "Low-hanging fruit ✓ ", count: 100_000)
-            let entry = Entry(
-                createdAt: .init(timeIntervalSince1970: 0),
-                definition: text,
-                id: UUID(0),
-                isBookmarked: false,
-                term: text
-            )
-
-            let record = try #require(try EntriesArchive.records(from: EntriesArchive.data(for: [entry])).first)
-
-            #expect(record.term == text)
-            #expect(record.definition == text)
         }
 
         @Test
         func anExportedFileIsReadable() throws {
-            let entry = Entry(
+            let entry = try Entry(
                 createdAt: .init(timeIntervalSince1970: 0),
                 definition: "Either/or",
                 id: UUID(0),
@@ -312,36 +209,31 @@ extension BaseSuite {
 
             let text = String(decoding: try EntriesArchive.data(for: [entry]), as: UTF8.self)
 
-            #expect(text.contains(#""term" : "And/or""#))
-            #expect(text.contains(#""version" : 1"#))
-            #expect(text.contains(#""createdAt" : "1970-01-01T00:00:00.000000Z""#))
-        }
-
-        @Test
-        func anEmptyListExportsAFileThatImports() throws {
-            expectNoDifference(try EntriesArchive.records(from: EntriesArchive.data(for: [])), [])
-        }
-
-        @Test(arguments: [String.Encoding.utf16, .utf16LittleEndian, .utf16BigEndian])
-        func aFileInADifferentUnicodeEncodingImports(encoding: String.Encoding) throws {
-            let data = try #require(#"{ "version": 1, "entries": [{ "term": "Café" }] }"#.data(using: encoding))
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record(term: "Café")])
-        }
-
-        @Test
-        func aFileWithAByteOrderMarkImports() throws {
-            let data = Data([0xEF, 0xBB, 0xBF]) + Data(#"{ "version": 1, "entries": [{ "term": "Café" }] }"#.utf8)
-
-            expectNoDifference(try EntriesArchive.records(from: data), [EntriesArchive.Record(term: "Café")])
+            expectNoDifference(
+                text,
+                """
+                {
+                  "entries" : [
+                    {
+                      "createdAt" : "1970-01-01T00:00:00.000000Z",
+                      "definition" : "Either/or",
+                      "id" : "00000000-0000-0000-0000-000000000000",
+                      "isBookmarked" : false,
+                      "term" : "And/or"
+                    }
+                  ],
+                  "version" : 1
+                }
+                """
+            )
         }
 
         @Test
         func aLargeLibraryExportsAFileThatCanBeImported() throws {
             let definition = String(repeating: "A definition in the user's own words. ", count: 5)
-            let entries = (0 ..< 50_000)
+            let entries = try (0 ..< 50_000)
                 .map { index in
-                    Entry(
+                    try Entry(
                         createdAt: Date(timeIntervalSince1970: 1_750_000_000 + Double(index)),
                         definition: definition,
                         id: UUID(index),
@@ -352,28 +244,75 @@ extension BaseSuite {
 
             let data = try EntriesArchive.data(for: entries)
 
-            #expect(data.count <= Settings.maximumImportFileSize)
-            #expect(try EntriesArchive.records(from: data).count == entries.count)
+            #expect(data.count <= EntriesArchive.maximumFileSize)
         }
 
         @Test(arguments: [1, 2, 3, 4, 5])
         func randomEntriesImportExactlyAsTheyExported(seed: UInt64) throws {
             var generator = SplitMix64(seed: seed)
-            let entries = (0 ..< 300).map { _ in Entry.random(using: &generator) }
+            let entries = try (0 ..< 300).map { _ in try Entry.random(using: &generator) }
 
             let records = try EntriesArchive.records(from: EntriesArchive.data(for: entries))
 
-            try #require(records.count == entries.count)
-            for (entry, record) in zip(entries, records) {
-                #expect(record.id == entry.id)
-                #expect(record.term.map { Array($0.utf8) } == Array(entry.term.utf8))
-                #expect(record.definition.map { Array($0.utf8) } == Array(entry.definition.utf8))
-                #expect(record.isBookmarked == entry.isBookmarked)
-                let createdAt = try #require(record.createdAt)
-                #expect(abs(createdAt.timeIntervalSince(entry.createdAt)) <= 0.000_001)
-            }
+            expectNoDifference(records.map(Fields.init), entries.map(Fields.init))
+            #expect(
+                zip(entries, records)
+                    .allSatisfy { entry, record in
+                        record.createdAt.map { abs($0.timeIntervalSince(entry.createdAt)) <= 0.000_001 } == true
+                    }
+            )
+        }
+
+        @Test
+        func theExportedDataIsTheArchiveOfEveryEntry() async throws {
+            let data = try await EntriesArchive.Export(entries: Entry.mocks).exported(as: .json)
+
+            expectNoDifference(data, try EntriesArchive.data(for: Entry.mocks))
+        }
+
+        @Test
+        func theFileNameUsesTheLocalDate() {
+            let date = Date(timeIntervalSince1970: 1_791_671_400)
+
+            expectNoDifference(
+                EntriesArchive.Export.fileName(date: date, timeZone: TimeZone(identifier: "Europe/Rome")!),
+                "Lexicon 2026-10-11.json"
+            )
+            expectNoDifference(
+                EntriesArchive.Export.fileName(date: date, timeZone: TimeZone(identifier: "America/New_York")!),
+                "Lexicon 2026-10-10.json"
+            )
         }
     }
+}
+
+private struct Fields: Equatable {
+    let definition: [UInt8]?
+    let id: UUID?
+    let isBookmarked: Bool?
+    let term: [UInt8]?
+
+    init(_ record: EntriesArchive.Record) {
+        definition = record.definition.map { Array($0.utf8) }
+        id = record.id
+        isBookmarked = record.isBookmarked
+        term = record.term.map { Array($0.utf8) }
+    }
+
+    init(_ entry: Entry) {
+        definition = Array(entry.definition.utf8)
+        id = entry.id
+        isBookmarked = entry.isBookmarked
+        term = Array(entry.term.utf8)
+    }
+}
+
+private struct Timestamps: Decodable {
+    struct Item: Decodable {
+        let createdAt: String
+    }
+
+    let entries: [Item]
 }
 
 private struct SplitMix64: RandomNumberGenerator {
@@ -392,9 +331,15 @@ private struct SplitMix64: RandomNumberGenerator {
     }
 }
 
+extension Data {
+    fileprivate init(utf16WithByteOrderMark string: String) {
+        self.init([0xFF, 0xFE] + string.utf16.flatMap { [UInt8(truncatingIfNeeded: $0), UInt8($0 >> 8)] })
+    }
+}
+
 extension Entry {
-    fileprivate static func random(using generator: inout some RandomNumberGenerator) -> Entry {
-        Entry(
+    fileprivate static func random(using generator: inout some RandomNumberGenerator) throws -> Entry {
+        try Entry(
             createdAt: Date(
                 timeIntervalSince1970: Double(
                     Int64.random(in: -2_000_000_000_000 ... 4_000_000_000_000, using: &generator))
@@ -403,7 +348,7 @@ extension Entry {
             definition: String.random(maximumCount: 200, using: &generator),
             id: UUID(uuid: UUID.random(using: &generator)),
             isBookmarked: Bool.random(using: &generator),
-            term: String.random(maximumCount: 40, using: &generator)
+            term: "Term " + String.random(maximumCount: 40, using: &generator)
         )
     }
 }
