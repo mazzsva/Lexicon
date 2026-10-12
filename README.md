@@ -14,7 +14,7 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
   <tr><td><b>Backend</b></td><td>Firebase</td></tr>
   <tr><td><b>Database</b></td><td>Cloud Firestore</td></tr>
   <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
-  <tr><td><b>Intelligence</b></td><td>Foundation Models</td></tr>
+  <tr><td><b>Intelligence</b></td><td><a href="https://developer.apple.com/documentation/foundationmodels">Foundation Models</a></td></tr>
   <tr><td><b>Testing</b></td><td><a href="https://github.com/swiftlang/swift-testing">Swift Testing</a></td></tr>
 </table>
 
