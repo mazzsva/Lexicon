@@ -121,9 +121,9 @@ extension BaseSuite {
             let store = TestStore(initialState: Self.state()) {
                 Settings()
             } withDependencies: {
-                $0.entriesClient.save = { entry, uid in
+                $0.entriesClient.createAll = { entries, uid in
                     expectNoDifference(uid, User.mock.uid)
-                    saved.withValue { $0.append(entry) }
+                    saved.withValue { $0.append(contentsOf: entries) }
                 }
             }
 

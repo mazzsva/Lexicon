@@ -201,9 +201,7 @@ struct Settings {
     #if DEBUG
     private func addMockEntries(uid: String) -> Effect<Action> {
         .run { _ in
-            for entry in Entry.mocks {
-                try await entriesClient.save(entry: entry, uid: uid)
-            }
+            try await entriesClient.createAll(entries: Entry.mocks, uid: uid)
         } catch: { error, _ in
             logger.error("Adding the mock entries failed: \(error, privacy: .public)")
         }

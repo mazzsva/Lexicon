@@ -376,7 +376,7 @@ extension BaseSuite {
                         Home()
                     } withDependencies: {
                         $0.date.now = now
-                        $0.entriesClient.save = { entry, uid in
+                        $0.entriesClient.create = { entry, uid in
                             expectNoDifference(entry, created)
                             expectNoDifference(uid, User.mock.uid)
                             savesEntry()
@@ -436,7 +436,7 @@ extension BaseSuite {
                 let store = TestStore(initialState: state) {
                     Home()
                 } withDependencies: {
-                    $0.entriesClient.save = { [bookmarked] entry, uid in
+                    $0.entriesClient.update = { [bookmarked] entry, uid in
                         expectNoDifference(entry, bookmarked)
                         expectNoDifference(uid, User.mock.uid)
                         savesEntry()
@@ -452,7 +452,7 @@ extension BaseSuite {
 
         // The save leaves no trace on screen, so an alert must report the failure
         @Test
-        func aFailedSaveShowsAnAlert() async {
+        func aFailedUpdateShowsAnAlert() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
@@ -461,12 +461,33 @@ extension BaseSuite {
             let store = TestStore(initialState: state) {
                 Home()
             } withDependencies: {
-                $0.entriesClient.save = { _, _ in throw EntriesFailure() }
+                $0.entriesClient.update = { _, _ in throw EntriesFailure() }
             }
 
             await store.send(
                 .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
             )
+            await store.receive(\.entrySaveFailed) {
+                $0.destination = .alert(.failed(.entrySave))
+            }
+        }
+
+        @Test
+        func aFailedCreationShowsAnAlert() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.destination = .createEntry(EntryForm.State())
+
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.entriesClient.create = { _, _ in throw EntriesFailure() }
+                $0.hapticsClient.success = {}
+            }
+
+            await store.send(.destination(.presented(.createEntry(.delegate(.didSubmit(.blueMoon)))))) {
+                $0.destination = nil
+            }
             await store.receive(\.entrySaveFailed) {
                 $0.destination = .alert(.failed(.entrySave))
             }
@@ -641,7 +662,7 @@ extension BaseSuite {
                 let store = TestStore(initialState: state) {
                     Home()
                 } withDependencies: {
-                    $0.entriesClient.saveAll = { entries, uid in
+                    $0.entriesClient.createAll = { entries, uid in
                         expectNoDifference(uid, User.mock.uid)
                         saved.setValue(entries)
                     }
@@ -697,7 +718,7 @@ extension BaseSuite {
                 Home()
             } withDependencies: {
                 $0.date.now = Date(timeIntervalSince1970: 1_751_000_000)
-                $0.entriesClient.saveAll = { entries, uid in
+                $0.entriesClient.createAll = { entries, uid in
                     expectNoDifference(uid, user.uid)
                     saved.setValue(entries)
                 }
@@ -743,7 +764,7 @@ extension BaseSuite {
             let store = TestStore(initialState: state) {
                 Home()
             } withDependencies: {
-                $0.entriesClient.saveAll = { _, _ in throw EntriesFailure() }
+                $0.entriesClient.createAll = { _, _ in throw EntriesFailure() }
                 $0.hapticsClient.success = {}
             }
 

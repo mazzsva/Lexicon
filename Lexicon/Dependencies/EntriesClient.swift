@@ -15,6 +15,8 @@ import os
 @DependencyClient
 struct EntriesClient: Sendable {
     var clearLocalData: @Sendable () async throws -> Void
+    var create: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
+    var createAll: @Sendable (_ entries: [Entry], _ uid: String) async throws -> Void
     var delete: @Sendable (_ id: Entry.ID, _ uid: String) async throws -> Void
     var deleteAll: @Sendable (_ uid: String) async throws -> Void
 
@@ -22,8 +24,7 @@ struct EntriesClient: Sendable {
         AsyncThrowingStream { _ in }
     }
 
-    var save: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
-    var saveAll: @Sendable (_ entries: [Entry], _ uid: String) async throws -> Void
+    var update: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
 }
 
 struct EntriesSnapshot: Equatable, Sendable {
@@ -43,6 +44,12 @@ extension EntriesClient: DependencyKey {
             clearLocalData: {
                 try await FirestoreStorage.shared.clearLocalData()
             },
+            create: { entry, uid in
+                try await FirestoreStorage.shared.create(entry, uid: uid)
+            },
+            createAll: { entries, uid in
+                try await FirestoreStorage.shared.createAll(entries, uid: uid)
+            },
             delete: { id, uid in
                 try await FirestoreStorage.shared.delete(id: id, uid: uid)
             },
@@ -52,11 +59,8 @@ extension EntriesClient: DependencyKey {
             entries: { uid in
                 await FirestoreStorage.shared.entries(uid: uid)
             },
-            save: { entry, uid in
-                try await FirestoreStorage.shared.save(entry, uid: uid)
-            },
-            saveAll: { entries, uid in
-                try await FirestoreStorage.shared.saveAll(entries, uid: uid)
+            update: { entry, uid in
+                try await FirestoreStorage.shared.update(entry, uid: uid)
             }
         )
     }
@@ -64,6 +68,8 @@ extension EntriesClient: DependencyKey {
     static var previewValue: EntriesClient {
         EntriesClient(
             clearLocalData: {},
+            create: { _, _ in },
+            createAll: { _, _ in },
             delete: { _, _ in },
             deleteAll: { _ in },
             entries: { _ in
@@ -71,8 +77,7 @@ extension EntriesClient: DependencyKey {
                     continuation.yield(.mock)
                 }
             },
-            save: { _, _ in },
-            saveAll: { _, _ in }
+            update: { _, _ in }
         )
     }
 
@@ -105,6 +110,29 @@ private actor FirestoreStorage {
         self.clearing = clearing
         defer { self.clearing = nil }
         try await clearing.value
+    }
+
+    func create(_ entry: Entry, uid: String) async throws {
+        await waitForClearing()
+        try await entriesCollection(uid: uid).document(entry.id.uuidString).setData(entry.documentData)
+    }
+
+    func createAll(_ entries: [Entry], uid: String) async throws {
+        await waitForClearing()
+        let batches = Entry.writeBatches(for: entries)
+        let (results, continuation) = AsyncStream.makeStream(of: (any Error)?.self)
+        for chunk in batches {
+            let batch = Firestore.firestore().batch()
+            for entry in chunk {
+                batch.setData(
+                    entry.documentData, forDocument: entriesCollection(uid: uid).document(entry.id.uuidString))
+            }
+            batch.commit { continuation.yield($0) }
+        }
+        for await error in results.prefix(batches.count) {
+            if let error { throw error }
+        }
+        try Task.checkCancellation()
     }
 
     func delete(id: Entry.ID, uid: String) async throws {
@@ -153,27 +181,9 @@ private actor FirestoreStorage {
         }
     }
 
-    func save(_ entry: Entry, uid: String) async throws {
+    func update(_ entry: Entry, uid: String) async throws {
         await waitForClearing()
-        try await entriesCollection(uid: uid).document(entry.id.uuidString).setData(entry.documentData)
-    }
-
-    func saveAll(_ entries: [Entry], uid: String) async throws {
-        await waitForClearing()
-        let batches = Entry.writeBatches(for: entries)
-        let (results, continuation) = AsyncStream.makeStream(of: (any Error)?.self)
-        for chunk in batches {
-            let batch = Firestore.firestore().batch()
-            for entry in chunk {
-                batch.setData(
-                    entry.documentData, forDocument: entriesCollection(uid: uid).document(entry.id.uuidString))
-            }
-            batch.commit { continuation.yield($0) }
-        }
-        for await error in results.prefix(batches.count) {
-            if let error { throw error }
-        }
-        try Task.checkCancellation()
+        try await entriesCollection(uid: uid).document(entry.id.uuidString).updateData(entry.editableData)
     }
 
     private func waitForClearing() async {
@@ -232,8 +242,13 @@ extension Entry {
     }
 
     fileprivate var documentData: [String: Any] {
+        var data = editableData
+        data["createdAt"] = Timestamp(date: createdAt)
+        return data
+    }
+
+    fileprivate var editableData: [String: Any] {
         [
-            "createdAt": Timestamp(date: createdAt),
             "definition": definition,
             "isBookmarked": isBookmarked,
             "term": term,

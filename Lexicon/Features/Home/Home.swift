@@ -163,7 +163,7 @@ struct Home {
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },
-                    save(entry, uid: state.user.uid)
+                    create(entry, uid: state.user.uid)
                 )
 
             case .destination(.presented(.settings(.delegate(.didConfirmAccountDeletion)))):
@@ -241,7 +241,7 @@ struct Home {
                 )
 
             case .path(.element(id: _, action: .delegate(.didUpdate(let entry)))):
-                return save(entry, uid: state.user.uid)
+                return update(entry, uid: state.user.uid)
 
             case .path:
                 return .none
@@ -277,6 +277,14 @@ struct Home {
         state.isFreshSignIn ? .run { _ in await hapticsClient.success() } : .none
     }
 
+    private func create(_ entry: Entry, uid: String) -> Effect<Action> {
+        .run { _ in
+            try await entriesClient.create(entry: entry, uid: uid)
+        } catch: { error, send in
+            await send(.entrySaveFailed(entry.id, error))
+        }
+    }
+
     private func delete(_ id: Entry.ID, uid: String) -> Effect<Action> {
         .run { _ in
             try await entriesClient.delete(id: id, uid: uid)
@@ -287,7 +295,7 @@ struct Home {
 
     private func importEntries(_ entries: [Entry], uid: String) -> Effect<Action> {
         .run { _ in
-            try await entriesClient.saveAll(entries: entries, uid: uid)
+            try await entriesClient.createAll(entries: entries, uid: uid)
         } catch: { error, send in
             await send(.entriesImportFailed(error))
         }
@@ -308,14 +316,6 @@ struct Home {
         )
     }
 
-    private func save(_ entry: Entry, uid: String) -> Effect<Action> {
-        .run { _ in
-            try await entriesClient.save(entry: entry, uid: uid)
-        } catch: { error, send in
-            await send(.entrySaveFailed(entry.id, error))
-        }
-    }
-
     private func subscribeToEntries(_ state: State) -> Effect<Action> {
         let uid = state.user.uid
         return
@@ -331,6 +331,14 @@ struct Home {
                 }
             }
             .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
+    }
+
+    private func update(_ entry: Entry, uid: String) -> Effect<Action> {
+        .run { _ in
+            try await entriesClient.update(entry: entry, uid: uid)
+        } catch: { error, send in
+            await send(.entrySaveFailed(entry.id, error))
+        }
     }
 }
 
