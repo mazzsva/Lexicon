@@ -16,6 +16,9 @@
     "^[%lld entry](inflect: true) can't be imported and will be skipped." : {
 
     },
+    "A generated definition will replace the one you wrote." : {
+
+    },
     "All the entries in this file are already in Lexicon." : {
 
     },
@@ -38,6 +41,9 @@
 
     },
     "Cancel" : {
+
+    },
+    "Check the generated definition for mistakes." : {
 
     },
     "Connecting…" : {
@@ -67,6 +73,9 @@
     "Deleting your account…" : {
 
     },
+    "Did you mean “%@”? Check the generated definition for mistakes." : {
+
+    },
     "Dismiss" : {
 
     },
@@ -82,6 +91,12 @@
     "Export Entries" : {
 
     },
+    "Generate" : {
+
+    },
+    "Generate Definition" : {
+
+    },
     "Import" : {
 
     },
@@ -93,6 +108,15 @@
     },
     "Lexicon" : {
       "shouldTranslate" : false
+    },
+    "Lexicon can't define terms in this language yet." : {
+
+    },
+    "Lexicon can't define this term." : {
+
+    },
+    "Lexicon doesn't know this term. Check the spelling, or write the definition yourself." : {
+
     },
     "Lexicon Entries" : {
 
@@ -119,6 +143,12 @@
 
     },
     "Remove Bookmark" : {
+
+    },
+    "Replace Definition" : {
+
+    },
+    "Replace Your Definition?" : {
 
     },
     "Save" : {
@@ -154,6 +184,12 @@
     "Something Went Wrong" : {
 
     },
+    "Stop" : {
+
+    },
+    "Stop Generating" : {
+
+    },
     "Syncing, %@" : {
 
     },
@@ -161,6 +197,9 @@
 
     },
     "Term" : {
+
+    },
+    "The definition couldn't be generated. Write it yourself, or try again later." : {
 
     },
     "The file couldn't be opened." : {
@@ -185,6 +224,9 @@
 
     },
     "Welcome to" : {
+
+    },
+    "Writing…" : {
 
     },
     "You couldn't be signed in." : {
