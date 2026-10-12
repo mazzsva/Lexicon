@@ -396,7 +396,7 @@ extension BaseSuite {
                         $0.destination?.modify(\.createEntry) { $0.definition = created.definition }
                     }
                     await store.send(.destination(.presented(.createEntry(.saveButtonTapped))))
-                    await store.receive(\.destination.presented.createEntry.delegate.didSubmit, created) {
+                    await store.receive(\.destination.presented.createEntry.delegate.didCreate, created) {
                         $0.destination = nil
                     }
                     await store.finish()
@@ -485,7 +485,7 @@ extension BaseSuite {
                 $0.hapticsClient.success = {}
             }
 
-            await store.send(.destination(.presented(.createEntry(.delegate(.didSubmit(.blueMoon)))))) {
+            await store.send(.destination(.presented(.createEntry(.delegate(.didCreate(.blueMoon)))))) {
                 $0.destination = nil
             }
             await store.receive(\.entrySaveFailed) {

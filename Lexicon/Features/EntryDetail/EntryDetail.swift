@@ -63,7 +63,7 @@ struct EntryDetail {
             case .destination(.presented(.alert(.confirmDeletion))):
                 return .send(.delegate(.didDelete(state.entry.id)))
 
-            case .destination(.presented(.editEntry(.delegate(.didSubmit(let entry))))):
+            case .destination(.presented(.editEntry(.delegate(.didUpdate(let entry))))):
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },

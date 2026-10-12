@@ -159,7 +159,7 @@ struct Home {
                 presentSettings(&state, destination: .alert(.accountDeletionFailed(failure)))
                 return .none
 
-            case .destination(.presented(.createEntry(.delegate(.didSubmit(let entry))))):
+            case .destination(.presented(.createEntry(.delegate(.didCreate(let entry))))):
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },

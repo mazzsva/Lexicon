@@ -97,7 +97,7 @@ extension BaseSuite {
                     $0.destination?.modify(\.editEntry) { $0.definition = edited.definition }
                 }
                 await store.send(.destination(.presented(.editEntry(.saveButtonTapped))))
-                await store.receive(\.destination.presented.editEntry.delegate.didSubmit, edited) {
+                await store.receive(\.destination.presented.editEntry.delegate.didUpdate, edited) {
                     $0.destination = nil
                 }
                 await store.receive(\.delegate.didUpdate, edited)

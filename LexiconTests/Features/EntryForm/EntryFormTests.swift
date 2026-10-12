@@ -55,7 +55,7 @@ extension BaseSuite {
                 $0.definition = created.definition
             }
             await store.send(.saveButtonTapped)
-            await store.receive(\.delegate.didSubmit, created)
+            await store.receive(\.delegate.didCreate, created)
         }
 
         // The identity and the date come from the original, so the save replaces it
@@ -77,7 +77,7 @@ extension BaseSuite {
                 $0.definition = "  A rare event.  "
             }
             await store.send(.saveButtonTapped)
-            await store.receive(\.delegate.didSubmit, edited)
+            await store.receive(\.delegate.didUpdate, edited)
         }
 
         // The view disables the save button, and the reducer refuses the term as well
