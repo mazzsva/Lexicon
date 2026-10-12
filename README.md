@@ -28,11 +28,11 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 
 **Export and import.** Settings exports the entries to a versioned JSON file and imports it back. Each imported entry gets a new ID, so an import never overwrites an entry, and duplicates are skipped.
 
-**Definitions.** On request, the on-device Apple Intelligence model writes a definition for English learners: one short sentence in simple, everyday words, like a learner's dictionary. Online, it reads the term's Wiktionary senses first, and a term it doesn't know gets a note.
+**Definitions.** On request, the on-device Apple Intelligence model writes a one-sentence definition in simple words for English learners. Online, it reads the Wiktionary senses first, and an unknown term gets a note.
 
 **Apple Account checks.** The app checks the Apple Account credential on launch and each time it becomes active, and it listens for revocations. Any state other than authorized signs the user out.
 
-**Account deletion.** Deleting an account reauthenticates the user with Apple, deletes their Firestore data, revokes the Apple token, then deletes the account. The whole sequence times out after 60 seconds, and a failure after the revoke signs the user out.
+**Account deletion.** Deleting an account reauthenticates with Apple, deletes the Firestore data, revokes the token, then deletes the account. It times out after 60 seconds, and a failure after the revoke signs out.
 
 ## Quality
 
