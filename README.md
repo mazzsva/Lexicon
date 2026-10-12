@@ -14,6 +14,7 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
   <tr><td><b>Backend</b></td><td>Firebase</td></tr>
   <tr><td><b>Database</b></td><td>Cloud Firestore</td></tr>
   <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
+  <tr><td><b>Intelligence</b></td><td>Foundation Models</td></tr>
   <tr><td><b>Testing</b></td><td><a href="https://github.com/swiftlang/swift-testing">Swift Testing</a></td></tr>
 </table>
 
@@ -26,6 +27,8 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 **Offline reads and writes.** The entry list has one source of truth: a live Firestore listener backed by its local cache. Reads keep working when the connection drops, writes queue on-device, and both sync the moment it returns.
 
 **Export and import.** Settings exports the entries to a versioned JSON file and imports it back. Each imported entry gets a new ID, so an import never overwrites an entry, and duplicates are skipped.
+
+**Definitions.** On request, the on-device Apple Intelligence model writes a definition for English learners: one short sentence in simple, everyday words, like a learner's dictionary. Online, it reads the term's Wiktionary senses first, and a term it doesn't know gets a note.
 
 **Apple Account checks.** The app checks the Apple Account credential on launch and each time it becomes active, and it listens for revocations. Any state other than authorized signs the user out.
 
