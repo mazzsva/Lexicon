@@ -35,9 +35,9 @@ jobs:
           udid=$(xcrun simctl list devices available --json | jq -r '
             [.devices | to_entries[]
               | select(.key | contains("SimRuntime.iOS-"))
-              | {version: (.key | split("iOS-")[1] | split("-") | map(tonumber)), device: (.value[] | select(.name == "iPhone 18 Pro"))}]
+              | {version: (.key | split("iOS-")[1] | split("-") | map(tonumber)), device: (.value[] | select(.name == "iPhone Air"))}]
             | sort_by(.version) | last | .device.udid')
-          echo "Booting iPhone 18 Pro ($udid)"
+          echo "Booting iPhone Air ($udid)"
           xcrun simctl boot "$udid"
           echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
 
