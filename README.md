@@ -2,7 +2,7 @@
 
 Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 
-<img src="https://github.com/user-attachments/assets/e9d250fa-a8c3-4cdb-9690-edea475f64be" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/4301c0fd-4196-4493-8207-9794eff2f3ee" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/b846a87b-dcd8-4e94-a0f5-5018607b727c" alt="An entry detail screen, with the term and its definition" width="32%">
+<img src="https://github.com/user-attachments/assets/958c7ff8-ce0c-43ea-a6c0-db470a488fc5" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/bb727d29-7bbe-4a07-a633-de88410b48f8" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/ccf6d7e3-ec19-4ebf-bfb5-9a750055804d" alt="An entry detail screen, with the term and its definition" width="32%">
 
 ## Technologies
 
