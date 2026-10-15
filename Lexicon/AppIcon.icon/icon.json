@@ -1,37 +1,79 @@
 {
-  "fill" : {
-    "automatic-gradient" : "srgb:1.00000,1.00000,1.00000,1.00000"
+  "fill": {
+    "automatic-gradient": "srgb:1.00000,1.00000,1.00000,1.00000"
   },
-  "groups" : [
+  "groups": [
     {
-      "layers" : [
+      "layers": [
         {
-          "fill" : {
-            "solid" : "srgb:1.00000,0.57637,0.00000,1.00000"
+          "fill": {
+            "solid": "srgb:1.00000,0.57637,0.00000,1.00000"
           },
-          "image-name" : "bookmark.fill@2x.png",
-          "name" : "bookmark.fill@2x",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              0,
-              -237
+          "image-name": "bookmark.fill@2x.png",
+          "name": "bookmark.fill",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              170,
+              -382
             ]
           }
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
       },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.3
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    },
+    {
+      "layers": [
+        {
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.11000,0.11000,0.12000,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.92000,0.92000,0.94000,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ],
+          "image-name": "textformat@2x.png",
+          "name": "textformat",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              70
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
       }
     }
   ],
-  "supported-platforms" : {
-    "squares" : [
+  "supported-platforms": {
+    "squares": [
       "iOS"
     ]
   }
