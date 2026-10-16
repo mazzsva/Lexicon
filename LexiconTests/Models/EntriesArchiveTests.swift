@@ -361,7 +361,7 @@ extension String {
         ]
         var string = ""
         for _ in 0 ..< Int.random(in: 0 ... maximumCount, using: &generator) {
-            let range = ranges.randomElement(using: &generator)!
+            let range = ranges[Int.random(in: ranges.indices, using: &generator)]
             if let scalar = Unicode.Scalar(UInt32.random(in: range, using: &generator)) {
                 string.unicodeScalars.append(scalar)
             }
