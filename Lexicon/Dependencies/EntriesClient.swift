@@ -122,12 +122,7 @@ private actor FirestoreStorage {
         let batches = Entry.writeBatches(for: entries)
         let (results, continuation) = AsyncStream.makeStream(of: (any Error)?.self)
         for chunk in batches {
-            let batch = Firestore.firestore().batch()
-            for entry in chunk {
-                batch.setData(
-                    entry.documentData, forDocument: entriesCollection(uid: uid).document(entry.id.uuidString))
-            }
-            batch.commit { continuation.yield($0) }
+            commit(chunk, uid: uid) { continuation.yield($0) }
         }
         for await error in results.prefix(batches.count) {
             if let error { throw error }
@@ -184,6 +179,17 @@ private actor FirestoreStorage {
     func update(_ entry: Entry, uid: String) async throws {
         await waitForClearing()
         try await entriesCollection(uid: uid).document(entry.id.uuidString).updateData(entry.editableData)
+    }
+
+    private func commit(
+        _ entries: [Entry], uid: String, completion: @escaping @Sendable ((any Error)?) -> Void
+    ) {
+        let batch = Firestore.firestore().batch()
+        for entry in entries {
+            batch.setData(
+                entry.documentData, forDocument: entriesCollection(uid: uid).document(entry.id.uuidString))
+        }
+        batch.commit(completion: completion)
     }
 
     private func waitForClearing() async {
