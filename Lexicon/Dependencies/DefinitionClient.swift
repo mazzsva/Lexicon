@@ -245,17 +245,7 @@ extension DefinitionClient {
         """
 
     private static func generationError(for error: any Error) -> any Error {
-        if #available(iOS 27, *), let error = error as? LanguageModelError {
-            switch error {
-            case .guardrailViolation, .refusal:
-                return GenerationError.unsupportedTerm
-            case .unsupportedLanguageOrLocale:
-                return GenerationError.unsupportedLanguage
-            default:
-                return error
-            }
-        }
-        guard let error = error as? LanguageModelSession.GenerationError else { return error }
+        guard let error = error as? LanguageModelError else { return error }
         switch error {
         case .guardrailViolation, .refusal:
             return GenerationError.unsupportedTerm
