@@ -7,7 +7,7 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 ## Technologies
 
 <table>
-  <tr><td><b>Platform</b></td><td>iOS 26</td></tr>
+  <tr><td><b>Platform</b></td><td>iOS 27</td></tr>
   <tr><td><b>Language</b></td><td>Swift 6</td></tr>
   <tr><td><b>Interface</b></td><td>SwiftUI</td></tr>
   <tr><td><b>Architecture</b></td><td><a href="https://github.com/pointfreeco/swift-composable-architecture">The Composable Architecture</a></td></tr>
