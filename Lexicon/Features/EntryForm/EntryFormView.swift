@@ -37,7 +37,13 @@ struct EntryFormView: View {
                         }
                         .animation(.easeInOut(duration: 0.25), value: store.isGeneratingDefinition)
                         .accessibilityLabel("Definition")
-                        .listRowBackground(GenerationGlow(isActive: store.isGeneratingDefinition))
+                        .listRowBackground(
+                            GenerationGlow(
+                                completedGenerationCount: store.completedGenerationCount,
+                                definition: store.definition,
+                                generation: store.generation
+                            )
+                        )
                 } header: {
                     definitionHeaderLayout {
                         Text("Definition")
@@ -151,37 +157,6 @@ private struct GeneratingLabel: View {
         Label("Writing…", systemImage: "sparkles")
             .symbolEffect(.variableColor.iterative)
             .foregroundStyle(.secondary)
-    }
-}
-
-private struct GenerationGlow: View {
-    let isActive: Bool
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Color(.secondarySystemGroupedBackground)
-            .overlay {
-                if isActive {
-                    TimelineView(.animation(paused: reduceMotion)) { context in
-                        Rectangle()
-                            .strokeBorder(
-                                AngularGradient(
-                                    colors: [.blue, .purple, .pink, .orange, .yellow, .blue],
-                                    center: .center,
-                                    angle: .degrees(
-                                        (context.date.timeIntervalSinceReferenceDate * 120)
-                                            .truncatingRemainder(dividingBy: 360)
-                                    )
-                                ),
-                                lineWidth: 8
-                            )
-                            .blur(radius: 8)
-                    }
-                    .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.4), value: isActive)
     }
 }
 
