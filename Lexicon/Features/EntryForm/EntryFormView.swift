@@ -317,3 +317,13 @@ private struct GeneratingLabel: View {
         }
     )
 }
+
+#Preview("Unavailable") {
+    EntryFormView(
+        store: Store(initialState: EntryForm.State()) {
+            EntryForm()
+        } withDependencies: {
+            $0.definitionClient.isAvailable = { false }
+        }
+    )
+}
