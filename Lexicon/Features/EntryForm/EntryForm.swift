@@ -34,6 +34,7 @@ struct EntryForm {
 
     @ObservableState
     struct State: Equatable {
+        var completedGenerationCount = 0
         @Presents var confirmationDialog: ConfirmationDialogState<ConfirmationDialog>?
         var definition: String
         let entry: Entry?
@@ -165,6 +166,7 @@ struct EntryForm {
                 guard !state.definition.isEmpty else {
                     return failGeneration(&state, error: DefinitionClient.GenerationError.failed)
                 }
+                state.completedGenerationCount += 1
                 state.generatedDefinition = GeneratedDefinition(correctForm: correctForm, text: state.definition)
                 state.generation = nil
                 return .run { _ in await hapticsClient.success() }

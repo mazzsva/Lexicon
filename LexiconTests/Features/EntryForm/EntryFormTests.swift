@@ -198,6 +198,7 @@ extension BaseSuite {
                 }
                 continuation.finish()
                 await store.receive(\.definitionGenerationFinished) {
+                    $0.completedGenerationCount = 1
                     $0.generatedDefinition = EntryForm.GeneratedDefinition(text: created.definition)
                     $0.generation = nil
                 }
@@ -240,6 +241,7 @@ extension BaseSuite {
                 }
                 continuation.finish()
                 await store.receive(\.definitionGenerationFinished, "nip in the bud") {
+                    $0.completedGenerationCount = 1
                     $0.generatedDefinition = EntryForm.GeneratedDefinition(
                         correctForm: "nip in the bud",
                         text: "To stop a problem early."
@@ -297,6 +299,7 @@ extension BaseSuite {
                 }
                 continuation.finish()
                 await store.receive(\.definitionGenerationFinished) {
+                    $0.completedGenerationCount = 1
                     $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Something that happens very rarely.")
                     $0.generation = nil
                 }
