@@ -57,13 +57,16 @@ struct EntryForm {
 
         var generatableTerm: String? {
             guard isModelAvailable, !isGeneratingDefinition else { return nil }
-            let term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !term.isEmpty, !isTermTooLong else { return nil }
-            return term
+            guard !trimmedTerm.isEmpty, !isTermTooLong else { return nil }
+            return trimmedTerm
         }
 
         var isCreating: Bool {
             entry == nil
+        }
+
+        var isDefinitionBlank: Bool {
+            definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
 
         var isGenerateButtonEnabled: Bool {
@@ -79,11 +82,11 @@ struct EntryForm {
         }
 
         var isTermTooLong: Bool {
-            term.trimmingCharacters(in: .whitespacesAndNewlines).count > EntryForm.maximumGeneratableTermLength
+            trimmedTerm.count > EntryForm.maximumGeneratableTermLength
         }
 
         var needsReplacementConfirmation: Bool {
-            !definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            !isDefinitionBlank
                 && definition != generatedDefinition?.text
         }
 
@@ -94,13 +97,16 @@ struct EntryForm {
             case .lookingUp, .writing:
                 return nil
             case nil:
-                let isDefinitionBlank = definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 if isModelAvailable && isTermTooLong && isDefinitionBlank {
                     return .termTooLong
                 }
                 guard let generatedDefinition, definition == generatedDefinition.text else { return nil }
                 return .generated(correctForm: generatedDefinition.correctForm)
             }
+        }
+
+        var trimmedTerm: String {
+            term.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 
@@ -172,7 +178,7 @@ struct EntryForm {
 
             case .definitionGenerationFinished(let correctForm):
                 guard state.generation.is(\.writing) else { return .none }
-                guard !state.definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                guard !state.isDefinitionBlank else {
                     return failGeneration(&state, error: DefinitionClient.GenerationError.failed)
                 }
                 state.completedGenerationCount += 1
