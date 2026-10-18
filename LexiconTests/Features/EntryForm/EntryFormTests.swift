@@ -308,6 +308,39 @@ extension BaseSuite {
         }
 
         @Test
+        func regeneratingTheSameDefinitionCountsAnotherCompletedGeneration() async {
+            let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+            var state = Self.generatedState()
+            state.completedGenerationCount = 1
+
+            await confirmation("Plays the success haptic") { playsHaptic in
+                let store = Self.store(state) {
+                    $0.definitionClient.definition = { _, _ in definitions }
+                    $0.hapticsClient.success = { playsHaptic() }
+                }
+
+                await store.send(.generateDefinitionButtonTapped) {
+                    $0.definition = ""
+                    $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                }
+                await store.receive(\.dictionaryEntryResponse, nil) {
+                    $0.generation = .writing(previousDefinition: "A rare event.")
+                }
+                continuation.yield("A rare event.")
+                await store.receive(\.definitionGenerated, "A rare event.") {
+                    $0.definition = "A rare event."
+                }
+                continuation.finish()
+                await store.receive(\.definitionGenerationFinished) {
+                    $0.completedGenerationCount = 2
+                    $0.generation = nil
+                }
+                expectNoDifference(store.state.note, .generated(correctForm: nil))
+                await store.finish()
+            }
+        }
+
+        @Test
         func generatingOverAnEditedGeneratedDefinitionAsks() async {
             var state = Self.generatableState(term: "Once in a blue moon")
             state.definition = "Something that happens very rarely, almost never."
@@ -376,6 +409,7 @@ extension BaseSuite {
                 $0.definition = "A rare event."
                 $0.generation = nil
             }
+            expectNoDifference(store.state.note, .generated(correctForm: nil))
             continuation.yield("Something late")
             continuation.finish()
             await store.finish()
@@ -398,6 +432,7 @@ extension BaseSuite {
                 $0.definition = "A rare event."
                 $0.generation = nil
             }
+            expectNoDifference(store.state.note, .generated(correctForm: nil))
         }
 
         @Test(
