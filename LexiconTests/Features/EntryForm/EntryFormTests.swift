@@ -480,20 +480,21 @@ extension BaseSuite {
         }
 
         @Test(arguments: [nil, "  \n "])
-        func aGenerationWithNoDefinitionFails(definition: String?) async {
+        func aGenerationWithABlankDefinitionFails(definition: String?) async {
             let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
 
             await confirmation("Plays the warning haptic") { playsHaptic in
-                let store = Self.store(Self.generatableState(term: "Once in a blue moon")) {
+                let store = Self.store(Self.generatedState()) {
                     $0.definitionClient.definition = { _, _ in definitions }
                     $0.hapticsClient.warning = { playsHaptic() }
                 }
 
                 await store.send(.generateDefinitionButtonTapped) {
-                    $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                    $0.definition = ""
+                    $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
                 }
                 await store.receive(\.dictionaryEntryResponse, nil) {
-                    $0.generation = .writing(previousDefinition: "")
+                    $0.generation = .writing(previousDefinition: "A rare event.")
                 }
                 if let definition {
                     continuation.yield(definition)
@@ -503,9 +504,10 @@ extension BaseSuite {
                 }
                 continuation.finish()
                 await store.receive(\.definitionGenerationFinished) {
-                    $0.definition = ""
+                    $0.definition = "A rare event."
                     $0.generation = .failed(.failed)
                 }
+                expectNoDifference(store.state.note, .failure(.failed))
                 await store.finish()
             }
         }
@@ -583,6 +585,9 @@ extension BaseSuite {
             )
             expectNoDifference(state.note, .termTooLong)
 
+            state.definition = "  \n "
+            expectNoDifference(state.note, .termTooLong)
+
             state.definition = "Very rarely."
             expectNoDifference(state.note, nil)
 
@@ -592,7 +597,7 @@ extension BaseSuite {
         }
 
         @Test
-        func theGeneratedDefinitionIsExplainedBeforeATermThatIsTooLong() {
+        func aTermThatIsTooLongKeepsTheGeneratedNote() {
             var state = Self.generatedState()
             expectNoDifference(state.note, .generated(correctForm: nil))
 
