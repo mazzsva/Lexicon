@@ -130,7 +130,8 @@ struct EntryFormView: View {
             GenerationGlow(
                 completedGenerationCount: store.completedGenerationCount,
                 definition: store.definition,
-                generation: store.generation
+                generation: store.generation,
+                isModelAvailable: store.isModelAvailable
             )
         )
     }

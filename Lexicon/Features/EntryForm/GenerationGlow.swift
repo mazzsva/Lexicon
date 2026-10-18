@@ -12,6 +12,7 @@ struct GenerationGlow: View {
     let completedGenerationCount: Int
     let definition: String
     let generation: EntryForm.Generation?
+    let isModelAvailable: Bool
 
     private static let maximumPulseCount = 8
     private static let minimumPulseInterval = 0.2
@@ -43,8 +44,9 @@ struct GenerationGlow: View {
                     }
                     .id(run.start)
                     .transition(.asymmetric(insertion: reduceMotion ? .opacity : .identity, removal: .opacity))
-                } else {
+                } else if isModelAvailable {
                     GenerationGlowSurface(completion: nil, pulses: [], time: 0, writingStart: nil)
+                        .transition(.identity)
                 }
             }
             .onChange(of: definition) { definitionChanged() }
