@@ -88,6 +88,9 @@
     "Email" : {
 
     },
+    "Enter a term first." : {
+
+    },
     "Export Entries" : {
 
     },
@@ -166,6 +169,9 @@
     "Settings" : {
 
     },
+    "Shorten the term first." : {
+
+    },
     "Show All Entries" : {
 
     },
@@ -191,6 +197,12 @@
 
     },
     "Stop Generating" : {
+
+    },
+    "Stopped writing" : {
+
+    },
+    "Stops writing and restores the previous definition." : {
 
     },
     "Syncing, %@" : {
@@ -227,6 +239,21 @@
 
     },
     "Welcome to" : {
+
+    },
+    "Write a definition, or enter a term to generate one." : {
+
+    },
+    "Write a definition, or tap %@ to generate one." : {
+
+    },
+    "Write a definition." : {
+
+    },
+    "Writes a definition of the term." : {
+
+    },
+    "Writing definition" : {
 
     },
     "Writing…" : {

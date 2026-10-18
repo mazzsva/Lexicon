@@ -11,54 +11,47 @@ import SwiftUI
 struct EntryFormView: View {
     @Bindable var store: StoreOf<EntryForm>
 
+    private static let definitionMinimumHeight: CGFloat = 180
+    private static let definitionPadding = EdgeInsets(top: 6, leading: 11, bottom: 6, trailing: 11)
+    private static let definitionRowID = "definition"
+    private static let generateButtonClearance: CGFloat = 40
+    private static let generateButtonMargin: CGFloat = 7
+    private static let generateGradient = LinearGradient(
+        colors: [.blue, .purple, .pink, .orange],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var isFollowingGeneration = false
+    @FocusState private var isDefinitionFocused: Bool
     @FocusState private var isTermFocused: Bool
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Term") {
-                    TextField("", text: $store.term)
-                        .focused($isTermFocused)
-                        .disabled(store.isGeneratingDefinition)
-                        .accessibilityLabel("Term")
-                }
-                Section {
-                    TextEditor(text: $store.definition)
-                        .frame(minHeight: 180)
-                        .disabled(store.isGeneratingDefinition)
-                        .overlay(alignment: .topLeading) {
-                            if store.isGeneratingDefinition && store.definition.isEmpty {
-                                GeneratingLabel()
-                                    .padding(.top, 8)
-                                    .padding(.leading, 5)
-                                    .transition(.asymmetric(insertion: .opacity, removal: .identity))
-                            }
-                        }
-                        .animation(.easeInOut(duration: 0.25), value: store.isGeneratingDefinition)
-                        .accessibilityLabel("Definition")
-                        .listRowBackground(
-                            GenerationGlow(
-                                completedGenerationCount: store.completedGenerationCount,
-                                definition: store.definition,
-                                generation: store.generation
-                            )
-                        )
-                } header: {
-                    definitionHeaderLayout {
-                        Text("Definition")
-                        Spacer()
-                        if store.isModelAvailable {
-                            generateButton
-                        }
+            ScrollViewReader { proxy in
+                Form {
+                    Section("Term") {
+                        TextField("", text: $store.term)
+                            .focused($isTermFocused)
+                            .disabled(store.isGeneratingDefinition)
+                            .accessibilityLabel("Term")
                     }
-                } footer: {
-                    footer
+                    Section {
+                        definitionRow
+                    } header: {
+                        Text("Definition")
+                    } footer: {
+                        footer
+                    }
                 }
+                .listSectionSpacing(.compact)
+                .scrollContentBackground(.hidden)
+                .groupedBackground()
+                .onScrollPhaseChange { _, phase in scrollPhaseChanged(phase) }
+                .onChange(of: store.definition) { definitionChanged(proxy) }
             }
-            .listSectionSpacing(.compact)
-            .scrollContentBackground(.hidden)
-            .groupedBackground()
             .navigationTitle(store.isCreating ? "New Entry" : "Edit Entry")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -78,15 +71,68 @@ struct EntryFormView: View {
                 }
             }
             .onAppear { appeared() }
+            .onChange(of: store.completedGenerationCount) { generationCompleted() }
+            .onChange(of: store.isGeneratingDefinition) { _, isGenerating in generatingChanged(isGenerating) }
             .onChange(of: store.note) { _, note in noteChanged(note) }
             .task { await store.send(.task).finish() }
         }
     }
 
-    private var definitionHeaderLayout: AnyLayout {
-        dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
-            : AnyLayout(HStackLayout())
+    private var definitionClearance: CGFloat {
+        store.isModelAvailable ? Self.generateButtonClearance : 0
+    }
+
+    private var definitionEditor: some View {
+        TextEditor(text: $store.definition)
+            .focused($isDefinitionFocused)
+            .frame(minHeight: Self.definitionMinimumHeight - definitionClearance)
+            .disabled(store.isGeneratingDefinition)
+            .overlay(alignment: .topLeading) {
+                Group {
+                    if store.isGeneratingDefinition && store.definition.isEmpty {
+                        GeneratingLabel()
+                            .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                    } else if !store.isGeneratingDefinition && store.definition.isEmpty {
+                        placeholder
+                            .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                    }
+                }
+                .padding(.top, 8)
+                .padding(.horizontal, 5)
+                .allowsHitTesting(false)
+            }
+            .animation(.easeInOut(duration: 0.25), value: store.isGeneratingDefinition)
+            .accessibilityLabel("Definition")
+            .padding(.bottom, definitionClearance)
+    }
+
+    private var definitionRow: some View {
+        ZStack(alignment: .bottomTrailing) {
+            definitionEditor
+                .padding(Self.definitionPadding)
+            if store.isModelAvailable {
+                if !store.isGeneratingDefinition {
+                    Color.clear
+                        .frame(height: Self.definitionPadding.bottom + Self.generateButtonClearance)
+                        .contentShape(.rect)
+                        .onTapGesture { isDefinitionFocused = true }
+                        .accessibilityHidden(true)
+                }
+                generateButton
+                    .padding(Self.generateButtonMargin)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: store.isModelAvailable)
+        .id(Self.definitionRowID)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(
+            GenerationGlow(
+                completedGenerationCount: store.completedGenerationCount,
+                definition: store.definition,
+                generation: store.generation
+            )
+        )
     }
 
     private var footer: some View {
@@ -103,21 +149,71 @@ struct EntryFormView: View {
     private var generateButton: some View {
         let isGenerating = store.isGeneratingDefinition
         return Button {
-            store.send(isGenerating ? .stopGeneratingButtonTapped : .generateDefinitionButtonTapped)
+            generateButtonTapped()
         } label: {
-            HStack(spacing: 5) {
-                Text(isGenerating ? "Stop" : "Generate")
-                Image(systemName: isGenerating ? "stop.fill" : "sparkles")
-                    .contentTransition(.symbolEffect(.replace))
-                    .animation(.default, value: isGenerating)
+            ZStack {
+                if isGenerating {
+                    Image(systemName: "stop.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .transition(.blurReplace)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(generateButtonStyle)
+                        .transition(.blurReplace)
+                }
             }
+            .frame(width: 30, height: 30)
+            .animation(.snappy(duration: 0.2), value: isGenerating)
         }
-        .font(.subheadline)
-        .fontWeight(.semibold)
-        .textCase(nil)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .disabled(!store.isGenerateButtonEnabled)
         .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
-        .accessibilityLabel(isGenerating ? "Stop Generating" : "Generate Definition")
+        .accessibilityLabel(generateButtonTitle)
+        .accessibilityHint(generateButtonHint)
+        .accessibilityInputLabels(isGenerating ? ["Stop", "Stop Generating"] : ["Generate", "Generate Definition"])
+        .accessibilityShowsLargeContentViewer {
+            Label(generateButtonTitle, systemImage: isGenerating ? "stop.fill" : "sparkles")
+        }
+    }
+
+    private var generateButtonHint: Text {
+        if store.isGeneratingDefinition {
+            Text("Stops writing and restores the previous definition.")
+        } else if store.isGenerateButtonEnabled {
+            Text("Writes a definition of the term.")
+        } else if store.isTermTooLong {
+            Text("Shorten the term first.")
+        } else {
+            Text("Enter a term first.")
+        }
+    }
+
+    private var generateButtonStyle: AnyShapeStyle {
+        store.isGenerateButtonEnabled ? AnyShapeStyle(Self.generateGradient) : AnyShapeStyle(.tertiary)
+    }
+
+    private var generateButtonTitle: LocalizedStringKey {
+        store.isGeneratingDefinition ? "Stop Generating" : "Generate Definition"
+    }
+
+    private var placeholder: some View {
+        Group {
+            if !store.isModelAvailable || dynamicTypeSize.isAccessibilitySize {
+                Text("Write a definition.")
+            } else if store.isGenerateButtonEnabled {
+                Text("Write a definition, or tap \(Image(systemName: "sparkles")) to generate one.")
+            } else if store.isTermTooLong {
+                Text("Write a definition.")
+            } else {
+                Text("Write a definition, or enter a term to generate one.")
+            }
+        }
+        .foregroundStyle(.tertiary)
+        .accessibilityHidden(true)
     }
 
     private func appeared() {
@@ -125,11 +221,55 @@ struct EntryFormView: View {
         isTermFocused = true
     }
 
-    private func noteChanged(_ note: EntryForm.Note?) {
-        guard let note else { return }
+    private func definitionChanged(_ proxy: ScrollViewProxy) {
+        guard store.isGeneratingDefinition, isFollowingGeneration else { return }
+        withAnimation(.smooth(duration: 0.3)) {
+            proxy.scrollTo(Self.definitionRowID, anchor: .bottom)
+        }
+    }
+
+    private func generateButtonTapped() {
+        guard store.isGeneratingDefinition else {
+            store.send(.generateDefinitionButtonTapped)
+            return
+        }
+        store.send(.stopGeneratingButtonTapped)
+        guard isVoiceOverEnabled else { return }
+        AccessibilityNotification.Announcement(AttributedString(localized: "Stopped writing")).post()
+    }
+
+    private func generatingChanged(_ isGenerating: Bool) {
+        if isGenerating {
+            isFollowingGeneration = true
+        }
+        guard isGenerating, isVoiceOverEnabled else { return }
+        AccessibilityNotification.Announcement(AttributedString(localized: "Writing definition")).post()
+    }
+
+    private func generationCompleted() {
+        guard isVoiceOverEnabled, let note = store.note else { return }
         var announcement = AttributedString(localized: note.text)
         announcement.accessibilitySpeechAnnouncementPriority = .high
         AccessibilityNotification.Announcement(announcement).post()
+    }
+
+    private func noteChanged(_ note: EntryForm.Note?) {
+        guard isVoiceOverEnabled, let note else { return }
+        var announcement = AttributedString(localized: note.text)
+        switch note {
+        case .failure:
+            announcement.accessibilitySpeechAnnouncementPriority = .high
+        case .generated:
+            return
+        case .termTooLong:
+            guard isTermFocused || isDefinitionFocused else { return }
+        }
+        AccessibilityNotification.Announcement(announcement).post()
+    }
+
+    private func scrollPhaseChanged(_ phase: ScrollPhase) {
+        guard phase == .interacting else { return }
+        isFollowingGeneration = false
     }
 }
 
@@ -159,6 +299,7 @@ private struct GeneratingLabel: View {
         Label("Writing…", systemImage: "sparkles")
             .symbolEffect(.variableColor.iterative)
             .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
     }
 }
 
