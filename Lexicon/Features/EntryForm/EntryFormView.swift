@@ -49,8 +49,8 @@ struct EntryFormView: View {
                 .listSectionSpacing(.compact)
                 .scrollContentBackground(.hidden)
                 .groupedBackground()
-                .onScrollPhaseChange { _, phase in scrollPhaseChanged(phase) }
                 .onChange(of: store.definition) { definitionChanged(proxy) }
+                .onScrollPhaseChange { _, phase in scrollPhaseChanged(phase) }
             }
             .navigationTitle(store.isCreating ? "New Entry" : "Edit Entry")
             .navigationBarTitleDisplayMode(.inline)
@@ -203,12 +203,10 @@ struct EntryFormView: View {
 
     private var placeholder: some View {
         Group {
-            if !store.isModelAvailable || dynamicTypeSize.isAccessibilitySize {
+            if !store.isModelAvailable || store.isTermTooLong || dynamicTypeSize.isAccessibilitySize {
                 Text("Write a definition.")
             } else if store.isGenerateButtonEnabled {
                 Text("Write a definition, or tap \(Image(systemName: "sparkles")) to generate one.")
-            } else if store.isTermTooLong {
-                Text("Write a definition.")
             } else {
                 Text("Write a definition, or enter a term to generate one.")
             }
