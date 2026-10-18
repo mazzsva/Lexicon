@@ -444,8 +444,8 @@ extension BaseSuite {
             await Self.expectFailure(.failed, after: ModelError())
         }
 
-        @Test
-        func aGenerationWithNoDefinitionFails() async {
+        @Test(arguments: [nil, "  \n "])
+        func aGenerationWithNoDefinitionFails(definition: String?) async {
             let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
 
             await confirmation("Plays the warning haptic") { playsHaptic in
@@ -460,8 +460,15 @@ extension BaseSuite {
                 await store.receive(\.dictionaryEntryResponse, nil) {
                     $0.generation = .writing(previousDefinition: "")
                 }
+                if let definition {
+                    continuation.yield(definition)
+                    await store.receive(\.definitionGenerated, definition) {
+                        $0.definition = definition
+                    }
+                }
                 continuation.finish()
                 await store.receive(\.definitionGenerationFinished) {
+                    $0.definition = ""
                     $0.generation = .failed(.failed)
                 }
                 await store.finish()

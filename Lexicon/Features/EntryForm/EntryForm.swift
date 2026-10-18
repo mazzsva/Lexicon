@@ -163,7 +163,7 @@ struct EntryForm {
 
             case .definitionGenerationFinished(let correctForm):
                 guard state.generation.is(\.writing) else { return .none }
-                guard !state.definition.isEmpty else {
+                guard !state.definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                     return failGeneration(&state, error: DefinitionClient.GenerationError.failed)
                 }
                 state.completedGenerationCount += 1
