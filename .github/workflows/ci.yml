@@ -30,6 +30,9 @@ jobs:
           xcodebuild -version
           swift format --version
 
+      - name: Install the Metal Toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
+
       - name: Boot the simulator
         run: |
           udid=$(xcrun simctl list devices available --json | jq -r '
