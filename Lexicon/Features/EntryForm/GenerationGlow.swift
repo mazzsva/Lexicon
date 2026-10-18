@@ -37,16 +37,34 @@ struct GenerationGlow: View {
                     }
                     .id(run.start)
                     .transition(.asymmetric(insertion: reduceMotion ? .opacity : .identity, removal: .opacity))
+                } else {
+                    GenerationGlowSurface(completion: nil, pulses: [], time: 0, writingStart: nil)
                 }
             }
             .onChange(of: generation) { generationChanged() }
             .onChange(of: definition) { definitionChanged() }
             .onChange(of: reduceMotion) { reduceMotionChanged() }
-            .task(id: run?.completion) { await finishRun() }
+            .task(id: run?.completion) { await completionChanged() }
     }
 
     private var isCompleted: Bool {
         run.map { $0.completedGenerationCount != completedGenerationCount } ?? false
+    }
+
+    private func completionChanged() async {
+        guard let run, let completion = run.completion else { return }
+        let end = completion + GenerationGlowSurface.completionDuration
+        try? await Task.sleep(for: .seconds(end - run.elapsedTime))
+        guard !Task.isCancelled else { return }
+        withAnimation(.easeInOut(duration: 0.4)) { self.run = nil }
+    }
+
+    private func definitionChanged() {
+        guard generation.is(\.writing), var run else { return }
+        let time = run.elapsedTime
+        guard run.pulses.last.map({ time - $0 >= Self.minimumPulseInterval }) ?? true else { return }
+        run.pulses = run.pulses.suffix(Self.maximumPulseCount - 1) + [time]
+        self.run = run
     }
 
     private func generationChanged() {
@@ -64,25 +82,9 @@ struct GenerationGlow: View {
         }
     }
 
-    private func definitionChanged() {
-        guard generation.is(\.writing), var run else { return }
-        let time = run.elapsedTime
-        guard run.pulses.last.map({ time - $0 >= Self.minimumPulseInterval }) ?? true else { return }
-        run.pulses = run.pulses.suffix(Self.maximumPulseCount - 1) + [time]
-        self.run = run
-    }
-
     private func reduceMotionChanged() {
         guard reduceMotion, run?.completion != nil else { return }
         withAnimation(.easeInOut(duration: 0.4)) { run = nil }
-    }
-
-    private func finishRun() async {
-        guard let run, let completion = run.completion else { return }
-        let end = completion + GenerationGlowSurface.completionDuration
-        try? await Task.sleep(for: .seconds(end - run.elapsedTime))
-        guard !Task.isCancelled else { return }
-        withAnimation(.easeInOut(duration: 0.4)) { self.run = nil }
     }
 }
 

@@ -14,6 +14,8 @@ constant float lineInset = 1.75;
 constant float launch = 0.1;
 constant float meet = 0.8;
 constant float homeArrival = 0.72;
+constant float orbInset = 29.0;
+constant float orbReach = 50.0;
 
 constant float3 lightPalette[6] = {
     float3(0.22, 0.62, 1.00),
@@ -100,7 +102,8 @@ static float3 paletteColor(float x, float dark) {
     q.x = mirrored > 0.5 ? -q.x : q.x;
     float radius = min(cornerRadius, min(halfSize.x, halfSize.y) * 0.8);
     float e = -continuousBoxDistance(q, halfSize, radius);
-    if (e > 50.0) {
+    float orbDistance = length(q - (halfSize - orbInset));
+    if (e > 64.0 && orbDistance > orbReach) {
         return half4(0.0);
     }
     float edge = max(e, 0.0);
@@ -111,9 +114,8 @@ static float3 paletteColor(float x, float dark) {
     float perimeterLength = 4.0 * (b.x + b.y) + tau * skeleton;
     float halfLength = 0.5 * perimeterLength;
     float u = perimeterCoordinate(q, b, skeleton, perimeterLength);
-    float originU = (b.x + 0.25 * M_PI_F * skeleton) / perimeterLength;
+    float originU = 0.25 + (b.y + 0.25 * M_PI_F * skeleton) / perimeterLength;
     float span = abs(fract(u - originU + 0.5) - 0.5) * perimeterLength;
-    float fromBottom = abs(fract(u) - 0.5) * perimeterLength;
     float soften = 2.0 + 1.2 * edge;
     float nearOrigin = sqrt(span * span + soften * soften) - soften;
     float nearMeet = sqrt((halfLength - nearOrigin) * (halfLength - nearOrigin) + soften * soften) - soften;
@@ -152,13 +154,14 @@ static float3 paletteColor(float x, float dark) {
         float envelope = smoothstep(0.0, 0.07, age) * (1.0 - smoothstep(0.15, 0.85, age));
         float a = age / 0.85;
         float pulseFront = 0.6 * halfLength * a * sqrt(a);
-        float beyond = max(fromBottom - pulseFront, 0.0) / (24.0 + 60.0 * age);
+        float beyond = max(nearOrigin - pulseFront, 0.0) / (24.0 + 60.0 * age);
         pulse = max(pulse, envelope * exp(-beyond * beyond));
         kick += smoothstep(0.0, 0.06, age) * exp(-age / 0.14);
         activity += envelope;
     }
-    float kickSpread = fromBottom / (0.45 * halfLength);
-    float tick = min(kick, 1.0) * pulseGate * exp(-kickSpread * kickSpread);
+    float kickSpread = nearOrigin / (0.45 * halfLength);
+    float pump = min(kick, 1.0) * pulseGate;
+    float tick = pump * exp(-kickSpread * kickSpread);
     float swell = min(0.5 * pulse * pulseGate + 0.5 * tick, 1.0);
     float lively = activity * pulseGate / (activity * pulseGate + 3.0);
 
@@ -166,9 +169,10 @@ static float3 paletteColor(float x, float dark) {
     float head = 0.0;
     float2 headOffset = float2(0.0);
     if (comet > 0.0) {
-        trail = exp(min(behind, 0.0) / 60.0) * (1.0 - smoothstep(-2.0, 2.0, behind)) * comet * (1.0 - settled);
+        trail = exp(min(behind, 0.0) / max(60.0, 0.1 * halfLength)) * (1.0 - smoothstep(-2.0, 2.0, behind))
+            * comet * (1.0 - settled);
         float lightHead = smoothstep(launch, launch + 0.18, time) * (1.0 - smoothstep(meet - 0.1, meet, time));
-        head = comet * mix(lightHead, 1.0, dark);
+        head = comet * mix(lightHead, 1.0 - 0.5 * smoothstep(meet - 0.12, meet, time), dark);
         headOffset = float2(behind + 2.0, across);
     }
 
@@ -186,11 +190,13 @@ static float3 paletteColor(float x, float dark) {
         float ahead = path - halfLength * (1.0 - homeProgress);
         float drained = 1.0 - smoothstep(0.66, 0.84, outro);
         keep = (1.0 - smoothstep(-2.0, 10.0, ahead)) * drained;
-        homeTrail = exp(-max(ahead, 0.0) / mix(45.0, 70.0, h)) * (1.0 - smoothstep(60.0, 150.0, ahead))
+        float tail = max(1.0, halfLength / 600.0);
+        homeTrail = exp(-max(ahead, 0.0) / (mix(45.0, 70.0, h) * tail))
+            * (1.0 - smoothstep(60.0, 150.0 * tail, ahead))
             * smoothstep(-2.0, 2.0, ahead) * (1.0 - smoothstep(0.7, 0.92, outro));
         homeHead = smoothstep(0.0, 0.06, outro) * (1.0 - smoothstep(mix(0.68, 0.72, dark), 0.8, outro));
         homeOffset = float2(ahead - 2.0, across);
-        glint = smoothstep(0.7, 0.76, outro) * (1.0 - smoothstep(0.8, 0.98, outro));
+        glint = smoothstep(0.66, 0.78, outro) * (1.0 - smoothstep(0.8, 1.0, outro));
         exit = 1.0 - smoothstep(0.86, 1.0, outro);
     }
 
@@ -203,18 +209,25 @@ static float3 paletteColor(float x, float dark) {
     float flow = u - 0.045 * time + dot(flowWave, float2(0.1, 0.07)) + 0.04 * writing * shimmer;
     float hue = triangle(flow) * mix(0.62, 1.0, writing);
 
-    float meetBoost = 0.0;
     float meetLight = 0.0;
-    if (flash > 0.0) {
-        float d = nearMeet;
-        meetBoost = flash * exp(-(d / 36.0) * (d / 36.0));
-        meetLight = 0.7 * dark * flash * exp(-length(float2(d / 3.0, across)) / 8.0);
+    float closing = 0.0;
+    float closeAge = time - meet;
+    if (closeAge > -0.05 && closeAge < 0.6) {
+        float wave = halfLength * smoothstep(0.0, 0.5, closeAge);
+        float waveWidth = 30.0 + 0.06 * halfLength;
+        float lag = (nearMeet - wave) / waveWidth;
+        closing = exp(-lag * lag) * smoothstep(-0.05, 0.02, closeAge) * (1.0 - smoothstep(0.4, 0.6, closeAge));
+        meetLight = 0.4 * dark * flash * exp(-length(float2(nearMeet / 4.0, 1.6 * across)) / 6.0);
     }
     float budBoost = bud * exp(-(span / 40.0) * (span / 40.0));
-    float lighten = (1.0 - dark) * clamp(meetBoost + budBoost, 0.0, 1.0);
+    float labelDistance = length(q + halfSize - float2(16.0, 21.0));
+    float nearLabel = (1.0 - smoothstep(16.0, 56.0, labelDistance)) * smoothstep(1.0, 4.0, across);
+    float hush = 1.0 - 0.85 * nearLabel;
+    float labelGuard = 1.0 - 0.75 * nearLabel * clamp(comet + closing + flash, 0.0, 1.0);
+    float lighten = (1.0 - dark) * clamp(budBoost + mix(0.9, 0.6, dark) * closing, 0.0, 1.0) * hush;
 
     float energy = bright * settle * (1.0 + 0.5 * lively) * (1.0 + 0.8 * swell);
-    float streak = 1.0 + mix(0.8, 1.4, dark) * trail + 1.2 * homeTrail;
+    float streak = 1.0 + mix(0.8, 1.4, dark) * trail + 1.2 * homeTrail + mix(1.3, 0.9, dark) * closing;
     float coreWidth = mix(1.7, 1.4, writing) * (0.8 + 0.2 * width) * (1.0 + mix(0.3, 0.6, dark) * swell);
     float core = exp(-(across / coreWidth) * (across / coreWidth));
     float haloRadius = mix(6.0, 4.5, writing) * width * (1.0 + 0.3 * calmBreath) * (1.0 + 0.15 * lively)
@@ -228,8 +241,8 @@ static float3 paletteColor(float x, float dark) {
     float haloGain = mix(mix(0.36, 0.45, writing), mix(0.42, 0.6, writing), dark);
     float bloomGain = mix(mix(0.18, 0.12, writing), mix(0.42, 0.5, writing), dark);
     float coreAlpha = clamp(core * energy * streak * base * coreGain, 0.0, 1.0);
-    float haloAlpha = halo * energy * (0.7 + 0.3 * streak) * base * haloGain * (0.85 + 0.15 * calmBreath)
-        * (1.0 + mix(0.5, 0.9, dark) * swell) * (1.0 + 0.5 * lighten);
+    float haloAlpha = halo * energy * (0.7 + 0.3 * mix(1.0, streak, hush)) * base * haloGain
+        * (0.85 + 0.15 * calmBreath) * (1.0 + mix(0.5, 0.9, dark) * swell) * (1.0 + 0.5 * lighten);
     float bloomAlpha = bloom * energy * base * bloomGain;
 
     float3 coreColor = paletteColor(hue + 0.08 + 0.04 * swell, dark);
@@ -238,7 +251,7 @@ static float3 paletteColor(float x, float dark) {
     float softening = 0.32 * (1.0 - dark);
     haloColor = mix(haloColor, float3(1.0), softening);
     bloomColor = mix(bloomColor, float3(1.0), softening);
-    float whiteness = clamp(mix(0.3, 0.5, writing) + 0.7 * swell + trail + homeTrail, 0.0, 1.0);
+    float whiteness = clamp(mix(0.3, 0.5, writing) + 0.7 * swell + trail + homeTrail + 0.6 * closing, 0.0, 1.0);
     float3 lightCore = mix(coreColor * mix(1.0, 0.92, writing), float3(1.0), 0.4 * lighten);
     float3 coreTint = mix(lightCore, mix(coreColor, float3(1.0), 0.6 * whiteness), dark);
 
@@ -247,7 +260,23 @@ static float3 paletteColor(float x, float dark) {
     float3 premultiplied = coreTint * coreAlpha + glowColor * glowAlpha * (1.0 - coreAlpha);
     float alpha = coreAlpha * mix(1.0, 0.8, dark) + glowAlpha * (1.0 - coreAlpha) * mix(1.0, 0.55, dark);
 
-    if (head + homeHead + bud + glint + meetLight > 0.0) {
+    float orbIn = smoothstep(0.0, 0.09, time) * (1.0 - smoothstep(0.12, 0.32, time));
+    float orbReturn = smoothstep(0.35, 0.5, closeAge) * (1.0 - smoothstep(0.5, 0.85, closeAge));
+    float orbLight = orbIn + mix(0.6, 0.35, dark) * orbReturn + 0.7 * pump + glint;
+    if (orbLight > 0.0 && orbDistance < orbReach) {
+        float ringRadius = orbIn > 0.0 ? mix(20.0, 35.0, smoothstep(0.0, 0.16, time)) : mix(34.0, 19.0, glint);
+        float ringOffset = (orbDistance - ringRadius) / mix(3.5, 5.5, dark);
+        float ring = (orbIn + glint) * exp(-ringOffset * ringOffset);
+        float orbCore = orbLight * exp(-(orbDistance / 24.0) * (orbDistance / 24.0));
+        float3 orbHue = paletteColor(hue + 0.12, dark);
+        float orbFade = 1.0 - smoothstep(orbReach - 10.0, orbReach, orbDistance);
+        float orbAlpha = clamp((0.55 * ring + 0.5 * orbCore) * mix(0.7, 1.0, dark) * exit * orbFade, 0.0, 1.0);
+        float3 orbColor = mix(orbHue, float3(1.0), mix(0.3, 0.45 + 0.3 * orbCore, dark));
+        premultiplied = orbColor * orbAlpha + premultiplied * (1.0 - orbAlpha);
+        alpha = orbAlpha * mix(1.0, 0.7, dark) + alpha * (1.0 - orbAlpha);
+    }
+
+    if (head + homeHead + bud + meetLight > 0.0) {
         float3 sparkHue = paletteColor(hue + 0.2, dark);
         float budRadius = length(float2(span, across));
         float budSize = mix(3.0, mix(7.0, 5.5, dark), smoothstep(0.0, 0.12, time));
@@ -258,12 +287,10 @@ static float3 paletteColor(float x, float dark) {
             float homeRadius = length(homeOffset);
             float2 headHot = headOffset / float2(max(2.6, 1.1 * introSpeed / 120.0), 2.6);
             float2 homeHot = homeOffset / float2(max(2.6, 1.1 * homeSpeed / 120.0), 2.6);
-            float glintSize = mix(2.0, 6.0, glint);
             float fringe = head * exp(-headRadius / 9.0) + homeHead * exp(-homeRadius / 9.0)
-                + bud * exp(-budRadius / budSize) + glint * exp(-budRadius / glintSize) + meetLight;
+                + bud * exp(-budRadius / budSize) + meetLight;
             float hot = head * exp(-dot(headHot, headHot)) + homeHead * exp(-dot(homeHot, homeHot))
                 + bud * exp(-(budRadius / 2.2) * (budRadius / 2.2))
-                + glint * exp(-(budRadius / 2.6) * (budRadius / 2.6))
                 + 0.3 * meetLight;
             sparkAlpha = fringe;
             sparkColor = mix(sparkHue, float3(1.0), clamp(hot * 1.5 + 0.25, 0.0, 1.0));
@@ -272,18 +299,17 @@ static float3 paletteColor(float x, float dark) {
             float2 homeShape = homeOffset / float2(10.0, 2.2);
             float comets = head * exp(-dot(headShape, headShape)) + homeHead * exp(-dot(homeShape, homeShape));
             float budLight = 0.5 * bud * exp(-(budRadius / budSize) * (budRadius / budSize));
-            float glintLight = 0.4 * glint * exp(-(budRadius / 7.0) * (budRadius / 7.0));
-            sparkAlpha = comets + budLight + glintLight;
-            float3 mixed = sparkHue * 0.82 * comets + mix(sparkHue, float3(1.0), 0.3) * budLight
-                + mix(sparkHue, float3(1.0), 0.45) * glintLight;
+            sparkAlpha = comets + budLight;
+            float3 mixed = sparkHue * 0.82 * comets + mix(sparkHue, float3(1.0), 0.3) * budLight;
             sparkColor = mixed / max(sparkAlpha, 1e-4);
         }
-        sparkAlpha = clamp(sparkAlpha * exit, 0.0, 1.0);
+        sparkAlpha = clamp(sparkAlpha * exit * hush, 0.0, 1.0);
         premultiplied = sparkColor * sparkAlpha + premultiplied * (1.0 - sparkAlpha);
         alpha = sparkAlpha * mix(1.0, 0.75, dark) + alpha * (1.0 - sparkAlpha);
     }
 
-    alpha = clamp(alpha, 0.0, 1.0);
+    alpha = clamp(alpha * labelGuard, 0.0, 1.0);
+    premultiplied *= labelGuard;
     float noise = fract(52.9829189 * fract(dot(position, float2(0.06711056, 0.00583715))));
     premultiplied += (noise - 0.5) / 255.0 * min(alpha * 8.0, 1.0);
     return half4(half3(clamp(premultiplied, 0.0, mix(alpha, 1.0, dark))), half(alpha)) * color.a;
