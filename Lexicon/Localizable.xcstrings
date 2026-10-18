@@ -109,6 +109,9 @@
     "Lexicon" : {
       "shouldTranslate" : false
     },
+    "Lexicon can generate definitions for terms of up to %lld characters." : {
+
+    },
     "Lexicon can't define terms in this language yet." : {
 
     },

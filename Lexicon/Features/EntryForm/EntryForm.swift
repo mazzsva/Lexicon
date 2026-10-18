@@ -30,6 +30,7 @@ struct EntryForm {
     enum Note: Hashable {
         case failure(DefinitionClient.GenerationError)
         case generated(correctForm: String?)
+        case termTooLong
     }
 
     @ObservableState
@@ -57,7 +58,7 @@ struct EntryForm {
         var generatableTerm: String? {
             guard isModelAvailable, !isGeneratingDefinition else { return nil }
             let term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !term.isEmpty, term.count <= EntryForm.maximumGeneratableTermLength else { return nil }
+            guard !term.isEmpty, !isTermTooLong else { return nil }
             return term
         }
 
@@ -77,6 +78,10 @@ struct EntryForm {
             content != nil
         }
 
+        var isTermTooLong: Bool {
+            term.trimmingCharacters(in: .whitespacesAndNewlines).count > EntryForm.maximumGeneratableTermLength
+        }
+
         var needsReplacementConfirmation: Bool {
             !definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && definition != generatedDefinition?.text
@@ -89,6 +94,10 @@ struct EntryForm {
             case .lookingUp, .writing:
                 return nil
             case nil:
+                let isDefinitionBlank = definition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                if isModelAvailable && isTermTooLong && isDefinitionBlank {
+                    return .termTooLong
+                }
                 guard let generatedDefinition, definition == generatedDefinition.text else { return nil }
                 return .generated(correctForm: generatedDefinition.correctForm)
             }

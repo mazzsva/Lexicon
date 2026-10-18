@@ -148,6 +148,8 @@ extension EntryForm.Note {
             "Did you mean “\(correctForm)”? Check the generated definition for mistakes."
         case .generated(nil):
             "Check the generated definition for mistakes."
+        case .termTooLong:
+            "Lexicon can generate definitions for terms of up to \(EntryForm.maximumGeneratableTermLength) characters."
         }
     }
 }

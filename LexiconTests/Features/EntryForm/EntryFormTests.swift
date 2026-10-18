@@ -542,12 +542,42 @@ extension BaseSuite {
         }
 
         @Test
-        func theLongestAllowedTermCanBeGenerated() {
-            let state = Self.generatableState(
-                term: String(repeating: "a", count: EntryForm.maximumGeneratableTermLength)
+        func aTermThatIsTooLongExplainsWhyItCannotBeGenerated() {
+            var state = Self.generatableState(
+                term: String(repeating: "a", count: EntryForm.maximumGeneratableTermLength + 1)
             )
+            expectNoDifference(state.note, .termTooLong)
+
+            state.definition = "Very rarely."
+            expectNoDifference(state.note, nil)
+
+            state.definition = ""
+            state.isModelAvailable = false
+            expectNoDifference(state.note, nil)
+        }
+
+        @Test
+        func theGeneratedDefinitionIsExplainedBeforeATermThatIsTooLong() {
+            var state = Self.generatedState()
+            expectNoDifference(state.note, .generated(correctForm: nil))
+
+            state.term = String(repeating: "a", count: EntryForm.maximumGeneratableTermLength + 1)
+            #expect(state.isTermTooLong)
+            expectNoDifference(state.note, .generated(correctForm: nil))
+        }
+
+        @Test(
+            arguments: [
+                String(repeating: "a", count: EntryForm.maximumGeneratableTermLength),
+                " \n" + String(repeating: "a", count: EntryForm.maximumGeneratableTermLength) + "  ",
+            ]
+        )
+        func theLongestAllowedTermCanBeGenerated(term: String) {
+            let state = Self.generatableState(term: term)
 
             #expect(state.isGenerateButtonEnabled)
+            #expect(!state.isTermTooLong)
+            expectNoDifference(state.note, nil)
         }
 
         @Test
