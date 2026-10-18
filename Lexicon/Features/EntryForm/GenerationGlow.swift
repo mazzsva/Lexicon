@@ -15,6 +15,7 @@ struct GenerationGlow: View {
 
     private static let maximumPulseCount = 8
     private static let minimumPulseInterval = 0.2
+    private static let reduceMotionTime: Double = 3
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var run: Run?
@@ -25,7 +26,12 @@ struct GenerationGlow: View {
                 if let run {
                     TimelineView(.animation(paused: reduceMotion)) { context in
                         if reduceMotion {
-                            GenerationGlowSurface(completion: nil, pulses: [], time: 3, writingStart: 0)
+                            GenerationGlowSurface(
+                                completion: nil,
+                                pulses: [],
+                                time: Self.reduceMotionTime,
+                                writingStart: 0
+                            )
                         } else {
                             GenerationGlowSurface(
                                 completion: run.completion,
@@ -41,8 +47,8 @@ struct GenerationGlow: View {
                     GenerationGlowSurface(completion: nil, pulses: [], time: 0, writingStart: nil)
                 }
             }
-            .onChange(of: generation) { generationChanged() }
             .onChange(of: definition) { definitionChanged() }
+            .onChange(of: generation) { generationChanged() }
             .onChange(of: reduceMotion) { reduceMotionChanged() }
             .task(id: run?.completion) { await completionChanged() }
     }
