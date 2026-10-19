@@ -10,14 +10,14 @@ import Foundation
 
 @Reducer
 struct EntryDetail {
+    enum Alert: Equatable {
+        case confirmDeletion
+    }
+
     @Reducer
     enum Destination {
         case alert(AlertState<EntryDetail.Alert>)
         case editEntry(EntryForm)
-    }
-
-    enum Alert: Equatable {
-        case confirmDeletion
     }
 
     @ObservableState

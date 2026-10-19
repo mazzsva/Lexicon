@@ -11,6 +11,8 @@ import os
 
 @Reducer
 struct Home {
+    enum Alert: Equatable {}
+
     @Reducer
     enum Destination {
         case accountDeletion(AccountDeletion)
@@ -19,12 +21,30 @@ struct Home {
         case settings(Settings)
     }
 
-    enum Alert: Equatable {}
+    enum EmptyState: Equatable {
+        case bookmarks
+        case entries
+        case failed
+        case search
+    }
 
     enum Failure: CaseIterable, Hashable {
         case entryDelete
         case entryImport
         case entrySave
+    }
+
+    @CasePathable
+    @dynamicMemberLookup
+    enum SessionOrigin: Equatable {
+        case freshSignIn(isNewAccount: Bool)
+        case restored
+    }
+
+    enum SyncStatus: Equatable {
+        case offline
+        case synced
+        case syncing
     }
 
     @ObservableState
@@ -39,20 +59,6 @@ struct Home {
         var searchText = ""
         let sessionOrigin: SessionOrigin
         let user: User
-
-        enum EmptyState: Equatable {
-            case bookmarks
-            case entries
-            case failed
-            case search
-        }
-
-        @CasePathable
-        @dynamicMemberLookup
-        enum SessionOrigin: Equatable {
-            case freshSignIn(isNewAccount: Bool)
-            case restored
-        }
 
         init(user: User, sessionOrigin: SessionOrigin = .restored) {
             _entries = Shared(value: .loading)

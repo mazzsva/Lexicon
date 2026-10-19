@@ -7,15 +7,9 @@
 
 import SwiftUI
 
-enum SyncStatus: Equatable {
-    case offline
-    case synced
-    case syncing
-}
-
 struct SyncStatusLabel: View {
     let entryCount: Int?
-    let status: SyncStatus
+    let status: Home.SyncStatus
 
     var body: some View {
         HStack(spacing: 5) {
