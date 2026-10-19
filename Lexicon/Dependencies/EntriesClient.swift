@@ -24,7 +24,8 @@ struct EntriesClient: Sendable {
         AsyncThrowingStream { _ in }
     }
 
-    var update: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
+    var updateBookmark: @Sendable (_ id: Entry.ID, _ isBookmarked: Bool, _ uid: String) async throws -> Void
+    var updateContent: @Sendable (_ id: Entry.ID, _ content: Entry.Content, _ uid: String) async throws -> Void
 }
 
 struct EntriesSnapshot: Equatable, Sendable {
@@ -59,8 +60,11 @@ extension EntriesClient: DependencyKey {
             entries: { uid in
                 await FirestoreStorage.shared.entries(uid: uid)
             },
-            update: { entry, uid in
-                try await FirestoreStorage.shared.update(entry, uid: uid)
+            updateBookmark: { id, isBookmarked, uid in
+                try await FirestoreStorage.shared.updateBookmark(id: id, isBookmarked: isBookmarked, uid: uid)
+            },
+            updateContent: { id, content, uid in
+                try await FirestoreStorage.shared.updateContent(id: id, content: content, uid: uid)
             }
         )
     }
@@ -77,7 +81,8 @@ extension EntriesClient: DependencyKey {
                     continuation.yield(.mock)
                 }
             },
-            update: { _, _ in }
+            updateBookmark: { _, _, _ in },
+            updateContent: { _, _, _ in }
         )
     }
 
@@ -176,9 +181,15 @@ private actor FirestoreStorage {
         }
     }
 
-    func update(_ entry: Entry, uid: String) async throws {
+    func updateBookmark(id: Entry.ID, isBookmarked: Bool, uid: String) async throws {
         await waitForClearing()
-        try await entriesCollection(uid: uid).document(entry.id.uuidString).updateData(entry.editableData)
+        try await entriesCollection(uid: uid).document(id.uuidString).updateData(["isBookmarked": isBookmarked])
+    }
+
+    func updateContent(id: Entry.ID, content: Entry.Content, uid: String) async throws {
+        await waitForClearing()
+        try await entriesCollection(uid: uid).document(id.uuidString)
+            .updateData(["definition": content.definition, "term": content.term])
     }
 
     private func commit(
@@ -248,13 +259,8 @@ extension Entry {
     }
 
     fileprivate var documentData: [String: Any] {
-        var data = editableData
-        data["createdAt"] = Timestamp(date: createdAt)
-        return data
-    }
-
-    fileprivate var editableData: [String: Any] {
         [
+            "createdAt": Timestamp(date: createdAt),
             "definition": definition,
             "isBookmarked": isBookmarked,
             "term": term,

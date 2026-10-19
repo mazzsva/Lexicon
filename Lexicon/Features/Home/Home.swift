@@ -242,15 +242,21 @@ struct Home {
                 state.destination = .createEntry(EntryForm.State())
                 return .none
 
-            case .path(.element(id: let id, action: .delegate(.didDelete(let entryID)))):
+            case .path(.element(id: let id, action: .delegate(.didChangeBookmark(let isBookmarked)))):
+                guard let entryID = state.path[id: id]?.entry.id else { return .none }
+                return updateBookmark(entryID, isBookmarked: isBookmarked, uid: state.user.uid)
+
+            case .path(.element(id: let id, action: .delegate(.didDelete))):
+                guard let entryID = state.path[id: id]?.entry.id else { return .none }
                 state.path.pop(from: id)
                 return .merge(
                     .run { _ in await hapticsClient.warning() },
                     delete(entryID, uid: state.user.uid)
                 )
 
-            case .path(.element(id: _, action: .delegate(.didUpdate(let entry)))):
-                return update(entry, uid: state.user.uid)
+            case .path(.element(id: let id, action: .delegate(.didUpdate(let content)))):
+                guard let entryID = state.path[id: id]?.entry.id else { return .none }
+                return updateContent(entryID, content: content, uid: state.user.uid)
 
             case .path:
                 return .none
@@ -341,11 +347,19 @@ struct Home {
             .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
     }
 
-    private func update(_ entry: Entry, uid: String) -> Effect<Action> {
+    private func updateBookmark(_ id: Entry.ID, isBookmarked: Bool, uid: String) -> Effect<Action> {
         .run { _ in
-            try await entriesClient.update(entry: entry, uid: uid)
+            try await entriesClient.updateBookmark(id: id, isBookmarked: isBookmarked, uid: uid)
         } catch: { error, send in
-            await send(.entrySaveFailed(entry.id, error))
+            await send(.entrySaveFailed(id, error))
+        }
+    }
+
+    private func updateContent(_ id: Entry.ID, content: Entry.Content, uid: String) -> Effect<Action> {
+        .run { _ in
+            try await entriesClient.updateContent(id: id, content: content, uid: uid)
+        } catch: { error, send in
+            await send(.entrySaveFailed(id, error))
         }
     }
 }

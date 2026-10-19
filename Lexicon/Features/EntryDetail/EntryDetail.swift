@@ -35,8 +35,9 @@ struct EntryDetail {
 
         @CasePathable
         enum Delegate {
-            case didDelete(Entry.ID)
-            case didUpdate(Entry)
+            case didChangeBookmark(Bool)
+            case didDelete
+            case didUpdate(Entry.Content)
         }
     }
 
@@ -46,11 +47,9 @@ struct EntryDetail {
         Reduce { state, action in
             switch action {
             case .bookmarkButtonTapped:
-                var entry = state.entry
-                entry.isBookmarked.toggle()
                 return .merge(
                     .run { _ in await hapticsClient.selection() },
-                    .send(.delegate(.didUpdate(entry)))
+                    .send(.delegate(.didChangeBookmark(!state.entry.isBookmarked)))
                 )
 
             case .delegate:
@@ -61,13 +60,13 @@ struct EntryDetail {
                 return .none
 
             case .destination(.presented(.alert(.confirmDeletion))):
-                return .send(.delegate(.didDelete(state.entry.id)))
+                return .send(.delegate(.didDelete))
 
-            case .destination(.presented(.editEntry(.delegate(.didUpdate(let entry))))):
+            case .destination(.presented(.editEntry(.delegate(.didUpdate(let content))))):
                 state.destination = nil
                 return .merge(
                     .run { _ in await hapticsClient.success() },
-                    .send(.delegate(.didUpdate(entry)))
+                    .send(.delegate(.didUpdate(content)))
                 )
 
             case .destination:

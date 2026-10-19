@@ -424,27 +424,26 @@ extension BaseSuite {
         // The detail stays on screen because it reads the entry from the shared state
         @Test
         func updatingFromTheDetailSavesTheEntry() async {
-            var bookmarked = Entry.burningCandle
-            bookmarked.isBookmarked = true
-
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .burningCandle)))
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
             await confirmation("Saves the entry") { savesEntry in
                 let store = TestStore(initialState: state) {
                     Home()
                 } withDependencies: {
-                    $0.entriesClient.update = { [bookmarked] entry, uid in
-                        expectNoDifference(entry, bookmarked)
+                    $0.entriesClient.updateBookmark = { id, isBookmarked, uid in
+                        expectNoDifference(id, Entry.burningCandle.id)
+                        #expect(isBookmarked)
                         expectNoDifference(uid, User.mock.uid)
                         savesEntry()
                     }
                 }
 
                 await store.send(
-                    .path(.element(id: detailID, action: .delegate(.didUpdate(bookmarked))))
+                    .path(.element(id: detailID, action: .delegate(.didChangeBookmark(true))))
                 )
                 await store.finish()
             }
@@ -461,11 +460,59 @@ extension BaseSuite {
             let store = TestStore(initialState: state) {
                 Home()
             } withDependencies: {
-                $0.entriesClient.update = { _, _ in throw EntriesFailure() }
+                $0.entriesClient.updateContent = { _, _, _ in throw EntriesFailure() }
             }
 
             await store.send(
-                .path(.element(id: detailID, action: .delegate(.didUpdate(.blueMoon))))
+                .path(.element(id: detailID, action: .delegate(.didUpdate(Entry.blueMoon.content))))
+            )
+            await store.receive(\.entrySaveFailed) {
+                $0.destination = .alert(.failed(.entrySave))
+            }
+        }
+
+        @Test
+        func editingFromTheDetailSavesOnlyTheContent() async throws {
+            let edited = try Entry.Content(term: Entry.blueMoon.term, definition: "A rare event.")
+
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .burningCandle)))
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            let detailID = Array(state.path.ids)[1]
+
+            await confirmation("Saves the content") { savesContent in
+                let store = TestStore(initialState: state) {
+                    Home()
+                } withDependencies: {
+                    $0.entriesClient.updateContent = { id, content, uid in
+                        expectNoDifference(id, Entry.blueMoon.id)
+                        expectNoDifference(content, edited)
+                        expectNoDifference(uid, User.mock.uid)
+                        savesContent()
+                    }
+                }
+
+                await store.send(.path(.element(id: detailID, action: .delegate(.didUpdate(edited)))))
+                await store.finish()
+            }
+        }
+
+        @Test
+        func aFailedBookmarkChangeShowsAnAlert() async {
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
+            let detailID = Array(state.path.ids)[0]
+
+            let store = TestStore(initialState: state) {
+                Home()
+            } withDependencies: {
+                $0.entriesClient.updateBookmark = { _, _, _ in throw EntriesFailure() }
+            }
+
+            await store.send(
+                .path(.element(id: detailID, action: .delegate(.didChangeBookmark(false))))
             )
             await store.receive(\.entrySaveFailed) {
                 $0.destination = .alert(.failed(.entrySave))
@@ -498,8 +545,9 @@ extension BaseSuite {
         func deletingFromTheDetailPopsBackAndDeletesTheEntry() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .burningCandle)))
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
-            let detailID = Array(state.path.ids)[0]
+            let detailID = Array(state.path.ids)[1]
 
             await confirmation("Deletes the entry") { deletesEntry in
                 let store = TestStore(initialState: state) {
@@ -514,7 +562,7 @@ extension BaseSuite {
                 }
 
                 await store.send(
-                    .path(.element(id: detailID, action: .delegate(.didDelete(Entry.blueMoon.id))))
+                    .path(.element(id: detailID, action: .delegate(.didDelete)))
                 ) {
                     $0.path.pop(from: detailID)
                 }
@@ -538,7 +586,7 @@ extension BaseSuite {
             }
 
             await store.send(
-                .path(.element(id: detailID, action: .delegate(.didDelete(Entry.blueMoon.id))))
+                .path(.element(id: detailID, action: .delegate(.didDelete)))
             ) {
                 $0.path.pop(from: detailID)
             }

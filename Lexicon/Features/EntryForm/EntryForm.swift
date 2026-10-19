@@ -128,7 +128,7 @@ struct EntryForm {
         @CasePathable
         enum Delegate {
             case didCreate(Entry)
-            case didUpdate(Entry)
+            case didUpdate(Entry.Content)
         }
     }
 
@@ -208,18 +208,12 @@ struct EntryForm {
 
             case .saveButtonTapped:
                 guard let content = state.content else { return .none }
+                guard state.isCreating else {
+                    return .send(.delegate(.didUpdate(content)))
+                }
                 do {
-                    guard let original = state.entry else {
-                        let entry = try Entry(content: content, createdAt: now, id: uuid(), isBookmarked: false)
-                        return .send(.delegate(.didCreate(entry)))
-                    }
-                    let entry = try Entry(
-                        content: content,
-                        createdAt: original.createdAt,
-                        id: original.id,
-                        isBookmarked: original.isBookmarked
-                    )
-                    return .send(.delegate(.didUpdate(entry)))
+                    let entry = try Entry(content: content, createdAt: now, id: uuid(), isBookmarked: false)
+                    return .send(.delegate(.didCreate(entry)))
                 } catch {
                     reportIssue(error)
                     return .none

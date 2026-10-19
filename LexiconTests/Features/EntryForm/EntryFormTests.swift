@@ -77,7 +77,7 @@ extension BaseSuite {
                 $0.definition = "  A rare event.  "
             }
             await store.send(.saveButtonTapped)
-            await store.receive(\.delegate.didUpdate, edited)
+            await store.receive(\.delegate.didUpdate, edited.content)
         }
 
         // The view disables the save button, and the reducer refuses the term as well

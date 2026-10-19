@@ -26,11 +26,8 @@ extension BaseSuite {
                     $0.hapticsClient.selection = { playsHaptic() }
                 }
 
-                var bookmarked = Entry.burningCandle
-                bookmarked.isBookmarked = true
-
                 await store.send(.bookmarkButtonTapped)
-                await store.receive(\.delegate.didUpdate, bookmarked)
+                await store.receive(\.delegate.didChangeBookmark, true)
                 await store.finish()
             }
         }
@@ -47,11 +44,8 @@ extension BaseSuite {
                     $0.hapticsClient.selection = { playsHaptic() }
                 }
 
-                var unbookmarked = Entry.blueMoon
-                unbookmarked.isBookmarked = false
-
                 await store.send(.bookmarkButtonTapped)
-                await store.receive(\.delegate.didUpdate, unbookmarked)
+                await store.receive(\.delegate.didChangeBookmark, false)
                 await store.finish()
             }
         }
@@ -99,10 +93,10 @@ extension BaseSuite {
                     $0.destination?.modify(\.editEntry) { $0.definition = edited.definition }
                 }
                 await store.send(.destination(.presented(.editEntry(.saveButtonTapped))))
-                await store.receive(\.destination.presented.editEntry.delegate.didUpdate, edited) {
+                await store.receive(\.destination.presented.editEntry.delegate.didUpdate, edited.content) {
                     $0.destination = nil
                 }
-                await store.receive(\.delegate.didUpdate, edited)
+                await store.receive(\.delegate.didUpdate, edited.content)
                 await store.finish()
             }
         }
@@ -136,7 +130,7 @@ extension BaseSuite {
             await store.send(.destination(.presented(.alert(.confirmDeletion)))) {
                 $0.destination = nil
             }
-            await store.receive(\.delegate.didDelete, Entry.blueMoon.id)
+            await store.receive(\.delegate.didDelete)
         }
 
         // A dismissed alert must not reach the parent
