@@ -36,7 +36,7 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 
 ## Quality
 
-- **Tests:** 199 tests cover every reducer, and none touch the network.
+- **Tests:** 210 tests cover every reducer, and none touch the network.
 - **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
