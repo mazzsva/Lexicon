@@ -31,6 +31,7 @@ extension BaseSuite {
 
                 await store.send(.bookmarkButtonTapped)
                 await store.receive(\.delegate.didUpdate, bookmarked)
+                await store.finish()
             }
         }
 
@@ -51,6 +52,7 @@ extension BaseSuite {
 
                 await store.send(.bookmarkButtonTapped)
                 await store.receive(\.delegate.didUpdate, unbookmarked)
+                await store.finish()
             }
         }
 
