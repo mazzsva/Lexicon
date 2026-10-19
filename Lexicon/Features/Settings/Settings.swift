@@ -237,6 +237,8 @@ extension AlertState where Action == Settings.Alert {
             TextState("Something Went Wrong")
         } message: {
             switch failure {
+            case .connectionFailed:
+                TextState("Your account couldn't be deleted. Check your connection and try again.")
             case .notDeleted:
                 TextState("Your account couldn't be deleted.")
             case .notFullyDeleted:

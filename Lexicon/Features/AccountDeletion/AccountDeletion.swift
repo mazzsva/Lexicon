@@ -17,6 +17,7 @@ struct AccountDeletion {
     }
 
     enum Failure: Equatable {
+        case connectionFailed
         case notDeleted
         case notFullyDeleted
         case notSignedOut
@@ -153,9 +154,16 @@ struct AccountDeletion {
             return .merge(.cancel(id: CancelID.deletion), .send(.delegate(.didCancel)))
         }
         logger.error("Account deletion failed: \(error, privacy: .public)")
+        let isConnectionFailure = (error as? DeletionError) == .timedOut || error.isAuthNetworkError
+        let failure: Failure =
+            switch state.step {
+            case .deleting where isConnectionFailure: .connectionFailed
+            case .entriesDeleted: .notFullyDeleted
+            case .credentialRevoked, .deleting, .reauthenticating: .notDeleted
+            }
         return .merge(
             .cancel(id: CancelID.deletion),
-            .send(.delegate(.didFail(state.step == .entriesDeleted ? .notFullyDeleted : .notDeleted)))
+            .send(.delegate(.didFail(failure)))
         )
     }
 }

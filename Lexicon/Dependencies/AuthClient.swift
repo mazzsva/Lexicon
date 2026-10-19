@@ -90,6 +90,13 @@ extension DependencyValues {
     }
 }
 
+extension Error {
+    var isAuthNetworkError: Bool {
+        let error = self as NSError
+        return error.domain == AuthErrors.domain && error.code == AuthErrorCode.networkError.rawValue
+    }
+}
+
 private enum AuthClientError: Error {
     case notSignedIn
 }

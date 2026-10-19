@@ -122,6 +122,26 @@ extension BaseSuite {
             await store.finish()
         }
 
+        @Test
+        func aNetworkErrorBeforeTheEntriesAreDeletedReportsAConnectionFailure() async {
+            let clock = TestClock()
+            let store = TestStore(initialState: AccountDeletion.State(uid: User.mock.uid)) {
+                AccountDeletion()
+            } withDependencies: {
+                $0.authClient.reauthenticate = { _ in throw NSError(domain: "FIRAuthErrorDomain", code: 17020) }
+                $0.continuousClock = clock
+                $0.signInWithAppleClient.requestCredential = { .mock }
+            }
+
+            await store.send(.deletionConfirmed)
+            await store.receive(\.appleCredentialReceived) {
+                $0.step = .deleting
+            }
+            await store.receive(\.deletionFailed)
+            await store.receive(\.delegate.didFail, .connectionFailed)
+            await store.finish()
+        }
+
         // The entries are already gone, so the alert must not report a deletion that did not start
         @Test
         func aFailureAfterTheEntriesAreDeletedReportsAnUnfinishedDeletion() async {
@@ -131,6 +151,31 @@ extension BaseSuite {
             } withDependencies: {
                 $0.authClient.reauthenticate = { _ in }
                 $0.authClient.revokeAppleToken = { _ in throw DeletionFailure() }
+                $0.continuousClock = clock
+                $0.entriesClient.deleteAll = { _ in }
+                $0.signInWithAppleClient.requestCredential = { .mock }
+            }
+
+            await store.send(.deletionConfirmed)
+            await store.receive(\.appleCredentialReceived) {
+                $0.step = .deleting
+            }
+            await store.receive(\.entriesDeleted) {
+                $0.step = .entriesDeleted
+            }
+            await store.receive(\.deletionFailed)
+            await store.receive(\.delegate.didFail, .notFullyDeleted)
+            await store.finish()
+        }
+
+        @Test
+        func aNetworkErrorAfterTheEntriesAreDeletedReportsAnUnfinishedDeletion() async {
+            let clock = TestClock()
+            let store = TestStore(initialState: AccountDeletion.State(uid: User.mock.uid)) {
+                AccountDeletion()
+            } withDependencies: {
+                $0.authClient.reauthenticate = { _ in }
+                $0.authClient.revokeAppleToken = { _ in throw NSError(domain: "FIRAuthErrorDomain", code: 17020) }
                 $0.continuousClock = clock
                 $0.entriesClient.deleteAll = { _ in }
                 $0.signInWithAppleClient.requestCredential = { .mock }
@@ -215,8 +260,8 @@ extension BaseSuite {
         // A request that never returns leaves the user with a spinner
         @Test(
             arguments: [
-                (.reauthenticate, .notDeleted),
-                (.deleteAll, .notDeleted),
+                (.reauthenticate, .connectionFailed),
+                (.deleteAll, .connectionFailed),
                 (.revokeAppleToken, .notFullyDeleted),
             ] as [(StalledStep, AccountDeletion.Failure)]
         )

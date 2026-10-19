@@ -259,7 +259,10 @@ extension BaseSuite {
             await store.send(.appleCredentialInvalidated(.revoked))
         }
 
-        @Test(arguments: [nil, .notDeleted, .notFullyDeleted, .notSignedOut] as [AccountDeletion.Failure?])
+        @Test(
+            arguments: [nil, .connectionFailed, .notDeleted, .notFullyDeleted, .notSignedOut]
+                as [AccountDeletion.Failure?]
+        )
         func endingTheAccountDeletionVerifiesTheCredential(failure: AccountDeletion.Failure?) async {
             var home = Home.State(user: .mock)
             home.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid))
