@@ -11,9 +11,7 @@ struct WelcomeView: View {
     let onContinue: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
+        ScrollView {
             VStack(alignment: .leading, spacing: 56) {
                 VStack(spacing: 0) {
                     Text("Welcome to")
@@ -30,11 +28,12 @@ struct WelcomeView: View {
                     }
                 }
             }
-
-            Spacer()
-            Spacer()
-            Spacer()
-
+            .padding(.horizontal, 32)
+            .padding(.vertical, 24)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .defaultScrollAnchor(UnitPoint(x: 0.5, y: 0.25), for: .alignment)
+        .safeAreaBar(edge: .bottom) {
             Button {
                 onContinue()
             } label: {
@@ -45,9 +44,9 @@ struct WelcomeView: View {
             .buttonStyle(.glassProminent)
             .controlSize(.large)
             .buttonBorderShape(.capsule)
+            .padding(.horizontal, 32)
             .padding(.bottom, 16)
         }
-        .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .groupedBackground()
     }
