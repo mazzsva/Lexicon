@@ -428,7 +428,7 @@ extension BaseSuite {
                 }
                 expectNoDifference(store.state.isLoading, true)
 
-                await clock.advance(by: .milliseconds(500))
+                await clock.advance(by: AppFeature.signedOutSettleDelay)
                 await store.receive(\.signedOutSettleTimerElapsed) {
                     $0.isSignedOutSettling = false
                 }

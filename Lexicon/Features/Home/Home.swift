@@ -137,6 +137,8 @@ struct Home {
         case entriesSubscription
     }
 
+    static let entriesRetryDelay = Duration.seconds(5)
+
     @Dependency(\.continuousClock) var clock
     @Dependency(\.entriesClient) var entriesClient
     @Dependency(\.hapticsClient) var hapticsClient
@@ -199,7 +201,7 @@ struct Home {
                 state.isSyncing = true
                 let retry: Effect<Action> =
                     .run { send in
-                        try await clock.sleep(for: .seconds(5))
+                        try await clock.sleep(for: Self.entriesRetryDelay)
                         await send(.entriesRetryTimerElapsed)
                     }
                     .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)

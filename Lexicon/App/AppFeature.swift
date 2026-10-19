@@ -86,6 +86,8 @@ struct AppFeature {
         case signedOutSettle
     }
 
+    static let signedOutSettleDelay = Duration.milliseconds(500)
+
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.entriesClient) var entriesClient
@@ -214,7 +216,7 @@ struct AppFeature {
                 .cancel(id: CancelID.appleCredentialCheck),
                 clearLocalData(),
                 .run { send in
-                    try await clock.sleep(for: .milliseconds(500))
+                    try await clock.sleep(for: Self.signedOutSettleDelay)
                     await send(.signedOutSettleTimerElapsed)
                 }
                 .cancellable(id: CancelID.signedOutSettle, cancelInFlight: true)

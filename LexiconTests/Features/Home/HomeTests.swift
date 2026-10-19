@@ -86,7 +86,7 @@ extension BaseSuite {
             #expect(!store.state.isLoadingFirstEntries)
             expectNoDifference(store.state.emptyState, .failed)
 
-            await clock.advance(by: .seconds(5))
+            await clock.advance(by: Home.entriesRetryDelay)
             await store.receive(\.entriesRetryTimerElapsed)
             await store.finish()
         }
@@ -111,7 +111,7 @@ extension BaseSuite {
             await store.send(.entriesStreamFailed(EntriesFailure())) {
                 $0.isSyncing = true
             }
-            await clock.advance(by: .seconds(4))
+            await clock.advance(by: Home.entriesRetryDelay - .seconds(1))
             await store.send(.bookmarkFilterButtonTapped) {
                 $0.isShowingBookmarkedOnly = true
             }
@@ -162,7 +162,7 @@ extension BaseSuite {
                 }
                 #expect(!store.state.isLoadingFirstEntries)
 
-                await clock.advance(by: .seconds(5))
+                await clock.advance(by: Home.entriesRetryDelay)
                 await store.receive(\.entriesRetryTimerElapsed)
                 entries.continuation.yield(.mock)
                 entries.continuation.finish()
