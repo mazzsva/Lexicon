@@ -22,6 +22,8 @@ struct Settings {
     enum Destination {
         case alert(AlertState<Settings.Alert>)
         @ReducerCaseIgnored
+        case fileImporter
+        @ReducerCaseIgnored
         case loadingImportFile
     }
 
@@ -29,7 +31,6 @@ struct Settings {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @SharedReader var entries: EntriesPhase
-        var isFileImporterPresented = false
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
@@ -48,6 +49,8 @@ struct Settings {
         var canExportEntries: Bool { !(entries.loaded?.isEmpty ?? true) }
 
         var canImportEntries: Bool { entries.is(\.loaded) && !isLoadingImportFile }
+
+        var isFileImporterPresented: Bool { destination.is(\.fileImporter) }
 
         var isLoadingImportFile: Bool { destination.is(\.loadingImportFile) }
     }
@@ -129,12 +132,13 @@ struct Settings {
                 return .run { _ in await dismiss() }
 
             case .fileImporterPresentationChanged(let isPresented):
-                state.isFileImporterPresented = isPresented
+                guard !isPresented, state.destination.is(\.fileImporter) else { return .none }
+                state.destination = nil
                 return .none
 
             case .importEntriesButtonTapped:
                 guard state.canImportEntries else { return .none }
-                state.isFileImporterPresented = true
+                state.destination = .fileImporter
                 return .none
 
             case .importFileLoaded(let result):

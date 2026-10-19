@@ -26,11 +26,49 @@ extension BaseSuite {
             }
 
             await store.send(.importEntriesButtonTapped) {
-                $0.isFileImporterPresented = true
+                $0.destination = .fileImporter
             }
             await store.send(.fileImporterPresentationChanged(false)) {
-                $0.isFileImporterPresented = false
+                $0.destination = nil
             }
+        }
+
+        @Test
+        func theImporterClosingAfterAPickKeepsTheLoad() async {
+            let clock = TestClock()
+
+            let store = TestStore(initialState: Self.state(entries: [])) {
+                Settings()
+            } withDependencies: {
+                $0.fileClient.read = { _, _ in
+                    try await clock.sleep(for: .seconds(1))
+                    throw FileClient.ReadError.tooLarge
+                }
+            }
+
+            await store.send(.importEntriesButtonTapped) {
+                $0.destination = .fileImporter
+            }
+            await store.send(.importFilePicked(.success(Self.url))) {
+                $0.destination = .loadingImportFile
+            }
+            await store.send(.fileImporterPresentationChanged(false))
+            await clock.advance(by: .seconds(1))
+            await store.receive(\.importFileLoaded) {
+                $0.destination = .alert(.importFailed(FileClient.ReadError.tooLarge))
+            }
+        }
+
+        @Test
+        func theImporterClosingUnderAnAlertKeepsTheAlert() async {
+            let store = TestStore(initialState: Self.state(entries: [], destination: .fileImporter)) {
+                Settings()
+            }
+
+            await store.send(.signOutFailed(SignOutFailure())) {
+                $0.destination = .alert(.signOutFailed)
+            }
+            await store.send(.fileImporterPresentationChanged(false))
         }
 
         @Test(
@@ -344,10 +382,15 @@ extension BaseSuite {
             let populated = Self.state(entries: Entry.mocks)
             #expect(populated.canExportEntries)
             #expect(populated.canImportEntries)
+            #expect(!populated.isFileImporterPresented)
+
+            let importing = Self.state(entries: Entry.mocks, destination: .fileImporter)
+            #expect(importing.isFileImporterPresented)
 
             let loadingFile = Self.state(entries: Entry.mocks, destination: .loadingImportFile)
             #expect(loadingFile.canExportEntries)
             #expect(!loadingFile.canImportEntries)
+            #expect(!loadingFile.isFileImporterPresented)
         }
 
         enum ConfirmationButton: CaseIterable, Sendable {
@@ -382,5 +425,7 @@ extension BaseSuite {
         ) -> Settings.State {
             Settings.State(destination: destination, entries: SharedReader(value: phase), user: .mock)
         }
+
+        private struct SignOutFailure: Error {}
     }
 }
