@@ -460,13 +460,13 @@ extension BaseSuite {
                     $0.isSignedOutSettling = true
                     $0.scene = .signIn(SignIn.State())
                 }
-                expectNoDifference(store.state.isLoading, true)
+                #expect(store.state.isLoading)
 
                 await clock.advance(by: AppFeature.signedOutSettleDelay)
                 await store.receive(\.signedOutSettleTimerElapsed) {
                     $0.isSignedOutSettling = false
                 }
-                expectNoDifference(store.state.isLoading, false)
+                #expect(!store.state.isLoading)
                 await store.finish()
             }
         }
