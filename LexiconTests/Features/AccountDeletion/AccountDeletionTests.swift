@@ -270,6 +270,50 @@ extension BaseSuite {
             await store.finish()
         }
 
+        @Test
+        func aStalledDeletionAfterTheRevokeSignsTheUserOut() async {
+            let clock = TestClock()
+            let isStallCanceled = LockIsolated(false)
+            let stall: @Sendable () async -> Void = {
+                await withTaskCancellationHandler {
+                    _ = await Task { try? await clock.sleep(for: .seconds(3600)) }.value
+                } onCancel: {
+                    isStallCanceled.setValue(true)
+                }
+            }
+            await confirmation("Signs the user out") { signsOut in
+                let store = TestStore(initialState: AccountDeletion.State(uid: User.mock.uid)) {
+                    AccountDeletion()
+                } withDependencies: {
+                    $0.authClient.signOut = { signsOut() }
+                    $0.continuousClock = clock
+                    $0.signInWithAppleClient.requestCredential = { .mock }
+                    $0.authClient.deleteAccount = { await stall() }
+                    $0.authClient.reauthenticate = { _ in }
+                    $0.authClient.revokeAppleToken = { _ in }
+                    $0.entriesClient.deleteAll = { _ in }
+                }
+
+                await store.send(.deletionConfirmed)
+                await store.receive(\.appleCredentialReceived) {
+                    $0.step = .deleting
+                }
+                await store.receive(\.entriesDeleted) {
+                    $0.step = .entriesDeleted
+                }
+                await store.receive(\.appleCredentialRevoked) {
+                    $0.step = .credentialRevoked
+                }
+                await clock.advance(by: AccountDeletion.timeout - .milliseconds(1))
+                #expect(!isStallCanceled.value)
+                await clock.advance(by: .milliseconds(1))
+                await store.receive(\.deletionTimerElapsed)
+                #expect(isStallCanceled.value)
+                await clock.advance(by: .seconds(3600))
+                await store.finish()
+            }
+        }
+
         enum StalledStep: Sendable {
             case deleteAll
             case reauthenticate
