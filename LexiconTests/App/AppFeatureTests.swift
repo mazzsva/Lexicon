@@ -259,6 +259,40 @@ extension BaseSuite {
             await store.send(.appleCredentialInvalidated(.revoked))
         }
 
+        @Test(arguments: [nil, .notDeleted, .notFullyDeleted, .notSignedOut] as [AccountDeletion.Failure?])
+        func endingTheAccountDeletionVerifiesTheCredential(failure: AccountDeletion.Failure?) async {
+            var home = Home.State(user: .mock)
+            home.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid))
+            var state = AppFeature.State()
+            state.scene = .home(home)
+
+            await confirmation("Signs the user out") { signsOut in
+                let store = TestStore(initialState: state) {
+                    AppFeature()
+                } withDependencies: {
+                    $0.authClient.appleUserID = { "apple-user" }
+                    $0.authClient.signOut = { signsOut() }
+                    $0.signInWithAppleClient.credentialState = { _ in .revoked }
+                }
+
+                let delegate: AccountDeletion.Action.Delegate = failure.map { .didFail($0) } ?? .didCancel
+                await store.send(.scene(.home(.destination(.presented(.accountDeletion(.delegate(delegate))))))) {
+                    $0.scene?
+                        .modify(\.home) { home in
+                            home.destination = .settings(
+                                Settings.State(
+                                    destination: failure.map { .alert(.accountDeletionFailed($0)) },
+                                    entries: SharedReader(home.$entries),
+                                    user: .mock
+                                )
+                            )
+                        }
+                }
+                await store.receive(\.appleCredentialInvalidated)
+                await store.finish()
+            }
+        }
+
         // The message follows the step in progress, and a system sheet gets none
         @Test
         func theLoadingMessageDescribesWhatTheAppIsDoing() {

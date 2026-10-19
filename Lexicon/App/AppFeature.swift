@@ -113,6 +113,9 @@ struct AppFeature {
             case .authUserChanged(let user):
                 return resolveAuthChange(&state, user: user)
 
+            case .scene(.home(.destination(.presented(.accountDeletion(.delegate))))):
+                return verifyAppleCredential()
+
             case .scene:
                 return .none
 
