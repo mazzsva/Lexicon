@@ -184,6 +184,8 @@ extension BaseSuite {
                 await store.send(.importFileLoaded(.success([EntriesArchive.Record(term: "Break the ice")]))) {
                     $0.destination = nil
                 }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "The import file loaded while the entries were not loaded." }
             }
         }
 

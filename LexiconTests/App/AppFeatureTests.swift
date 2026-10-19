@@ -406,6 +406,8 @@ extension BaseSuite {
                 await store.send(.authUserChanged(other)) {
                     $0.scene = nil
                 }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
             }
             await store.receive(\.authUserChanged, other) {
                 $0.scene = .home(Home.State(user: other))
@@ -433,6 +435,8 @@ extension BaseSuite {
                 await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
                     $0.scene = nil
                 }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
             }
             await store.receive(\.authUserChanged, nil) {
                 $0.scene = .signIn(SignIn.State())
