@@ -630,6 +630,34 @@ extension BaseSuite {
             await store.send(.entriesUpdated(.mock))
         }
 
+        @Test
+        func anEditedEntryUpdatesItsDetail() async throws {
+            let edited = try Entry(
+                createdAt: Entry.blueMoon.createdAt,
+                definition: "A rare event.",
+                id: Entry.blueMoon.id,
+                isBookmarked: Entry.blueMoon.isBookmarked,
+                term: Entry.blueMoon.term
+            )
+            let snapshot = Entry.mocks.map { $0.id == edited.id ? edited : $0 }
+
+            var state = Home.State(user: .mock)
+            state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
+            let entry = try #require(state.filteredEntries.first { $0.wrappedValue.id == Entry.blueMoon.id })
+            state.path.append(EntryDetail.State(entry: entry))
+            let detailID = Array(state.path.ids)[0]
+
+            let store = TestStore(initialState: state) {
+                Home()
+            }
+
+            await store.send(.entriesUpdated(EntriesSnapshot(entries: snapshot, isSyncing: false))) {
+                $0.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: snapshot)) }
+                $0.isSyncing = false
+            }
+            expectNoDifference(store.state.path[id: detailID]?.entry, edited)
+        }
+
         // The settings need the user, and home is the scene that holds it
         @Test
         func theSettingsButtonOpensTheSettings() async {
