@@ -150,7 +150,7 @@ struct Settings {
                     logger.error("Loading the import file failed: \(error, privacy: .public)")
                     state.destination = .alert(.importFailed(error))
                 case .success(let records):
-                    guard case .loaded(let existing) = state.entries else {
+                    guard let existing = state.entries.loaded else {
                         reportIssue("The import file loaded while the entries were not loaded.")
                         state.destination = nil
                         return .none
