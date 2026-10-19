@@ -30,7 +30,7 @@ Offline-first vocabulary app in SwiftUI, TCA, and Firestore.
 
 **Definitions.** On request, the on-device Apple Intelligence model writes a one-sentence definition in simple words for English learners. Online, it reads the Wiktionary senses first, and an unknown term gets a note.
 
-**Apple Account checks.** The app checks the Apple Account credential on launch and each time it becomes active, and it listens for revocations. Any state other than authorized signs the user out.
+**Apple Account checks.** The app checks the Apple Account credential on launch and each time it becomes active, and it listens for revocations. Only a revoked credential signs the user out.
 
 **Account deletion.** Deleting an account reauthenticates with Apple, deletes the Firestore data, revokes the token, then deletes the account. It times out after 60 seconds, and a failure after the revoke signs out.
 

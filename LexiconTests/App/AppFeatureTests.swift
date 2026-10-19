@@ -69,6 +69,26 @@ extension BaseSuite {
             }
         }
 
+        @Test
+        func aSignedInUserAtLaunchKeepsTheSessionWhenTheCredentialIsNotFound() async {
+            await confirmation("Verifies the Apple credential") { verifiesCredential in
+                let store = TestStore(initialState: AppFeature.State()) {
+                    AppFeature()
+                } withDependencies: {
+                    $0.authClient.appleUserID = { "apple-user" }
+                    $0.signInWithAppleClient.credentialState = { _ in
+                        verifiesCredential()
+                        return .notFound
+                    }
+                }
+
+                await store.send(.authUserChanged(.mock)) {
+                    $0.scene = .home(Home.State(user: .mock))
+                }
+                await store.finish()
+            }
+        }
+
         // Firestore keeps its cache on disk, so the app removes the entries of the last user
         @Test
         func aSignedOutUserAtLaunchRoutesToSignInAndClearsTheLocalData() async {
@@ -239,6 +259,27 @@ extension BaseSuite {
 
                 await store.send(.appBecameActive)
                 await store.receive(\.appleCredentialInvalidated)
+                await store.finish()
+            }
+        }
+
+        @Test(arguments: [.notFound, .transferred, .unknown] as [AppleCredentialState])
+        func becomingActiveKeepsTheSessionWhenTheCredentialIsNotRevoked(credentialState: AppleCredentialState) async {
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            await confirmation("Verifies the Apple credential") { verifiesCredential in
+                let store = TestStore(initialState: state) {
+                    AppFeature()
+                } withDependencies: {
+                    $0.authClient.appleUserID = { "apple-user" }
+                    $0.signInWithAppleClient.credentialState = { _ in
+                        verifiesCredential()
+                        return credentialState
+                    }
+                }
+
+                await store.send(.appBecameActive)
                 await store.finish()
             }
         }

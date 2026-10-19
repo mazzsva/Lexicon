@@ -231,7 +231,13 @@ struct AppFeature {
         .run { send in
             guard let appleUserID = authClient.appleUserID() else { return }
             let credentialState = await signInWithAppleClient.credentialState(userID: appleUserID)
-            guard credentialState != .authorized else { return }
+            guard credentialState == .revoked else {
+                if credentialState != .authorized {
+                    logger.notice(
+                        "Apple ID credential is \(credentialState.description, privacy: .public); keeping the session.")
+                }
+                return
+            }
             await send(.appleCredentialInvalidated(credentialState))
         }
         .cancellable(id: CancelID.appleCredentialCheck, cancelInFlight: true)
