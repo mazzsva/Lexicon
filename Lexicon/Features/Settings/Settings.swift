@@ -178,12 +178,17 @@ struct Settings {
                 state.destination = .loadingImportFile
                 return
                     .run { send in
-                        do {
-                            let data = try await fileClient.read(url: url, maximumSize: EntriesArchive.maximumFileSize)
-                            await send(.importFileLoaded(.success(try EntriesArchive.records(from: data))))
-                        } catch {
-                            await send(.importFileLoaded(.failure(error)))
-                        }
+                        await send(
+                            .importFileLoaded(
+                                Result {
+                                    let data = try await fileClient.read(
+                                        url: url,
+                                        maximumSize: EntriesArchive.maximumFileSize
+                                    )
+                                    return try EntriesArchive.records(from: data)
+                                }
+                            )
+                        )
                     }
                     .cancellable(id: CancelID.importFileLoad, cancelInFlight: true)
 
