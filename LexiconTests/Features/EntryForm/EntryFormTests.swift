@@ -58,9 +58,9 @@ extension BaseSuite {
             await store.receive(\.delegate.didCreate, created)
         }
 
-        // The identity and the date come from the original, so the save replaces it
+        // Only the content leaves the form, so the save cannot change the identity, the date, or the bookmark
         @Test
-        func editingAnEntryKeepsItsIdentity() async throws {
+        func editingAnEntrySendsOnlyItsContent() async throws {
             let edited = try Entry(
                 createdAt: Entry.blueMoon.createdAt,
                 definition: "A rare event.",

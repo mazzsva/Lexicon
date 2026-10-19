@@ -64,7 +64,7 @@ extension BaseSuite {
             }
         }
 
-        // The detail closes the form itself, and home receives the entry to save
+        // The detail closes the form itself, and home receives the content to save
         @Test
         func savingTheEditedEntryClosesTheFormAndTellsTheParent() async throws {
             let edited = try Entry(
