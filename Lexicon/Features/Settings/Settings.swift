@@ -86,7 +86,9 @@ struct Settings {
     @Dependency(\.authClient) var authClient
     @Dependency(\.date.now) var now
     @Dependency(\.dismiss) var dismiss
+    #if DEBUG
     @Dependency(\.entriesClient) var entriesClient
+    #endif
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.uuid) var uuid
 
