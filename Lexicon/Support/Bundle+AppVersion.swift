@@ -9,7 +9,8 @@ import Foundation
 
 extension Bundle {
     var appVersion: String {
-        let version = object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+        let version =
+            object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? String(localized: "Unknown")
         guard let build = object(forInfoDictionaryKey: "CFBundleVersion") as? String else {
             return version
         }
