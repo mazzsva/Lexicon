@@ -470,5 +470,42 @@ extension BaseSuite {
                 await store.finish()
             }
         }
+
+        @Test
+        func aSignOutCancelsTheCredentialCheck() async {
+            let isCheckCanceled = LockIsolated(false)
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let clock = TestClock()
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.continuousClock = clock
+                $0.entriesClient.clearLocalData = {}
+                $0.signInWithAppleClient.credentialState = { _ in
+                    await withTaskCancellationHandler {
+                        _ = try? await Task.never()
+                    } onCancel: {
+                        isCheckCanceled.setValue(true)
+                    }
+                    return .authorized
+                }
+            }
+
+            await store.send(.appBecameActive)
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+                $0.scene = .signIn(SignIn.State())
+            }
+
+            await clock.advance(by: AppFeature.signedOutSettleDelay)
+            await store.receive(\.signedOutSettleTimerElapsed) {
+                $0.isSignedOutSettling = false
+            }
+            await store.finish()
+            #expect(isCheckCanceled.value)
+        }
     }
 }
