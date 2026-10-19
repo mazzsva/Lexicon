@@ -108,7 +108,7 @@ extension BaseSuite {
                 }
             }
 
-            await store.send(.entriesStreamFailed) {
+            await store.send(.entriesStreamFailed(EntriesFailure())) {
                 $0.isSyncing = true
             }
             await clock.advance(by: .seconds(4))
@@ -157,7 +157,7 @@ extension BaseSuite {
                     $0.hapticsClient.success = { playsHaptic() }
                 }
 
-                await store.send(.entriesStreamFailed) {
+                await store.send(.entriesStreamFailed(EntriesFailure())) {
                     $0.$entries.withLock { $0 = .failed }
                 }
                 #expect(!store.state.isLoadingFirstEntries)

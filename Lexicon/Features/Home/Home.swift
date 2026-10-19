@@ -122,7 +122,7 @@ struct Home {
         case destination(PresentationAction<Destination.Action>)
         case entriesImportFailed(any Error)
         case entriesRetryTimerElapsed
-        case entriesStreamFailed
+        case entriesStreamFailed(any Error)
         case entriesUpdated(EntriesSnapshot)
         case entryDeleteFailed(Entry.ID, any Error)
         case entrySaveFailed(Entry.ID, any Error)
@@ -194,7 +194,8 @@ struct Home {
             case .entriesRetryTimerElapsed:
                 return subscribeToEntries(state)
 
-            case .entriesStreamFailed:
+            case .entriesStreamFailed(let error):
+                logger.error("Entries stream failed: \(error, privacy: .public)")
                 state.isSyncing = true
                 let retry: Effect<Action> =
                     .run { send in
@@ -332,8 +333,7 @@ struct Home {
                         await send(.entriesUpdated(snapshot))
                     }
                 } catch {
-                    logger.error("Entries stream failed: \(error, privacy: .public)")
-                    await send(.entriesStreamFailed)
+                    await send(.entriesStreamFailed(error))
                 }
             }
             .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
