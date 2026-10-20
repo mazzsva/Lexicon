@@ -17,22 +17,24 @@ constant float homeArrival = 0.72;
 constant float orbInset = 29.0;
 constant float orbReach = 50.0;
 
-constant float3 lightPalette[6] = {
+constant float3 lightPalette[7] = {
     float3(0.22, 0.62, 1.00),
     float3(0.18, 0.40, 1.00),
     float3(0.55, 0.30, 1.00),
     float3(0.95, 0.24, 0.62),
     float3(1.00, 0.40, 0.32),
-    float3(1.00, 0.62, 0.30)
+    float3(1.00, 0.62, 0.30),
+    float3(1.00, 0.74, 0.16)
 };
 
-constant float3 darkPalette[6] = {
+constant float3 darkPalette[7] = {
     float3(0.30, 0.78, 1.00),
     float3(0.33, 0.50, 1.00),
     float3(0.66, 0.40, 1.00),
     float3(1.00, 0.36, 0.78),
     float3(1.00, 0.47, 0.42),
-    float3(1.00, 0.70, 0.32)
+    float3(1.00, 0.70, 0.32),
+    float3(1.00, 0.82, 0.24)
 };
 
 static float continuousBoxDistance(float2 p, float2 halfSize, float radius) {
@@ -71,8 +73,8 @@ static float triangle(float x) {
 }
 
 static float3 paletteColor(float x, float dark) {
-    float f = clamp(x, 0.0, 1.0) * 5.0;
-    int i = min(int(f), 4);
+    float f = clamp(x, 0.0, 1.0) * 6.0;
+    int i = min(int(f), 5);
     float m = f - float(i);
     float3 lightColor = mix(lightPalette[i], lightPalette[i + 1], m);
     float3 darkColor = mix(darkPalette[i], darkPalette[i + 1], m);

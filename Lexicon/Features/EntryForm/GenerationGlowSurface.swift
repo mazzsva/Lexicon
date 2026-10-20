@@ -45,6 +45,28 @@ struct GenerationGlowSurface: View {
             }
     }
 
+    static func palette(for colorScheme: ColorScheme) -> [Color] {
+        colorScheme == .dark
+            ? [
+                Color(red: 0.30, green: 0.78, blue: 1.00),
+                Color(red: 0.33, green: 0.50, blue: 1.00),
+                Color(red: 0.66, green: 0.40, blue: 1.00),
+                Color(red: 1.00, green: 0.36, blue: 0.78),
+                Color(red: 1.00, green: 0.47, blue: 0.42),
+                Color(red: 1.00, green: 0.70, blue: 0.32),
+                Color(red: 1.00, green: 0.82, blue: 0.24),
+            ]
+            : [
+                Color(red: 0.22, green: 0.62, blue: 1.00),
+                Color(red: 0.18, green: 0.40, blue: 1.00),
+                Color(red: 0.55, green: 0.30, blue: 1.00),
+                Color(red: 0.95, green: 0.24, blue: 0.62),
+                Color(red: 1.00, green: 0.40, blue: 0.32),
+                Color(red: 1.00, green: 0.62, blue: 0.30),
+                Color(red: 1.00, green: 0.74, blue: 0.16),
+            ]
+    }
+
     nonisolated private static func shader(
         size: CGSize,
         time: Float,
