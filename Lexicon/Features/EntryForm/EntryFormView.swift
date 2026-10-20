@@ -16,13 +16,9 @@ struct EntryFormView: View {
     private static let definitionRowID = "definition"
     private static let generateButtonClearance: CGFloat = 40
     private static let generateButtonMargin: CGFloat = 7
-    private static let generateGradient = LinearGradient(
-        colors: [.blue, .purple, .pink, .orange],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
 
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isFollowingGeneration = false
     @FocusState private var isDefinitionFocused: Bool
@@ -194,7 +190,15 @@ struct EntryFormView: View {
     }
 
     private var generateButtonStyle: AnyShapeStyle {
-        store.isGenerateButtonEnabled ? AnyShapeStyle(Self.generateGradient) : AnyShapeStyle(.tertiary)
+        store.isGenerateButtonEnabled ? AnyShapeStyle(generateGradient) : AnyShapeStyle(.tertiary)
+    }
+
+    private var generateGradient: LinearGradient {
+        LinearGradient(
+            colors: GenerationGlowSurface.palette(for: colorScheme),
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     private var generateButtonTitle: LocalizedStringKey {
