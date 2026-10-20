@@ -11,7 +11,10 @@ import SwiftUI
 struct SignInView: View {
     @Bindable var store: StoreOf<SignIn>
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let glowColors = GenerationGlowSurface.palette(for: colorScheme)
         VStack(spacing: 0) {
             Image(.appIcon)
                 .resizable()
@@ -32,22 +35,19 @@ struct SignInView: View {
                     }
                 }
                 .frame(width: 128, height: 128)
-                .shadow(color: .bookmark.opacity(0.35), radius: 18)
+                .background {
+                    AngularGradient(
+                        colors: glowColors + glowColors.reversed().dropFirst(),
+                        center: .center,
+                        angle: .degrees(315)
+                    )
+                    .mask { Image(.appIcon).resizable() }
+                    .scaleEffect(1.3)
+                    .blur(radius: 28)
+                    .opacity(colorScheme == .dark ? 0.85 : 0.7)
+                }
                 .accessibilityHidden(true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background {
-                    RadialGradient(
-                        stops: [
-                            .init(color: .bookmark.opacity(0.25), location: 0),
-                            .init(color: .bookmark.opacity(0.14), location: 0.35),
-                            .init(color: .bookmark.opacity(0.05), location: 0.7),
-                            .init(color: .bookmark.opacity(0), location: 1),
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 260
-                    )
-                }
 
             VStack(spacing: 6) {
                 Text("Lexicon")
