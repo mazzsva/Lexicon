@@ -70,7 +70,7 @@ struct AppFeature {
 
     enum Action {
         case appBecameActive
-        case appleCredentialInvalidated(AppleCredentialState)
+        case appleCredentialRevoked
         case authUserChanged(User?)
         case scene(Scene.Action)
         case signedOutSettleTimerElapsed
@@ -100,14 +100,13 @@ struct AppFeature {
                 guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
                 return verifyAppleCredential()
 
-            case .appleCredentialInvalidated(let credentialState):
+            case .appleCredentialRevoked:
                 guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
-                logger.notice(
-                    "Apple ID credential is \(credentialState.description, privacy: .public); signing out.")
+                logger.notice("Apple ID credential was revoked; signing out.")
                 return .run { _ in
                     try await authClient.signOut()
                 } catch: { error, _ in
-                    logger.error("Sign out after Apple ID credential check failed: \(error, privacy: .public)")
+                    logger.error("Sign out after Apple ID credential revocation failed: \(error, privacy: .public)")
                 }
 
             case .authUserChanged(let user):
@@ -169,7 +168,7 @@ struct AppFeature {
     private func observeCredentialRevocations() -> Effect<Action> {
         .run { send in
             for await _ in signInWithAppleClient.credentialRevocations() {
-                await send(.appleCredentialInvalidated(.revoked))
+                await send(.appleCredentialRevoked)
             }
         }
         .cancellable(id: CancelID.credentialRevocationObservation, cancelInFlight: true)
@@ -238,7 +237,7 @@ struct AppFeature {
                 }
                 return
             }
-            await send(.appleCredentialInvalidated(credentialState))
+            await send(.appleCredentialRevoked)
         }
         .cancellable(id: CancelID.appleCredentialCheck, cancelInFlight: true)
     }

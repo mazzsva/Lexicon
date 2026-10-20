@@ -39,7 +39,7 @@ extension BaseSuite {
                 }
 
                 revocations.continuation.yield()
-                await store.receive(\.appleCredentialInvalidated)
+                await store.receive(\.appleCredentialRevoked)
 
                 authChanges.continuation.finish()
                 revocations.continuation.finish()
@@ -258,7 +258,7 @@ extension BaseSuite {
                 }
 
                 await store.send(.appBecameActive)
-                await store.receive(\.appleCredentialInvalidated)
+                await store.receive(\.appleCredentialRevoked)
                 await store.finish()
             }
         }
@@ -297,7 +297,7 @@ extension BaseSuite {
             }
 
             await store.send(.appBecameActive)
-            await store.send(.appleCredentialInvalidated(.revoked))
+            await store.send(.appleCredentialRevoked)
         }
 
         @Test(
@@ -332,7 +332,7 @@ extension BaseSuite {
                             )
                         }
                 }
-                await store.receive(\.appleCredentialInvalidated)
+                await store.receive(\.appleCredentialRevoked)
                 await store.finish()
             }
         }
