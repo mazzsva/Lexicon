@@ -17,6 +17,7 @@ struct EntryFormView: View {
     private static let generateButtonClearance: CGFloat = 40
     private static let generateButtonMargin: CGFloat = 7
 
+    @Environment(\.accessibilityReduceMotion) private var isReduceMotionEnabled
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -70,6 +71,7 @@ struct EntryFormView: View {
             .onChange(of: store.completedGenerationCount) { generationCompleted() }
             .onChange(of: store.isGeneratingDefinition) { _, isGenerating in generatingChanged(isGenerating) }
             .onChange(of: store.note) { _, note in noteChanged(note) }
+            .onChange(of: isReduceMotionEnabled, initial: true) { store.isReduceMotionEnabled = isReduceMotionEnabled }
             .task { await store.send(.task).finish() }
         }
     }

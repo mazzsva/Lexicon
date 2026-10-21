@@ -42,7 +42,9 @@ struct EntryForm {
         let entry: Entry?
         var generatedDefinition: GeneratedDefinition?
         var generation: Generation?
+        var isAwaitingEarliestCompletion = false
         var isModelAvailable = false
+        var isReduceMotionEnabled = false
         var term: String
 
         init(entry: Entry? = nil) {
@@ -120,6 +122,7 @@ struct EntryForm {
         case delegate(Delegate)
         case dictionaryEntryResponse(DictionaryEntry?)
         case dismissButtonTapped
+        case earliestCompletionTimerElapsed
         case generateDefinitionButtonTapped
         case saveButtonTapped
         case stopGeneratingButtonTapped
@@ -133,11 +136,17 @@ struct EntryForm {
     }
 
     enum CancelID {
+        case earliestCompletion
         case generation
+        case successHaptic
     }
 
+    static let earliestCompletion = Duration.seconds(GenerationGlowSurface.earliestCompletion)
     static let lookupTimeout = Duration.seconds(3)
     static let maximumGeneratableTermLength = 100
+    static let successHapticDelay = Duration.seconds(
+        GenerationGlowSurface.completionDuration * GenerationGlowSurface.homeArrival
+    )
 
     @Dependency(\.continuousClock) var clock
     @Dependency(\.date.now) var now
@@ -185,7 +194,15 @@ struct EntryForm {
                 state.completedGenerationCount += 1
                 state.generatedDefinition = GeneratedDefinition(correctForm: correctForm, text: state.definition)
                 state.generation = nil
-                return .run { _ in await hapticsClient.success() }
+                guard !state.isReduceMotionEnabled else {
+                    state.isAwaitingEarliestCompletion = false
+                    return .merge(
+                        .cancel(id: CancelID.earliestCompletion),
+                        .run { _ in await hapticsClient.success() }
+                    )
+                }
+                guard !state.isAwaitingEarliestCompletion else { return .none }
+                return playSuccessHaptic()
 
             case .delegate:
                 return .none
@@ -197,6 +214,11 @@ struct EntryForm {
 
             case .dismissButtonTapped:
                 return .run { _ in await dismiss() }
+
+            case .earliestCompletionTimerElapsed:
+                state.isAwaitingEarliestCompletion = false
+                guard state.generation == nil else { return .none }
+                return playSuccessHaptic()
 
             case .generateDefinitionButtonTapped:
                 guard state.generatableTerm != nil else { return .none }
@@ -224,7 +246,11 @@ struct EntryForm {
                 case .lookingUp(let previousDefinition, _), .writing(let previousDefinition):
                     state.definition = previousDefinition
                     state.generation = nil
-                    return .cancel(id: CancelID.generation)
+                    state.isAwaitingEarliestCompletion = false
+                    return .merge(
+                        .cancel(id: CancelID.earliestCompletion),
+                        .cancel(id: CancelID.generation)
+                    )
                 case .failed, nil:
                     return .none
                 }
@@ -248,14 +274,26 @@ struct EntryForm {
         logger.error("Generating the definition failed: \(error, privacy: .public)")
         state.definition = previousDefinition
         state.generation = .failed(error as? DefinitionClient.GenerationError ?? .failed)
-        return .run { _ in await hapticsClient.warning() }
+        state.isAwaitingEarliestCompletion = false
+        return .merge(
+            .cancel(id: CancelID.earliestCompletion),
+            .run { _ in await hapticsClient.warning() }
+        )
     }
 
     private func generateDefinition(_ state: inout State) -> Effect<Action> {
         guard let term = state.generatableTerm else { return .none }
         state.generation = .lookingUp(previousDefinition: state.definition, term: term)
         state.definition = ""
-        return
+        state.isAwaitingEarliestCompletion = true
+        return .merge(
+            .cancel(id: CancelID.successHaptic),
+            .run { _ in await hapticsClient.softImpact() },
+            .run { [clock] send in
+                try await clock.sleep(for: Self.earliestCompletion)
+                await send(.earliestCompletionTimerElapsed)
+            }
+            .cancellable(id: CancelID.earliestCompletion, cancelInFlight: true),
             .run { [clock, dictionaryClient] send in
                 let entry = await withTaskGroup(of: DictionaryEntry?.self) { group in
                     group.addTask {
@@ -276,6 +314,15 @@ struct EntryForm {
                 await send(.dictionaryEntryResponse(entry))
             }
             .cancellable(id: CancelID.generation)
+        )
+    }
+
+    private func playSuccessHaptic() -> Effect<Action> {
+        .run { [clock] _ in
+            try await clock.sleep(for: Self.successHapticDelay)
+            await hapticsClient.success()
+        }
+        .cancellable(id: CancelID.successHaptic, cancelInFlight: true)
     }
 
     private func streamDefinition(term: String, entry: DictionaryEntry?) -> Effect<Action> {

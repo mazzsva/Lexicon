@@ -164,8 +164,10 @@ extension BaseSuite {
                 term: "Once in a blue moon"
             )
 
+            let clock = TestClock()
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = Self.store(Self.generatableState(term: " Once in a blue moon ")) {
+                    $0.continuousClock = clock
                     $0.date.now = now
                     $0.definitionClient.definition = { term, entry in
                         expectNoDifference(term, "Once in a blue moon")
@@ -182,6 +184,7 @@ extension BaseSuite {
 
                 await store.send(.generateDefinitionButtonTapped) {
                     $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                    $0.isAwaitingEarliestCompletion = true
                 }
                 #expect(!store.state.isSubmittable)
                 await store.receive(\.dictionaryEntryResponse, nil) {
@@ -206,7 +209,7 @@ extension BaseSuite {
 
                 await store.send(.saveButtonTapped)
                 await store.receive(\.delegate.didCreate, created)
-                await store.finish()
+                await Self.finishTheOutro(store, clock: clock)
             }
         }
 
@@ -219,8 +222,10 @@ extension BaseSuite {
                 title: "nip it in the butt"
             )
 
+            let clock = TestClock()
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = Self.store(Self.generatableState(term: "nip it in the butt")) {
+                    $0.continuousClock = clock
                     $0.definitionClient.definition = { _, received in
                         expectNoDifference(received, entry)
                         return definitions
@@ -231,6 +236,7 @@ extension BaseSuite {
 
                 await store.send(.generateDefinitionButtonTapped) {
                     $0.generation = .lookingUp(previousDefinition: "", term: "nip it in the butt")
+                    $0.isAwaitingEarliestCompletion = true
                 }
                 await store.receive(\.dictionaryEntryResponse, entry) {
                     $0.generation = .writing(previousDefinition: "")
@@ -249,7 +255,7 @@ extension BaseSuite {
                     $0.generation = nil
                 }
                 expectNoDifference(store.state.note, .generated(correctForm: "nip in the bud"))
-                await store.finish()
+                await Self.finishTheOutro(store, clock: clock)
             }
         }
 
@@ -276,35 +282,42 @@ extension BaseSuite {
             var state = Self.generatableState(term: "Once in a blue moon")
             state.definition = "A rare event."
 
-            await confirmation("Plays the success haptic") { playsHaptic in
-                let store = Self.store(state) {
-                    $0.definitionClient.definition = { _, _ in definitions }
-                    $0.hapticsClient.success = { playsHaptic() }
-                }
-
-                await store.send(.generateDefinitionButtonTapped) {
-                    $0.confirmationDialog = .confirmReplacement
-                }
-                await store.send(.confirmationDialog(.presented(.confirmReplacement))) {
-                    $0.confirmationDialog = nil
-                    $0.definition = ""
-                    $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
-                }
-                await store.receive(\.dictionaryEntryResponse, nil) {
-                    $0.generation = .writing(previousDefinition: "A rare event.")
-                }
-                continuation.yield("Something that happens very rarely.")
-                await store.receive(\.definitionGenerated, "Something that happens very rarely.") {
-                    $0.definition = "Something that happens very rarely."
-                }
-                continuation.finish()
-                await store.receive(\.definitionGenerationFinished) {
-                    $0.completedGenerationCount = 1
-                    $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Something that happens very rarely.")
-                    $0.generation = nil
-                }
-                await store.finish()
+            let clock = TestClock()
+            let haptics = LockIsolated<[String]>([])
+            let store = Self.store(state) {
+                $0.continuousClock = clock
+                $0.definitionClient.definition = { _, _ in definitions }
+                $0.hapticsClient.softImpact = { haptics.withValue { $0.append("softImpact") } }
+                $0.hapticsClient.success = { haptics.withValue { $0.append("success") } }
             }
+
+            await store.send(.generateDefinitionButtonTapped) {
+                $0.confirmationDialog = .confirmReplacement
+            }
+            await store.finish()
+            expectNoDifference(haptics.value, [])
+
+            await store.send(.confirmationDialog(.presented(.confirmReplacement))) {
+                $0.confirmationDialog = nil
+                $0.definition = ""
+                $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
+            }
+            await store.receive(\.dictionaryEntryResponse, nil) {
+                $0.generation = .writing(previousDefinition: "A rare event.")
+            }
+            continuation.yield("Something that happens very rarely.")
+            await store.receive(\.definitionGenerated, "Something that happens very rarely.") {
+                $0.definition = "Something that happens very rarely."
+            }
+            continuation.finish()
+            await store.receive(\.definitionGenerationFinished) {
+                $0.completedGenerationCount = 1
+                $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Something that happens very rarely.")
+                $0.generation = nil
+            }
+            await Self.finishTheOutro(store, clock: clock)
+            expectNoDifference(haptics.value, ["softImpact", "success"])
         }
 
         @Test
@@ -313,8 +326,10 @@ extension BaseSuite {
             var state = Self.generatedState()
             state.completedGenerationCount = 1
 
+            let clock = TestClock()
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = Self.store(state) {
+                    $0.continuousClock = clock
                     $0.definitionClient.definition = { _, _ in definitions }
                     $0.hapticsClient.success = { playsHaptic() }
                 }
@@ -322,6 +337,7 @@ extension BaseSuite {
                 await store.send(.generateDefinitionButtonTapped) {
                     $0.definition = ""
                     $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                    $0.isAwaitingEarliestCompletion = true
                 }
                 await store.receive(\.dictionaryEntryResponse, nil) {
                     $0.generation = .writing(previousDefinition: "A rare event.")
@@ -336,8 +352,231 @@ extension BaseSuite {
                     $0.generation = nil
                 }
                 expectNoDifference(store.state.note, .generated(correctForm: nil))
+                await Self.finishTheOutro(store, clock: clock)
+            }
+        }
+
+        @Test
+        func startingAGenerationPlaysASoftImpact() async {
+            await confirmation("Plays the soft impact") { playsHaptic in
+                let store = Self.store(Self.generatableState(term: "Once in a blue moon")) {
+                    $0.dictionaryClient.entry = { _ in
+                        try await Task.never()
+                        return nil
+                    }
+                    $0.hapticsClient.softImpact = { playsHaptic() }
+                }
+
+                await store.send(.generateDefinitionButtonTapped) {
+                    $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                    $0.isAwaitingEarliestCompletion = true
+                }
+                await store.send(.stopGeneratingButtonTapped) {
+                    $0.generation = nil
+                    $0.isAwaitingEarliestCompletion = false
+                }
                 await store.finish()
             }
+        }
+
+        @Test
+        func theSuccessHapticPlaysWhenTheLightReturnsToTheButton() async {
+            let clock = TestClock()
+            let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+            let successCount = LockIsolated(0)
+            let store = Self.store(Self.generatableState(term: "Once in a blue moon")) {
+                $0.continuousClock = clock
+                $0.definitionClient.definition = { _, _ in definitions }
+                $0.hapticsClient.success = { successCount.withValue { $0 += 1 } }
+            }
+
+            await store.send(.generateDefinitionButtonTapped) {
+                $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
+            }
+            await store.receive(\.dictionaryEntryResponse, nil) {
+                $0.generation = .writing(previousDefinition: "")
+            }
+            continuation.yield("Very rarely.")
+            await store.receive(\.definitionGenerated, "Very rarely.") {
+                $0.definition = "Very rarely."
+            }
+            await clock.advance(by: EntryForm.earliestCompletion)
+            await store.receive(\.earliestCompletionTimerElapsed) {
+                $0.isAwaitingEarliestCompletion = false
+            }
+            continuation.finish()
+            await store.receive(\.definitionGenerationFinished) {
+                $0.completedGenerationCount = 1
+                $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Very rarely.")
+                $0.generation = nil
+            }
+            await clock.advance(by: EntryForm.successHapticDelay - .milliseconds(1))
+            #expect(successCount.value == 0)
+
+            await clock.advance(by: .milliseconds(1))
+            await store.finish()
+            #expect(successCount.value == 1)
+        }
+
+        @Test
+        func anEarlyFinishPlaysTheSuccessHapticAfterTheEarliestCompletion() async {
+            let clock = TestClock()
+            let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+            let successCount = LockIsolated(0)
+            let store = Self.store(Self.generatableState(term: "Once in a blue moon")) {
+                $0.continuousClock = clock
+                $0.definitionClient.definition = { _, _ in definitions }
+                $0.hapticsClient.success = { successCount.withValue { $0 += 1 } }
+            }
+
+            await store.send(.generateDefinitionButtonTapped) {
+                $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
+            }
+            await store.receive(\.dictionaryEntryResponse, nil) {
+                $0.generation = .writing(previousDefinition: "")
+            }
+            continuation.yield("Very rarely.")
+            await store.receive(\.definitionGenerated, "Very rarely.") {
+                $0.definition = "Very rarely."
+            }
+            continuation.finish()
+            await store.receive(\.definitionGenerationFinished) {
+                $0.completedGenerationCount = 1
+                $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Very rarely.")
+                $0.generation = nil
+            }
+            await clock.advance(by: EntryForm.earliestCompletion - .milliseconds(1))
+            #expect(successCount.value == 0)
+
+            await clock.advance(by: .milliseconds(1))
+            await store.receive(\.earliestCompletionTimerElapsed) {
+                $0.isAwaitingEarliestCompletion = false
+            }
+            await clock.advance(by: EntryForm.successHapticDelay - .milliseconds(1))
+            #expect(successCount.value == 0)
+
+            await clock.advance(by: .milliseconds(1))
+            await store.finish()
+            #expect(successCount.value == 1)
+        }
+
+        @Test
+        func withReduceMotionTheSuccessHapticPlaysWhenTheModelFinishes() async {
+            let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+            var state = Self.generatableState(term: "Once in a blue moon")
+            state.isReduceMotionEnabled = true
+
+            await confirmation("Plays the success haptic") { playsHaptic in
+                let store = Self.store(state) {
+                    $0.definitionClient.definition = { _, _ in definitions }
+                    $0.hapticsClient.success = { playsHaptic() }
+                }
+
+                await store.send(.generateDefinitionButtonTapped) {
+                    $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                    $0.isAwaitingEarliestCompletion = true
+                }
+                await store.receive(\.dictionaryEntryResponse, nil) {
+                    $0.generation = .writing(previousDefinition: "")
+                }
+                continuation.yield("Very rarely.")
+                await store.receive(\.definitionGenerated, "Very rarely.") {
+                    $0.definition = "Very rarely."
+                }
+                continuation.finish()
+                await store.receive(\.definitionGenerationFinished) {
+                    $0.completedGenerationCount = 1
+                    $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Very rarely.")
+                    $0.generation = nil
+                    $0.isAwaitingEarliestCompletion = false
+                }
+                await store.finish()
+            }
+        }
+
+        @Test
+        func stoppingPlaysNoSuccessHaptic() async {
+            let clock = TestClock()
+            let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+            let store = Self.store(Self.generatedState()) {
+                $0.continuousClock = clock
+                $0.definitionClient.definition = { _, _ in definitions }
+            }
+
+            await store.send(.generateDefinitionButtonTapped) {
+                $0.definition = ""
+                $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
+            }
+            await store.receive(\.dictionaryEntryResponse, nil) {
+                $0.generation = .writing(previousDefinition: "A rare event.")
+            }
+            continuation.yield("Something")
+            await store.receive(\.definitionGenerated, "Something") {
+                $0.definition = "Something"
+            }
+            await store.send(.stopGeneratingButtonTapped) {
+                $0.definition = "A rare event."
+                $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
+            }
+            continuation.finish()
+            await clock.advance(by: EntryForm.earliestCompletion + EntryForm.successHapticDelay)
+            await store.finish()
+        }
+
+        @Test
+        func generatingAgainDuringTheOutroCancelsTheSuccessHaptic() async {
+            let clock = TestClock()
+            let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
+            let softImpactCount = LockIsolated(0)
+            let store = Self.store(Self.generatableState(term: "Once in a blue moon")) {
+                $0.continuousClock = clock
+                $0.definitionClient.definition = { _, _ in definitions }
+                $0.dictionaryClient.entry = { _ in
+                    try await Task.never()
+                    return nil
+                }
+                $0.hapticsClient.softImpact = { softImpactCount.withValue { $0 += 1 } }
+            }
+
+            await store.send(.generateDefinitionButtonTapped) {
+                $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
+            }
+            await clock.advance(by: EntryForm.lookupTimeout)
+            await store.receive(\.earliestCompletionTimerElapsed) {
+                $0.isAwaitingEarliestCompletion = false
+            }
+            await store.receive(\.dictionaryEntryResponse, nil) {
+                $0.generation = .writing(previousDefinition: "")
+            }
+            continuation.yield("Very rarely.")
+            await store.receive(\.definitionGenerated, "Very rarely.") {
+                $0.definition = "Very rarely."
+            }
+            continuation.finish()
+            await store.receive(\.definitionGenerationFinished) {
+                $0.completedGenerationCount = 1
+                $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "Very rarely.")
+                $0.generation = nil
+            }
+            await clock.advance(by: EntryForm.successHapticDelay - .milliseconds(1))
+            await store.send(.generateDefinitionButtonTapped) {
+                $0.definition = ""
+                $0.generation = .lookingUp(previousDefinition: "Very rarely.", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
+            }
+            await clock.advance(by: EntryForm.successHapticDelay)
+            await store.send(.stopGeneratingButtonTapped) {
+                $0.definition = "Very rarely."
+                $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
+            }
+            await store.finish()
+            #expect(softImpactCount.value == 2)
         }
 
         @Test
@@ -366,10 +605,12 @@ extension BaseSuite {
             await store.send(.generateDefinitionButtonTapped) {
                 $0.definition = ""
                 $0.generation = .lookingUp(previousDefinition: "  \n ", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
             }
             await store.send(.stopGeneratingButtonTapped) {
                 $0.definition = "  \n "
                 $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
             }
         }
 
@@ -397,6 +638,7 @@ extension BaseSuite {
             await store.send(.generateDefinitionButtonTapped) {
                 $0.definition = ""
                 $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
             }
             await store.receive(\.dictionaryEntryResponse, nil) {
                 $0.generation = .writing(previousDefinition: "A rare event.")
@@ -408,6 +650,7 @@ extension BaseSuite {
             await store.send(.stopGeneratingButtonTapped) {
                 $0.definition = "A rare event."
                 $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
             }
             expectNoDifference(store.state.note, .generated(correctForm: nil))
             continuation.yield("Something late")
@@ -427,10 +670,12 @@ extension BaseSuite {
             await store.send(.generateDefinitionButtonTapped) {
                 $0.definition = ""
                 $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
             }
             await store.send(.stopGeneratingButtonTapped) {
                 $0.definition = "A rare event."
                 $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
             }
             expectNoDifference(store.state.note, .generated(correctForm: nil))
         }
@@ -492,6 +737,7 @@ extension BaseSuite {
                 await store.send(.generateDefinitionButtonTapped) {
                     $0.definition = ""
                     $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                    $0.isAwaitingEarliestCompletion = true
                 }
                 await store.receive(\.dictionaryEntryResponse, nil) {
                     $0.generation = .writing(previousDefinition: "A rare event.")
@@ -506,6 +752,7 @@ extension BaseSuite {
                 await store.receive(\.definitionGenerationFinished) {
                     $0.definition = "A rare event."
                     $0.generation = .failed(.failed)
+                    $0.isAwaitingEarliestCompletion = false
                 }
                 expectNoDifference(store.state.note, .failure(.failed))
                 await store.finish()
@@ -525,9 +772,11 @@ extension BaseSuite {
 
             await store.send(.generateDefinitionButtonTapped) {
                 $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
             }
             await store.send(.stopGeneratingButtonTapped) {
                 $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
             }
         }
 
@@ -638,8 +887,12 @@ extension BaseSuite {
 
             await store.send(.generateDefinitionButtonTapped) {
                 $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
             }
             await clock.advance(by: EntryForm.lookupTimeout)
+            await store.receive(\.earliestCompletionTimerElapsed) {
+                $0.isAwaitingEarliestCompletion = false
+            }
             await store.receive(\.dictionaryEntryResponse, nil) {
                 $0.generation = .writing(previousDefinition: "")
             }
@@ -666,6 +919,7 @@ extension BaseSuite {
 
             await store.send(.generateDefinitionButtonTapped) {
                 $0.generation = .lookingUp(previousDefinition: "", term: "Once in a blue moon")
+                $0.isAwaitingEarliestCompletion = true
             }
             await store.receive(\.dictionaryEntryResponse, nil) {
                 $0.generation = .writing(previousDefinition: "")
@@ -677,6 +931,7 @@ extension BaseSuite {
             await store.send(.stopGeneratingButtonTapped) {
                 $0.definition = ""
                 $0.generation = nil
+                $0.isAwaitingEarliestCompletion = false
             }
         }
 
@@ -711,6 +966,7 @@ extension BaseSuite {
                 await store.send(.generateDefinitionButtonTapped) {
                     $0.definition = ""
                     $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
+                    $0.isAwaitingEarliestCompletion = true
                 }
                 await store.receive(\.dictionaryEntryResponse, nil) {
                     $0.generation = .writing(previousDefinition: "A rare event.")
@@ -723,10 +979,20 @@ extension BaseSuite {
                 await store.receive(\.definitionGenerationFailed) {
                     $0.definition = "A rare event."
                     $0.generation = .failed(failure)
+                    $0.isAwaitingEarliestCompletion = false
                 }
                 expectNoDifference(store.state.note, .failure(failure))
                 await store.finish()
             }
+        }
+
+        private static func finishTheOutro(_ store: TestStoreOf<EntryForm>, clock: TestClock<Duration>) async {
+            await clock.advance(by: EntryForm.earliestCompletion)
+            await store.receive(\.earliestCompletionTimerElapsed) {
+                $0.isAwaitingEarliestCompletion = false
+            }
+            await clock.advance(by: EntryForm.successHapticDelay)
+            await store.finish()
         }
 
         private static func generatableState(term: String) -> EntryForm.State {
@@ -752,6 +1018,7 @@ extension BaseSuite {
             } withDependencies: {
                 $0.continuousClock = TestClock()
                 $0.dictionaryClient.entry = { _ in nil }
+                $0.hapticsClient.softImpact = {}
                 dependencies(&$0)
             }
         }
