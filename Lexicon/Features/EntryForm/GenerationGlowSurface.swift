@@ -13,8 +13,9 @@ struct GenerationGlowSurface: View {
     let time: Double
     let writingStart: Double?
 
-    nonisolated static let completionDuration: Double = 0.9
-    static let earliestCompletion: Double = 1.1
+    nonisolated static let completionDuration: Double = 0.7
+    nonisolated static let earliestCompletion: Double = 1.0
+    nonisolated static let homeArrival: Double = 0.72
 
     nonisolated private static let cornerRadius: Float = 26
     private static let unset: Float = 1e6
@@ -83,6 +84,7 @@ struct GenerationGlowSurface: View {
             .float(writingStart),
             .float(completion),
             .float(Float(completionDuration)),
+            .float(Float(homeArrival)),
             .float(dark),
             .float(mirrored),
             .floatArray(pulses)
