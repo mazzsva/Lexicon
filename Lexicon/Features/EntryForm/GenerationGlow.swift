@@ -14,6 +14,7 @@ struct GenerationGlow: View {
     let generation: EntryForm.Generation?
     let isModelAvailable: Bool
 
+    private static let fade: Animation = .easeOut(duration: 0.3)
     private static let maximumPulseCount = 8
     private static let minimumPulseInterval = 0.2
     private static let reduceMotionTime: Double = 3
@@ -64,7 +65,7 @@ struct GenerationGlow: View {
         let end = completion + GenerationGlowSurface.completionDuration
         try? await Task.sleep(for: .seconds(end - run.elapsedTime))
         guard !Task.isCancelled else { return }
-        withAnimation(.easeInOut(duration: 0.4)) { self.run = nil }
+        withAnimation(Self.fade) { self.run = nil }
     }
 
     private func definitionChanged() {
@@ -78,7 +79,7 @@ struct GenerationGlow: View {
     private func generationChanged() {
         switch generation {
         case .lookingUp:
-            withAnimation(.easeInOut(duration: 0.4)) { run = Run(completedGenerationCount: completedGenerationCount) }
+            withAnimation(Self.fade) { run = Run(completedGenerationCount: completedGenerationCount) }
         case .writing where run == nil:
             run = Run(completedGenerationCount: completedGenerationCount, writingStart: 0)
         case .writing:
@@ -86,13 +87,13 @@ struct GenerationGlow: View {
         case nil where isCompleted && !reduceMotion:
             run?.completion = run.map { max($0.elapsedTime, GenerationGlowSurface.earliestCompletion) }
         case nil, .failed:
-            withAnimation(.easeInOut(duration: 0.4)) { run = nil }
+            withAnimation(Self.fade) { run = nil }
         }
     }
 
     private func reduceMotionChanged() {
         guard reduceMotion, run?.completion != nil else { return }
-        withAnimation(.easeInOut(duration: 0.4)) { run = nil }
+        withAnimation(Self.fade) { run = nil }
     }
 }
 
