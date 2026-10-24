@@ -4,7 +4,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 <img src="https://github.com/user-attachments/assets/43800149-fc55-4539-b365-e42cf97a3088" alt="The sign-in screen, with the Sign in with Apple button" width="32%"> <img src="https://github.com/user-attachments/assets/bb727d29-7bbe-4a07-a633-de88410b48f8" alt="The home screen, with the list of entry cards and the sync status" width="32%"> <img src="https://github.com/user-attachments/assets/ccf6d7e3-ec19-4ebf-bfb5-9a750055804d" alt="An entry detail screen, with the term and its definition" width="32%">
 
-## Technologies
+## Core technologies
 
 <table>
   <tr><td><b>Platform</b></td><td>iOS 27</td></tr>
@@ -17,7 +17,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
   <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
 </table>
 
-## Quality
+## Quality gates
 
 - **Tests:** 220 [Swift Testing](https://github.com/swiftlang/swift-testing) tests cover every reducer, and none touch the network.
 - **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
