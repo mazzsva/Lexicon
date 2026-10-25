@@ -54,8 +54,6 @@ struct SignInView: View {
                     .font(.title)
                     .fontWeight(.bold)
                     .accessibilityAddTraits(.isHeader)
-                Text("Make every word yours.")
-                    .foregroundStyle(.secondary)
                 AppleSignInButton {
                     store.send(.signInButtonTapped)
                 }
