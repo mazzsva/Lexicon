@@ -238,13 +238,7 @@
     "Welcome to" : {
 
     },
-    "Write a definition, or enter a term to generate one." : {
-
-    },
-    "Write a definition, or tap %@ to generate one." : {
-
-    },
-    "Write a definition." : {
+    "Write or generate a definition." : {
 
     },
     "Writes a definition of the term." : {

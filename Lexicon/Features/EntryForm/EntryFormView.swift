@@ -20,7 +20,6 @@ struct EntryFormView: View {
     @Environment(\.accessibilityReduceMotion) private var isReduceMotionEnabled
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isFollowingGeneration = false
     @FocusState private var isDefinitionFocused: Bool
     @FocusState private var isTermFocused: Bool
@@ -208,17 +207,9 @@ struct EntryFormView: View {
     }
 
     private var placeholder: some View {
-        Group {
-            if !store.isModelAvailable || store.isTermTooLong || dynamicTypeSize.isAccessibilitySize {
-                Text("Write a definition.")
-            } else if store.isGenerateButtonEnabled {
-                Text("Write a definition, or tap \(Image(systemName: "sparkles")) to generate one.")
-            } else {
-                Text("Write a definition, or enter a term to generate one.")
-            }
-        }
-        .foregroundStyle(.tertiary)
-        .accessibilityHidden(true)
+        Text("Write or generate a definition.")
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
     }
 
     private func appeared() {
