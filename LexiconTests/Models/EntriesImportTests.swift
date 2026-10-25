@@ -80,16 +80,16 @@ extension BaseSuite {
             largeCopy.definition = String(repeating: "a", count: Entry.Content.maximumSize + 1)
             let records = try EntriesArchive.records(from: EntriesArchive.data(for: Entry.mocks)) + [largeCopy]
             let restored = try Entry(
-                createdAt: Entry.lowHangingFruit.createdAt,
-                definition: Entry.lowHangingFruit.definition,
+                createdAt: Entry.wrongTree.createdAt,
+                definition: Entry.wrongTree.definition,
                 id: UUID(0),
-                isBookmarked: Entry.lowHangingFruit.isBookmarked,
-                term: Entry.lowHangingFruit.term
+                isBookmarked: Entry.wrongTree.isBookmarked,
+                term: Entry.wrongTree.term
             )
 
             expectNoDifference(
-                Self.imported(records, existing: [edited, .burningCandle]),
-                EntriesArchive.Import(duplicateCount: 3, entries: [restored], invalidCount: 0)
+                Self.imported(records, existing: [edited, .rabbitHole, .burningCandle, .bridgeWater]),
+                EntriesArchive.Import(duplicateCount: 5, entries: [restored], invalidCount: 0)
             )
         }
 

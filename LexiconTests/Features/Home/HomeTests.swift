@@ -216,7 +216,7 @@ extension BaseSuite {
             await store.send(.bookmarkFilterButtonTapped) {
                 $0.isShowingBookmarkedOnly = true
             }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
+            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.burningCandle])
 
             await store.send(.bookmarkFilterButtonTapped) {
                 $0.isShowingBookmarkedOnly = false
@@ -260,10 +260,10 @@ extension BaseSuite {
             }
             expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.burningCandle])
 
-            await store.send(.binding(.set(\.searchText, "easiest"))) {
-                $0.searchText = "easiest"
+            await store.send(.binding(.set(\.searchText, "answer"))) {
+                $0.searchText = "answer"
             }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.lowHangingFruit])
+            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.wrongTree])
         }
 
         // The search runs inside the filter, so an unbookmarked match stays hidden
@@ -277,15 +277,15 @@ extension BaseSuite {
                 Home()
             }
 
-            await store.send(.binding(.set(\.searchText, "candle"))) {
-                $0.searchText = "candle"
-            }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [])
-
             await store.send(.binding(.set(\.searchText, "moon"))) {
                 $0.searchText = "moon"
             }
-            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.blueMoon])
+            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [])
+
+            await store.send(.binding(.set(\.searchText, "candle"))) {
+                $0.searchText = "candle"
+            }
+            expectNoDifference(store.state.filteredEntries.map(\.wrappedValue), [.burningCandle])
         }
 
         // An empty list has three reasons, and each one needs its own message
@@ -312,10 +312,10 @@ extension BaseSuite {
 
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             expectNoDifference(state.emptyState, nil)
-            expectNoDifference(state.entryCount, 3)
+            expectNoDifference(state.entryCount, 5)
 
             state.$entries.withLock {
-                $0 = .loaded(IdentifiedArray(uniqueElements: [Entry.burningCandle, Entry.lowHangingFruit]))
+                $0 = .loaded(IdentifiedArray(uniqueElements: [Entry.blueMoon, Entry.wrongTree]))
             }
             state.isShowingBookmarkedOnly = true
             expectNoDifference(state.emptyState, .bookmarks)
@@ -426,7 +426,7 @@ extension BaseSuite {
         func updatingFromTheDetailSavesTheEntry() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
-            state.path.append(EntryDetail.State(entry: SharedReader(value: .burningCandle)))
+            state.path.append(EntryDetail.State(entry: SharedReader(value: .rabbitHole)))
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
             let detailID = Array(state.path.ids)[0]
 
@@ -435,7 +435,7 @@ extension BaseSuite {
                     Home()
                 } withDependencies: {
                     $0.entriesClient.updateBookmark = { id, isBookmarked, uid in
-                        expectNoDifference(id, Entry.burningCandle.id)
+                        expectNoDifference(id, Entry.rabbitHole.id)
                         #expect(isBookmarked)
                         expectNoDifference(uid, User.mock.uid)
                         savesEntry()
@@ -598,7 +598,7 @@ extension BaseSuite {
         // A different device can delete the entry while its detail is on screen
         @Test
         func aDeletedEntryPopsItsDetail() async {
-            let remaining = [Entry.burningCandle, Entry.lowHangingFruit]
+            let remaining = [Entry.burningCandle, Entry.wrongTree]
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
             state.path.append(EntryDetail.State(entry: SharedReader(value: .blueMoon)))
@@ -909,7 +909,7 @@ extension BaseSuite {
                 $0.pendingFailures = [.entrySave]
             }
             await store.send(.entrySaveFailed(Entry.burningCandle.id, EntriesFailure()))
-            await store.send(.entryDeleteFailed(Entry.lowHangingFruit.id, EntriesFailure())) {
+            await store.send(.entryDeleteFailed(Entry.wrongTree.id, EntriesFailure())) {
                 $0.pendingFailures = [.entryDelete, .entrySave]
             }
             await store.send(.destination(.dismiss)) {

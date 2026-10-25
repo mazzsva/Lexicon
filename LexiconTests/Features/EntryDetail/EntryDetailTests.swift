@@ -19,7 +19,7 @@ extension BaseSuite {
         func theBookmarkButtonBookmarksTheEntryAndTellsTheParent() async {
             await confirmation("Plays the selection haptic") { playsHaptic in
                 let store = TestStore(
-                    initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
+                    initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
                 ) {
                     EntryDetail()
                 } withDependencies: {
@@ -37,7 +37,7 @@ extension BaseSuite {
         func theBookmarkButtonRemovesTheBookmarkAndTellsTheParent() async {
             await confirmation("Plays the selection haptic") { playsHaptic in
                 let store = TestStore(
-                    initialState: EntryDetail.State(entry: SharedReader(value: .blueMoon))
+                    initialState: EntryDetail.State(entry: SharedReader(value: .burningCandle))
                 ) {
                     EntryDetail()
                 } withDependencies: {

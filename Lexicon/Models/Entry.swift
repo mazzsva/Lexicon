@@ -83,28 +83,44 @@ struct Entry: Equatable, Identifiable, Sendable {
 
 extension Entry {
     static let blueMoon = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_750_000_000),
+        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_790_624_820),
         definition: "Something that happens very rarely.",
         id: UUID(0),
-        isBookmarked: true,
+        isBookmarked: false,
         term: "Once in a blue moon"
     )
 
     static let burningCandle = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_749_000_000),
+        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_778_360_760),
         definition: "To work early and late until you're exhausted.",
         id: UUID(1),
-        isBookmarked: false,
+        isBookmarked: true,
         term: "Burn the candle at both ends"
     )
 
-    static let lowHangingFruit = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_748_000_000),
-        definition: "The easiest wins, taken first.",
+    static let wrongTree = Entry(
+        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_750_701_120),
+        definition: "Looking for the answer in the wrong place.",
         id: UUID(2),
         isBookmarked: false,
-        term: "Low-hanging fruit"
+        term: "Barking up the wrong tree"
     )
 
-    static let mocks: [Entry] = [.blueMoon, .burningCandle, .lowHangingFruit]
+    static let rabbitHole = Entry(
+        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_784_009_580),
+        definition: "To spend much more time on a topic than you planned.",
+        id: UUID(3),
+        isBookmarked: false,
+        term: "Go down the rabbit hole"
+    )
+
+    static let bridgeWater = Entry(
+        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_766_151_480),
+        definition: "Something in the past that is no longer important.",
+        id: UUID(4),
+        isBookmarked: false,
+        term: "Water under the bridge"
+    )
+
+    static let mocks: [Entry] = [.blueMoon, .rabbitHole, .burningCandle, .bridgeWater, .wrongTree]
 }

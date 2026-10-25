@@ -195,7 +195,7 @@ extension BaseSuite {
                 AlertState<Settings.Alert>
                     .confirmImport(EntriesArchive.Import(duplicateCount: 0, entries: Entry.mocks, invalidCount: 0))
                     .title,
-                TextState("Import ^[\(3) Entry](inflect: true)?")
+                TextState("Import ^[\(5) Entry](inflect: true)?")
             )
             expectNoDifference(
                 AlertState<Settings.Alert>
