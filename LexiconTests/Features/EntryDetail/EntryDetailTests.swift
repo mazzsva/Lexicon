@@ -32,7 +32,7 @@ extension BaseSuite {
             }
         }
 
-        // Blue moon starts with a bookmark, so the same button removes it
+        // Burning candle starts with a bookmark, so the same button removes it
         @Test
         func theBookmarkButtonRemovesTheBookmarkAndTellsTheParent() async {
             await confirmation("Plays the selection haptic") { playsHaptic in

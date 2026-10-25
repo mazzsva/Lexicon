@@ -203,7 +203,7 @@ extension BaseSuite {
             expectNoDifference(store.state.syncStatus, .syncing)
         }
 
-        // Blue moon is the only mock entry with a bookmark
+        // Burning candle is the only mock entry with a bookmark
         @Test
         func theBookmarkFilterShowsOnlyBookmarkedEntries() async {
             let state = Home.State(user: .mock)
