@@ -31,7 +31,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 **Definitions.** On request, the on-device Apple Intelligence model writes a one-sentence definition in simple words for English learners. Online, it reads the Wiktionary senses first, and an unknown term gets a note.
 
-**Live sync.** The entry list has one source of truth: a live Firestore listener backed by its local cache, so changes appear at once on every device and never wait for the network.
+**Live sync.** The entry list has one source of truth: a live Firestore listener backed by its local cache, so local changes appear at once, even offline, and sync to every other device.
 
 **Export and import.** Settings exports the entries to a versioned JSON file and imports it back. Each imported entry gets a new ID, so an import never overwrites an entry, and duplicates are skipped.
 
