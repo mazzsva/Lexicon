@@ -10,7 +10,6 @@ import Foundation
 
 struct Entry: Equatable, Identifiable, Sendable {
     enum ValidationError: Error, Equatable {
-        case createdAtOutOfRange
         case emptyTerm
         case tooLarge
     }
@@ -40,20 +39,14 @@ struct Entry: Equatable, Identifiable, Sendable {
             self.definition = definition
             self.term = term
         }
-
-        var size: Int { term.utf8.count + definition.utf8.count }
     }
-
-    static let createdAtRange =
-        Date(timeIntervalSince1970: -62_135_596_800) ..< Date(timeIntervalSince1970: 253_402_300_800)
 
     let content: Content
     let createdAt: Date
     let id: UUID
     var isBookmarked: Bool
 
-    init(content: Content, createdAt: Date, id: UUID, isBookmarked: Bool) throws(ValidationError) {
-        guard Self.createdAtRange.contains(createdAt) else { throw .createdAtOutOfRange }
+    init(content: Content, createdAt: Date, id: UUID, isBookmarked: Bool) {
         self.content = content
         self.createdAt = createdAt
         self.id = id
@@ -69,13 +62,6 @@ struct Entry: Equatable, Identifiable, Sendable {
         )
     }
 
-    private init(uncheckedCreatedAt createdAt: Date, definition: String, id: UUID, isBookmarked: Bool, term: String) {
-        content = Content(uncheckedTerm: term, definition: definition)
-        self.createdAt = createdAt
-        self.id = id
-        self.isBookmarked = isBookmarked
-    }
-
     var definition: String { content.definition }
 
     var term: String { content.term }
@@ -83,43 +69,53 @@ struct Entry: Equatable, Identifiable, Sendable {
 
 extension Entry {
     static let blueMoon = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_790_624_820),
-        definition: "Something that happens very rarely.",
+        content: Content(
+            uncheckedTerm: "Once in a blue moon",
+            definition: "Something that happens very rarely."
+        ),
+        createdAt: Date(timeIntervalSince1970: 1_790_624_820),
         id: UUID(0),
-        isBookmarked: false,
-        term: "Once in a blue moon"
+        isBookmarked: false
     )
 
     static let burningCandle = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_778_360_760),
-        definition: "To work early and late until you're exhausted.",
+        content: Content(
+            uncheckedTerm: "Burn the candle at both ends",
+            definition: "To work early and late until you're exhausted."
+        ),
+        createdAt: Date(timeIntervalSince1970: 1_778_360_760),
         id: UUID(1),
-        isBookmarked: true,
-        term: "Burn the candle at both ends"
+        isBookmarked: true
     )
 
     static let wrongTree = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_750_701_120),
-        definition: "Looking for the answer in the wrong place.",
+        content: Content(
+            uncheckedTerm: "Barking up the wrong tree",
+            definition: "Looking for the answer in the wrong place."
+        ),
+        createdAt: Date(timeIntervalSince1970: 1_750_701_120),
         id: UUID(2),
-        isBookmarked: false,
-        term: "Barking up the wrong tree"
+        isBookmarked: false
     )
 
     static let rabbitHole = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_784_009_580),
-        definition: "To spend much more time on a topic than you planned.",
+        content: Content(
+            uncheckedTerm: "Go down the rabbit hole",
+            definition: "To spend much more time on a topic than you planned."
+        ),
+        createdAt: Date(timeIntervalSince1970: 1_784_009_580),
         id: UUID(3),
-        isBookmarked: false,
-        term: "Go down the rabbit hole"
+        isBookmarked: false
     )
 
     static let bridgeWater = Entry(
-        uncheckedCreatedAt: Date(timeIntervalSince1970: 1_766_151_480),
-        definition: "Something in the past that is no longer important.",
+        content: Content(
+            uncheckedTerm: "Water under the bridge",
+            definition: "Something in the past that is no longer important."
+        ),
+        createdAt: Date(timeIntervalSince1970: 1_766_151_480),
         id: UUID(4),
-        isBookmarked: false,
-        term: "Water under the bridge"
+        isBookmarked: false
     )
 
     static let mocks: [Entry] = [.blueMoon, .rabbitHole, .burningCandle, .bridgeWater, .wrongTree]

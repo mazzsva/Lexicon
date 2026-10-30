@@ -47,42 +47,14 @@ extension BaseSuite {
             try #require(term.utf8.count + definition.utf8.count == Entry.Content.maximumSize)
 
             expectNoDifference(
-                try Entry.Content(term: term, definition: definition).size,
-                Entry.Content.maximumSize
-            )
-            expectNoDifference(
-                try Entry.Content(term: term, definition: "\n   " + definition + "   \n").size,
-                Entry.Content.maximumSize
+                try Entry.Content(term: term, definition: "\n   " + definition + "   \n"),
+                try Entry.Content(term: term, definition: definition)
             )
             #expect(throws: Entry.ValidationError.tooLarge) {
                 try Entry.Content(term: term + "a", definition: definition)
             }
             #expect(throws: Entry.ValidationError.tooLarge) {
                 try Entry.Content(term: term, definition: definition + "a")
-            }
-        }
-
-        @Test(
-            arguments: [
-                (-62_135_596_800.0, true),
-                (-62_135_596_801.0, false),
-                (253_402_300_799.999, true),
-                (253_402_300_800.0, false),
-            ]
-        )
-        func theCreationDateMustFitInAFirestoreTimestamp(timeIntervalSince1970: Double, isValid: Bool) throws {
-            let content = try Entry.Content(term: "Break the ice", definition: "")
-            let createdAt = Date(timeIntervalSince1970: timeIntervalSince1970)
-
-            if isValid {
-                expectNoDifference(
-                    try Entry(content: content, createdAt: createdAt, id: UUID(0), isBookmarked: false).createdAt,
-                    createdAt
-                )
-            } else {
-                #expect(throws: Entry.ValidationError.createdAtOutOfRange) {
-                    try Entry(content: content, createdAt: createdAt, id: UUID(0), isBookmarked: false)
-                }
             }
         }
 

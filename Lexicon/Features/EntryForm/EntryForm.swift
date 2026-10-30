@@ -7,7 +7,6 @@
 
 import ComposableArchitecture
 import Foundation
-import IssueReporting
 import os
 
 @Reducer
@@ -233,13 +232,8 @@ struct EntryForm {
                 guard state.isCreating else {
                     return .send(.delegate(.didUpdate(content)))
                 }
-                do {
-                    let entry = try Entry(content: content, createdAt: now, id: uuid(), isBookmarked: false)
-                    return .send(.delegate(.didCreate(entry)))
-                } catch {
-                    reportIssue(error)
-                    return .none
-                }
+                let entry = Entry(content: content, createdAt: now, id: uuid(), isBookmarked: false)
+                return .send(.delegate(.didCreate(entry)))
 
             case .stopGeneratingButtonTapped:
                 switch state.generation {

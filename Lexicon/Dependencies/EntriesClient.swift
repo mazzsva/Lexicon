@@ -193,15 +193,13 @@ extension Entry {
             id.uuidString == document.documentID,
             let isBookmarked = data["isBookmarked"] as? Bool,
             let term = data["term"] as? String,
-            let content = try? Entry.Content(storedTerm: term, definition: definition),
-            let entry = try? Entry(
-                content: content, createdAt: createdAt.dateValue(), id: id, isBookmarked: isBookmarked)
+            let content = try? Entry.Content(storedTerm: term, definition: definition)
         else {
             logger.error("Skipping entry document \(document.documentID, privacy: .public) that failed to decode.")
             reportIssue("Skipping entry document \(document.documentID) that failed to decode.")
             return nil
         }
-        self = entry
+        self.init(content: content, createdAt: createdAt.dateValue(), id: id, isBookmarked: isBookmarked)
     }
 
     fileprivate var documentData: [String: Any] {
