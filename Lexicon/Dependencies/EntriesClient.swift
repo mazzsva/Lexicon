@@ -16,7 +16,6 @@ import os
 struct EntriesClient: Sendable {
     var clearLocalData: @Sendable () async throws -> Void
     var create: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
-    var createAll: @Sendable (_ entries: [Entry], _ uid: String) async throws -> Void
     var delete: @Sendable (_ id: Entry.ID, _ uid: String) async throws -> Void
     var deleteAll: @Sendable (_ uid: String) async throws -> Void
 
@@ -48,9 +47,6 @@ extension EntriesClient: DependencyKey {
             create: { entry, uid in
                 try await FirestoreStorage.shared.create(entry, uid: uid)
             },
-            createAll: { entries, uid in
-                try await FirestoreStorage.shared.createAll(entries, uid: uid)
-            },
             delete: { id, uid in
                 try await FirestoreStorage.shared.delete(id: id, uid: uid)
             },
@@ -73,7 +69,6 @@ extension EntriesClient: DependencyKey {
         EntriesClient(
             clearLocalData: {},
             create: { _, _ in },
-            createAll: { _, _ in },
             delete: { _, _ in },
             deleteAll: { _ in },
             entries: { _ in
@@ -122,19 +117,6 @@ private actor FirestoreStorage {
         try await entriesCollection(uid: uid).document(entry.id.uuidString).setData(entry.documentData)
     }
 
-    func createAll(_ entries: [Entry], uid: String) async throws {
-        await waitForClearing()
-        let batches = Entry.writeBatches(for: entries)
-        let (results, continuation) = AsyncStream.makeStream(of: (any Error)?.self)
-        for chunk in batches {
-            commit(chunk, uid: uid) { continuation.yield($0) }
-        }
-        for await error in results.prefix(batches.count) {
-            if let error { throw error }
-        }
-        try Task.checkCancellation()
-    }
-
     func delete(id: Entry.ID, uid: String) async throws {
         await waitForClearing()
         try await entriesCollection(uid: uid).document(id.uuidString).delete()
@@ -144,7 +126,7 @@ private actor FirestoreStorage {
         await waitForClearing()
         while true {
             try Task.checkCancellation()
-            let snapshot = try await entriesCollection(uid: uid).limit(to: Entry.maximumBatchCount).getDocuments()
+            let snapshot = try await entriesCollection(uid: uid).limit(to: 500).getDocuments()
             guard !snapshot.documents.isEmpty else { return }
             let batch = Firestore.firestore().batch()
             for document in snapshot.documents {
@@ -192,44 +174,8 @@ private actor FirestoreStorage {
             .updateData(["definition": content.definition, "term": content.term])
     }
 
-    private func commit(
-        _ entries: [Entry], uid: String, completion: @escaping @Sendable ((any Error)?) -> Void
-    ) {
-        let batch = Firestore.firestore().batch()
-        for entry in entries {
-            batch.setData(
-                entry.documentData, forDocument: entriesCollection(uid: uid).document(entry.id.uuidString))
-        }
-        batch.commit(completion: completion)
-    }
-
     private func waitForClearing() async {
         _ = try? await clearing?.value
-    }
-}
-
-extension Entry {
-    static let maximumBatchCount = 500
-    static let maximumBatchSize = 5_000_000
-
-    static func writeBatches(for entries: [Entry]) -> [[Entry]] {
-        var batches: [[Entry]] = []
-        var batch: [Entry] = []
-        var batchSize = 0
-        for entry in entries {
-            let size = entry.content.size
-            if !batch.isEmpty, batch.count == maximumBatchCount || batchSize + size > maximumBatchSize {
-                batches.append(batch)
-                batch = []
-                batchSize = 0
-            }
-            batch.append(entry)
-            batchSize += size
-        }
-        if !batch.isEmpty {
-            batches.append(batch)
-        }
-        return batches
     }
 }
 
