@@ -30,7 +30,6 @@ struct Home {
 
     enum Failure: CaseIterable, Hashable {
         case entryDelete
-        case entryImport
         case entrySave
     }
 
@@ -120,7 +119,6 @@ struct Home {
         case bookmarkFilterButtonTapped
         case connectivityChanged(Bool)
         case destination(PresentationAction<Destination.Action>)
-        case entriesImportFailed(any Error)
         case entriesRetryTimerElapsed
         case entriesStreamFailed(any Error)
         case entriesUpdated(EntriesSnapshot)
@@ -178,19 +176,7 @@ struct Home {
                 state.destination = .accountDeletion(AccountDeletion.State(uid: state.user.uid))
                 return .send(.destination(.presented(.accountDeletion(.deletionConfirmed))))
 
-            case .destination(.presented(.settings(.delegate(.didImport(let entries))))):
-                state.destination = nil
-                return .merge(
-                    .run { _ in await hapticsClient.success() },
-                    importEntries(entries, uid: state.user.uid)
-                )
-
             case .destination:
-                return .none
-
-            case .entriesImportFailed(let error):
-                logger.error("Importing the entries failed: \(error, privacy: .public)")
-                state.pendingFailures.insert(.entryImport)
                 return .none
 
             case .entriesRetryTimerElapsed:
@@ -308,14 +294,6 @@ struct Home {
         }
     }
 
-    private func importEntries(_ entries: [Entry], uid: String) -> Effect<Action> {
-        .run { _ in
-            try await entriesClient.createAll(entries: entries, uid: uid)
-        } catch: { error, send in
-            await send(.entriesImportFailed(error))
-        }
-    }
-
     private func observeConnectivity() -> Effect<Action> {
         .run { send in
             for await isOnline in networkMonitorClient.connectivityChanges() {
@@ -326,9 +304,7 @@ struct Home {
     }
 
     private func presentSettings(_ state: inout State, destination: Settings.Destination.State? = nil) {
-        state.destination = .settings(
-            Settings.State(destination: destination, entries: SharedReader(state.$entries), user: state.user)
-        )
+        state.destination = .settings(Settings.State(destination: destination, user: state.user))
     }
 
     private func subscribeToEntries(_ state: State) -> Effect<Action> {
@@ -374,8 +350,6 @@ extension AlertState where Action == Home.Alert {
             switch failure {
             case .entryDelete:
                 TextState("Your entry couldn't be deleted.")
-            case .entryImport:
-                TextState("Some entries couldn't be imported.")
             case .entrySave:
                 TextState("Your entry couldn't be saved.")
             }

@@ -326,7 +326,6 @@ extension BaseSuite {
                             home.destination = .settings(
                                 Settings.State(
                                     destination: failure.map { .alert(.accountDeletionFailed($0)) },
-                                    entries: SharedReader(home.$entries),
                                     user: .mock
                                 )
                             )
@@ -391,7 +390,7 @@ extension BaseSuite {
             await store.send(\.scene.home.settingsButtonTapped) {
                 $0.scene?
                     .modify(\.home) { home in
-                        home.destination = .settings(Settings.State(entries: SharedReader(home.$entries), user: .mock))
+                        home.destination = .settings(Settings.State(user: .mock))
                     }
             }
             await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped) {

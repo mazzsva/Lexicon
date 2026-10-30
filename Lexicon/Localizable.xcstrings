@@ -7,19 +7,7 @@
     "^[%lld Entry](inflect: true)" : {
 
     },
-    "^[%lld entry](inflect: true) already in Lexicon and ^[%lld entry](inflect: true) that can't be imported will be skipped." : {
-
-    },
-    "^[%lld entry](inflect: true) already in Lexicon will be skipped." : {
-
-    },
-    "^[%lld entry](inflect: true) can't be imported and will be skipped." : {
-
-    },
     "A generated definition will replace the one you wrote." : {
-
-    },
-    "All the entries in this file are already in Lexicon." : {
 
     },
     "Are you sure you want to delete this entry?" : {
@@ -91,22 +79,10 @@
     "Enter a term first." : {
 
     },
-    "Export Entries" : {
-
-    },
     "Generate" : {
 
     },
     "Generate Definition" : {
-
-    },
-    "Import" : {
-
-    },
-    "Import ^[%lld Entry](inflect: true)?" : {
-
-    },
-    "Import Entries" : {
 
     },
     "Lexicon" : {
@@ -124,9 +100,6 @@
     "Lexicon doesn't know this term. Check the spelling, or write the definition yourself." : {
 
     },
-    "Lexicon Entries" : {
-
-    },
     "Lexicon will try again shortly." : {
 
     },
@@ -140,9 +113,6 @@
 
     },
     "No Internet" : {
-
-    },
-    "Nothing to Import" : {
 
     },
     "Remove Bookmark" : {
@@ -184,9 +154,6 @@
     "Signing in…" : {
 
     },
-    "Some entries couldn't be imported." : {
-
-    },
     "Something Went Wrong" : {
 
     },
@@ -212,21 +179,6 @@
 
     },
     "The definition couldn't be generated. Write it yourself, or try again later." : {
-
-    },
-    "The file couldn't be opened." : {
-
-    },
-    "There are no entries to import." : {
-
-    },
-    "This file is too large to import." : {
-
-    },
-    "This file isn't a Lexicon export." : {
-
-    },
-    "This file was made by a newer version of Lexicon." : {
 
     },
     "Unknown" : {

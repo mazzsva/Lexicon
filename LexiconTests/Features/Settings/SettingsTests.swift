@@ -18,7 +18,7 @@ extension BaseSuite {
         // A sign out clears the local entries
         @Test
         func theSignOutButtonAsksForConfirmation() async {
-            let store = TestStore(initialState: Self.state()) {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             }
 
@@ -31,7 +31,7 @@ extension BaseSuite {
         @Test
         func confirmingTheSignOutSignsTheUserOut() async {
             await confirmation("Signs the user out") { signsOut in
-                let store = TestStore(initialState: Self.state(destination: .alert(.confirmSignOut))) {
+                let store = TestStore(initialState: Settings.State(destination: .alert(.confirmSignOut), user: .mock)) {
                     Settings()
                 } withDependencies: {
                     $0.authClient.signOut = { signsOut() }
@@ -47,7 +47,7 @@ extension BaseSuite {
         // The settings stay on screen because the user is still signed in
         @Test
         func aFailedSignOutShowsAnAlert() async {
-            let store = TestStore(initialState: Self.state(destination: .alert(.confirmSignOut))) {
+            let store = TestStore(initialState: Settings.State(destination: .alert(.confirmSignOut), user: .mock)) {
                 Settings()
             } withDependencies: {
                 $0.authClient.signOut = { throw SignOutFailure() }
@@ -64,7 +64,7 @@ extension BaseSuite {
         // A dismissed confirmation must not sign the user out
         @Test
         func dismissingTheAlertClearsIt() async {
-            let store = TestStore(initialState: Self.state(destination: .alert(.confirmSignOut))) {
+            let store = TestStore(initialState: Settings.State(destination: .alert(.confirmSignOut), user: .mock)) {
                 Settings()
             }
 
@@ -76,7 +76,7 @@ extension BaseSuite {
         // The deletion removes the entries from every device
         @Test
         func theDeleteAccountButtonAsksForConfirmation() async {
-            let store = TestStore(initialState: Self.state()) {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             }
 
@@ -87,7 +87,9 @@ extension BaseSuite {
 
         @Test
         func confirmingTheAccountDeletionAsksHomeToDeleteTheAccount() async {
-            let store = TestStore(initialState: Self.state(destination: .alert(.confirmAccountDeletion))) {
+            let store = TestStore(
+                initialState: Settings.State(destination: .alert(.confirmAccountDeletion), user: .mock)
+            ) {
                 Settings()
             }
 
@@ -101,7 +103,7 @@ extension BaseSuite {
         @Test
         func theDismissButtonClosesTheSettings() async {
             await confirmation("Dismisses the settings") { dismissesSettings in
-                let store = TestStore(initialState: Self.state()) {
+                let store = TestStore(initialState: Settings.State(user: .mock)) {
                     Settings()
                 } withDependencies: {
                     $0.dismiss = DismissEffect { dismissesSettings() }
@@ -118,12 +120,12 @@ extension BaseSuite {
         func theDebugAddMockEntriesButtonSavesTheMockEntries() async {
             let saved = LockIsolated<[Entry]>([])
 
-            let store = TestStore(initialState: Self.state()) {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             } withDependencies: {
-                $0.entriesClient.createAll = { entries, uid in
+                $0.entriesClient.create = { entry, uid in
                     expectNoDifference(uid, User.mock.uid)
-                    saved.withValue { $0.append(contentsOf: entries) }
+                    saved.withValue { $0.append(entry) }
                 }
             }
 
@@ -136,7 +138,7 @@ extension BaseSuite {
         @Test
         func theDebugDeleteAllEntriesButtonDeletesEveryEntry() async {
             await confirmation("Deletes all the entries") { deletesAllEntries in
-                let store = TestStore(initialState: Self.state()) {
+                let store = TestStore(initialState: Settings.State(user: .mock)) {
                     Settings()
                 } withDependencies: {
                     $0.entriesClient.deleteAll = { uid in
@@ -152,7 +154,7 @@ extension BaseSuite {
 
         @Test
         func theDebugResetWelcomeToggleSetsTheFlagForTheNextLaunch() async {
-            let store = TestStore(initialState: Self.state()) {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
                 Settings()
             }
 
@@ -164,10 +166,6 @@ extension BaseSuite {
             }
         }
         #endif
-
-        private static func state(destination: Settings.Destination.State? = nil) -> Settings.State {
-            Settings.State(destination: destination, entries: SharedReader(value: .loaded([])), user: .mock)
-        }
 
         private struct SignOutFailure: Error {}
     }
