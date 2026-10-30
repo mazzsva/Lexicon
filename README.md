@@ -22,7 +22,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 ## Quality gates
 
-- **Tests:** 220 [Swift Testing](https://github.com/swiftlang/swift-testing) tests cover every reducer, and none touch the network.
+- **Tests:** 174 [Swift Testing](https://github.com/swiftlang/swift-testing) tests cover every reducer, and none touch the network.
 - **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
