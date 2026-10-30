@@ -24,9 +24,16 @@
         "kind" : "neutral",
         "opacity" : 0.5
       },
+      "specular-highlight-placement" : "inside",
+      "specular-highlight-placement-specializations" : [
+        {
+          "appearance" : "dark",
+          "value" : "outside"
+        }
+      ],
       "translucency" : {
         "enabled" : true,
-        "value" : 0.3
+        "value" : 0.1
       }
     },
     {
@@ -66,9 +73,16 @@
         "kind" : "neutral",
         "opacity" : 0.5
       },
+      "specular-highlight-placement" : "inside",
+      "specular-highlight-placement-specializations" : [
+        {
+          "appearance" : "dark",
+          "value" : "outside"
+        }
+      ],
       "translucency" : {
         "enabled" : true,
-        "value" : 0.3
+        "value" : 0.1
       }
     }
   ],
