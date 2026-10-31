@@ -23,11 +23,16 @@ struct SettingsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
+                } footer: {
+                    Text("Using Sign in with Apple")
                 }
                 Section {
                     Button("Sign Out") {
                         store.send(.signOutButtonTapped)
                     }
+                }
+                .listSectionSpacing(.custom(8))
+                Section {
                     Button("Delete Account", role: .destructive) {
                         store.send(.deleteAccountButtonTapped)
                     }
