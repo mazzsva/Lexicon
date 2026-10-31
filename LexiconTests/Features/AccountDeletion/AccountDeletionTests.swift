@@ -252,7 +252,6 @@ extension BaseSuite {
                 $0.step = .credentialRevoked
             }
             await store.receive(\.deletionFailed)
-            await store.receive(\.signOutFailed)
             await store.receive(\.delegate.didFail, .notSignedOut)
             await store.finish()
         }
@@ -308,7 +307,7 @@ extension BaseSuite {
             await clock.advance(by: AccountDeletion.timeout - .milliseconds(1))
             #expect(!isStallCanceled.value)
             await clock.advance(by: .milliseconds(1))
-            await store.receive(\.deletionTimerElapsed)
+            await store.receive(\.deletionFailed)
             await store.receive(\.delegate.didFail, failure)
             #expect(isStallCanceled.value)
             await clock.advance(by: .seconds(3600))
@@ -352,7 +351,7 @@ extension BaseSuite {
                 await clock.advance(by: AccountDeletion.timeout - .milliseconds(1))
                 #expect(!isStallCanceled.value)
                 await clock.advance(by: .milliseconds(1))
-                await store.receive(\.deletionTimerElapsed)
+                await store.receive(\.deletionFailed)
                 #expect(isStallCanceled.value)
                 await clock.advance(by: .seconds(3600))
                 await store.finish()

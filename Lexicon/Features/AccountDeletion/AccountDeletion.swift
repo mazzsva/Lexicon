@@ -43,9 +43,7 @@ struct AccountDeletion {
         case delegate(Delegate)
         case deletionConfirmed
         case deletionFailed(any Error)
-        case deletionTimerElapsed
         case entriesDeleted
-        case signOutFailed(any Error)
 
         @CasePathable
         enum Delegate {
@@ -81,7 +79,7 @@ struct AccountDeletion {
                         deleteAccount(credential: credential, authorizationCode: authorizationCode, uid: state.uid),
                         .run { send in
                             try await clock.sleep(for: Self.timeout)
-                            await send(.deletionTimerElapsed)
+                            await send(.deletionFailed(DeletionError.timedOut))
                         }
                     )
                     .cancellable(id: CancelID.deletion)
@@ -107,16 +105,9 @@ struct AccountDeletion {
             case .deletionFailed(let error):
                 return fail(&state, error: error)
 
-            case .deletionTimerElapsed:
-                return fail(&state, error: DeletionError.timedOut)
-
             case .entriesDeleted:
                 state.step = .entriesDeleted
                 return .none
-
-            case .signOutFailed(let error):
-                logger.error("Sign out failed: \(error, privacy: .public)")
-                return .send(.delegate(.didFail(.notSignedOut)))
             }
         }
     }
@@ -146,7 +137,8 @@ struct AccountDeletion {
                 .run { _ in
                     try await authClient.signOut()
                 } catch: { error, send in
-                    await send(.signOutFailed(error))
+                    logger.error("Sign out failed: \(error, privacy: .public)")
+                    await send(.delegate(.didFail(.notSignedOut)))
                 }
             )
         }
