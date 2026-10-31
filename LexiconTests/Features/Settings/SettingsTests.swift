@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import CustomDump
+import Foundation
 import Testing
 
 @testable import Lexicon
@@ -15,7 +16,7 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct SettingsTests {
-        // A sign out clears the local entries
+        // A sign out clears the local data
         @Test
         func theSignOutButtonAsksForConfirmation() async {
             let store = TestStore(initialState: Settings.State(user: .mock)) {
@@ -97,6 +98,22 @@ extension BaseSuite {
                 $0.destination = nil
             }
             await store.receive(\.delegate.didConfirmAccountDeletion)
+        }
+
+        // Every failure needs its own message, because the user decides what to do next from it
+        @Test(
+            arguments: [
+                (
+                    AccountDeletion.Failure.connectionFailed,
+                    TextState("Your account couldn't be deleted. Check your connection and try again.")
+                ),
+                (.notDeleted, TextState("Your account couldn't be deleted.")),
+                (.notFullyDeleted, TextState("Your account couldn't be fully deleted.")),
+                (.notSignedOut, TextState("You couldn't be signed out.")),
+            ] as [(AccountDeletion.Failure, TextState)]
+        )
+        func anAccountDeletionFailureHasItsOwnMessage(failure: AccountDeletion.Failure, message: TextState) {
+            expectNoDifference(AlertState<Settings.Alert>.accountDeletionFailed(failure).message, message)
         }
 
         // Home presents the settings, so only the dismiss effect can close them

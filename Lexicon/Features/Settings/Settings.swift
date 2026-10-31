@@ -157,7 +157,7 @@ extension AlertState where Action == Settings.Alert {
             TextState("Cancel")
         }
     } message: {
-        TextState("Your account and all your entries will be permanently deleted. Are you sure?")
+        TextState("Your account and all your data will be permanently deleted. Are you sure?")
     }
 
     static let confirmSignOut = AlertState {

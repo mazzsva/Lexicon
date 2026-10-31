@@ -26,8 +26,8 @@ struct AccountDeletion {
     enum Step: Equatable {
         case credentialRevoked
         case deleting
-        case entriesDeleted
         case reauthenticating
+        case userDataDeleted
     }
 
     @ObservableState
@@ -43,7 +43,7 @@ struct AccountDeletion {
         case delegate(Delegate)
         case deletionConfirmed
         case deletionFailed(any Error)
-        case entriesDeleted
+        case userDataDeleted
 
         @CasePathable
         enum Delegate {
@@ -60,8 +60,8 @@ struct AccountDeletion {
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.entriesClient) var entriesClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
+    @Dependency(\.userDataClient) var userDataClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -105,8 +105,8 @@ struct AccountDeletion {
             case .deletionFailed(let error):
                 return fail(&state, error: error)
 
-            case .entriesDeleted:
-                state.step = .entriesDeleted
+            case .userDataDeleted:
+                state.step = .userDataDeleted
                 return .none
             }
         }
@@ -116,8 +116,7 @@ struct AccountDeletion {
         .run { send in
             try await authClient.reauthenticate(credential: credential)
             try Task.checkCancellation()
-            try await entriesClient.deleteAll(uid: uid)
-            await send(.entriesDeleted)
+            try await userDataClient.deleteAll(uid) { await send(.userDataDeleted) }
             try Task.checkCancellation()
             try await authClient.revokeAppleToken(authorizationCode: authorizationCode)
             await send(.appleCredentialRevoked)
@@ -142,7 +141,7 @@ struct AccountDeletion {
                 }
             )
         }
-        guard !error.isSignInWithAppleCancellation else {
+        guard state.step != .reauthenticating || !error.isSignInWithAppleCancellation else {
             return .merge(.cancel(id: CancelID.deletion), .send(.delegate(.didCancel)))
         }
         logger.error("Account deletion failed: \(error, privacy: .public)")
@@ -150,7 +149,7 @@ struct AccountDeletion {
         let failure: Failure =
             switch state.step {
             case .deleting where isConnectionFailure: .connectionFailed
-            case .entriesDeleted: .notFullyDeleted
+            case .userDataDeleted: .notFullyDeleted
             case .credentialRevoked, .deleting, .reauthenticating: .notDeleted
             }
         return .merge(
