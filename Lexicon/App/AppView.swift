@@ -33,12 +33,9 @@ struct AppView: View {
                 .interactiveDismissDisabled()
         }
         .task { await store.send(.task).finish() }
-        .onChange(of: scenePhase) { _, newPhase in scenePhaseChanged(to: newPhase) }
-    }
-
-    private func scenePhaseChanged(to newPhase: ScenePhase) {
-        guard newPhase == .active else { return }
-        store.send(.appBecameActive)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active { store.send(.appBecameActive) }
+        }
     }
 }
 
