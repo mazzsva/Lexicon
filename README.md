@@ -2,11 +2,6 @@
 
 Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/images/hero-dark.png">
-  <img src=".github/images/hero-light.png" alt="The Lexicon home screen and the New Entry screen, where Apple Intelligence writes a definition for Once in a blue moon">
-</picture>
-
 ## Core technologies
 
 <table>
