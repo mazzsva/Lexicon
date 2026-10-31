@@ -505,6 +505,12 @@ extension BaseSuite {
 
                 await store.send(.authUserChanged(nil)) {
                     $0.isSignedOutSettling = true
+                }
+                #expect(store.state.isLoading)
+                #expect(store.state.scene.is(\.home))
+
+                await clock.advance(by: AppFeature.signedOutCoverDelay)
+                await store.receive(\.signedOutCoverTimerElapsed) {
                     $0.scene = .signIn(SignIn.State())
                 }
                 #expect(store.state.isLoading)
@@ -544,9 +550,12 @@ extension BaseSuite {
             await store.send(.appBecameActive)
             await store.send(.authUserChanged(nil)) {
                 $0.isSignedOutSettling = true
-                $0.scene = .signIn(SignIn.State())
             }
 
+            await clock.advance(by: AppFeature.signedOutCoverDelay)
+            await store.receive(\.signedOutCoverTimerElapsed) {
+                $0.scene = .signIn(SignIn.State())
+            }
             await clock.advance(by: AppFeature.signedOutSettleDelay)
             await store.receive(\.signedOutSettleTimerElapsed) {
                 $0.isSignedOutSettling = false

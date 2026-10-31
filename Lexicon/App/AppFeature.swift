@@ -34,7 +34,7 @@ struct AppFeature {
             case nil:
                 return true
             case .home(let home):
-                return isDeletingAccount || home.isLoadingFirstEntries
+                return isDeletingAccount || home.isLoadingFirstEntries || isSignedOutSettling
             case .signIn(let signIn):
                 return isSignedOutSettling || signIn.isAuthenticating
             }
@@ -73,6 +73,7 @@ struct AppFeature {
         case appleCredentialRevoked
         case authUserChanged(User?)
         case scene(Scene.Action)
+        case signedOutCoverTimerElapsed
         case signedOutSettleTimerElapsed
         case task
         case welcomeContinueButtonTapped
@@ -86,6 +87,7 @@ struct AppFeature {
         case signedOutSettle
     }
 
+    static let signedOutCoverDelay = Duration.milliseconds(300)
     static let signedOutSettleDelay = Duration.milliseconds(500)
 
     @Dependency(\.authClient) var authClient
@@ -97,11 +99,15 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .appBecameActive:
-                guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
+                guard state.scene.is(\.home), !state.isDeletingAccount, !state.isSignedOutSettling else {
+                    return .none
+                }
                 return verifyAppleCredential()
 
             case .appleCredentialRevoked:
-                guard state.scene.is(\.home), !state.isDeletingAccount else { return .none }
+                guard state.scene.is(\.home), !state.isDeletingAccount, !state.isSignedOutSettling else {
+                    return .none
+                }
                 logger.notice("Apple ID credential was revoked; signing out.")
                 return .run { _ in
                     try await authClient.signOut()
@@ -117,6 +123,18 @@ struct AppFeature {
 
             case .scene:
                 return .none
+
+            case .signedOutCoverTimerElapsed:
+                guard state.isSignedOutSettling, state.scene.is(\.home) else { return .none }
+                state.scene = .signIn(SignIn.State())
+                return .merge(
+                    clearLocalData(),
+                    .run { send in
+                        try await clock.sleep(for: Self.signedOutSettleDelay)
+                        await send(.signedOutSettleTimerElapsed)
+                    }
+                    .cancellable(id: CancelID.signedOutSettle, cancelInFlight: true)
+                )
 
             case .signedOutSettleTimerElapsed:
                 state.isSignedOutSettling = false
@@ -205,21 +223,21 @@ struct AppFeature {
         case (.home, .some):
             logger.notice("Auth changed accounts without signing out first; ending the session before the new one.")
             reportIssue("Auth changed accounts without signing out first.")
+            state.isSignedOutSettling = false
             state.scene = nil
             return .concatenate(
+                .cancel(id: CancelID.signedOutSettle),
                 clearLocalData(),
                 .run { send in await send(.authUserChanged(authClient.currentUser())) }
             )
 
         case (.home, nil):
             state.isSignedOutSettling = true
-            state.scene = .signIn(SignIn.State())
             return .merge(
                 .cancel(id: CancelID.appleCredentialCheck),
-                clearLocalData(),
                 .run { send in
-                    try await clock.sleep(for: Self.signedOutSettleDelay)
-                    await send(.signedOutSettleTimerElapsed)
+                    try await clock.sleep(for: Self.signedOutCoverDelay)
+                    await send(.signedOutCoverTimerElapsed)
                 }
                 .cancellable(id: CancelID.signedOutSettle, cancelInFlight: true)
             )
