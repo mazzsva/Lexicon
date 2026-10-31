@@ -61,16 +61,9 @@ struct SettingsView: View {
             .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .groupedBackground()
-            .contentMargins(.top, 8, for: .scrollContent)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarRole(.editor)
+            .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .title) {
-                    Text("Settings")
-                        .font(.title)
-                        .fontWeight(.bold)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Dismiss", systemImage: "xmark") {
                         store.send(.dismissButtonTapped)
                     }
@@ -79,13 +72,6 @@ struct SettingsView: View {
                 }
             }
             .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
-        }
-        .safeAreaBar(edge: .bottom) {
-            Text("Version \(Bundle.main.appVersion)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.bottom)
         }
         // The swipe stays disabled at every step so the user leaves Settings only through the Dismiss button
         .interactiveDismissDisabled()
