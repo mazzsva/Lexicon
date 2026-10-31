@@ -15,7 +15,7 @@ struct SignIn {
 
     enum Step: Equatable {
         case awaitingAuthorization
-        case signingIn(isNewAccount: Bool)
+        case signingIn
     }
 
     @ObservableState
@@ -24,8 +24,6 @@ struct SignIn {
         var step: Step?
 
         var isAuthenticating: Bool { step != nil }
-
-        var isCreatingAccount: Bool { step == .signingIn(isNewAccount: true) }
     }
 
     enum Action {
@@ -45,7 +43,7 @@ struct SignIn {
                 return .none
 
             case .authorizationResponse(.success(let credential)):
-                state.step = .signingIn(isNewAccount: credential.isFirstAuthorization)
+                state.step = .signingIn
                 return .run { _ in
                     try await authClient.signIn(credential: credential)
                 } catch: { error, send in

@@ -81,7 +81,7 @@ extension BaseSuite {
             await store.receive(\.entriesStreamFailed) {
                 $0.$entries.withLock { $0 = .failed }
             }
-            #expect(!store.state.isLoadingFirstEntries)
+            #expect(!store.state.isLoadingFirstContent)
             expectNoDifference(store.state.emptyState, .failed)
 
             await clock.advance(by: Home.entriesRetryDelay)
@@ -121,7 +121,7 @@ extension BaseSuite {
         // Only the first load welcomes the user, and the later ones stay quiet
         @Test
         func aFreshSignInPlaysItsHapticOnlyOnTheFirstLoad() async {
-            let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            let state = Home.State(user: .mock, sessionOrigin: .freshSignIn)
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {
@@ -144,7 +144,7 @@ extension BaseSuite {
         func aFreshSignInPlaysItsHapticEvenWhenTheFirstLoadFails() async {
             let clock = TestClock()
             let entries = AsyncThrowingStream<EntriesSnapshot, any Error>.makeStream()
-            let state = Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+            let state = Home.State(user: .mock, sessionOrigin: .freshSignIn)
 
             await confirmation("Plays the success haptic") { playsHaptic in
                 let store = TestStore(initialState: state) {
@@ -158,7 +158,7 @@ extension BaseSuite {
                 await store.send(.entriesStreamFailed(EntriesFailure())) {
                     $0.$entries.withLock { $0 = .failed }
                 }
-                #expect(!store.state.isLoadingFirstEntries)
+                #expect(!store.state.isLoadingFirstContent)
 
                 await clock.advance(by: Home.entriesRetryDelay)
                 await store.receive(\.entriesRetryTimerElapsed)
@@ -290,14 +290,14 @@ extension BaseSuite {
         @Test
         func theEntriesPhaseDrivesTheDerivedState() {
             var state = Home.State(user: .mock)
-            #expect(state.isLoadingFirstEntries)
+            #expect(state.isLoadingFirstContent)
             #expect(!state.canCreateEntries)
             expectNoDifference(state.emptyState, nil)
             expectNoDifference(state.entryCount, nil)
             expectNoDifference(state.filteredEntries.map(\.wrappedValue), [])
 
             state.$entries.withLock { $0 = .failed }
-            #expect(!state.isLoadingFirstEntries)
+            #expect(!state.isLoadingFirstContent)
             #expect(!state.canCreateEntries)
             expectNoDifference(state.emptyState, .failed)
             expectNoDifference(state.entryCount, nil)

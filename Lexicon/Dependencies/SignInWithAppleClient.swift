@@ -24,7 +24,6 @@ struct SignInWithAppleClient: Sendable {
 struct AppleCredential: Equatable, Sendable {
     let authorizationCode: String?
     let idToken: String
-    let isFirstAuthorization: Bool
     let rawNonce: String
 }
 
@@ -52,7 +51,6 @@ extension AppleCredential {
     static let mock = AppleCredential(
         authorizationCode: "mock-authorization-code",
         idToken: "mock-id-token",
-        isFirstAuthorization: false,
         rawNonce: "mock-raw-nonce"
     )
 }
@@ -111,7 +109,6 @@ extension SignInWithAppleClient: DependencyKey {
                     authorizationCode: credential.authorizationCode
                         .flatMap { String(data: $0, encoding: .utf8) },
                     idToken: idToken,
-                    isFirstAuthorization: credential.email != nil,
                     rawNonce: rawNonce
                 )
             }

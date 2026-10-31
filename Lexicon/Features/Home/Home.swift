@@ -33,13 +33,6 @@ struct Home {
         case entrySave
     }
 
-    @CasePathable
-    @dynamicMemberLookup
-    enum SessionOrigin: Equatable {
-        case freshSignIn(isNewAccount: Bool)
-        case restored
-    }
-
     enum SyncStatus: Equatable {
         case offline
         case synced
@@ -93,7 +86,7 @@ struct Home {
 
         var isFreshSignIn: Bool { sessionOrigin.is(\.freshSignIn) }
 
-        var isLoadingFirstEntries: Bool { entries.is(\.loading) }
+        var isLoadingFirstContent: Bool { entries.is(\.loading) }
 
         var isReauthenticating: Bool { destination?.accountDeletion?.step == .reauthenticating }
 
@@ -191,12 +184,12 @@ struct Home {
                         await send(.entriesRetryTimerElapsed)
                     }
                     .cancellable(id: CancelID.entriesSubscription, cancelInFlight: true)
-                guard state.isLoadingFirstEntries else { return retry }
+                guard state.isLoadingFirstContent else { return retry }
                 state.$entries.withLock { $0 = .failed }
                 return .merge(retry, celebrateFirstLoad(state))
 
             case .entriesUpdated(let snapshot):
-                let isFirstLoad = state.isLoadingFirstEntries
+                let isFirstLoad = state.isLoadingFirstContent
                 state.isSyncing = snapshot.isSyncing
                 let entries = IdentifiedArray(uniqueElements: snapshot.entries)
                 state.$entries.withLock { $0 = .loaded(entries) }

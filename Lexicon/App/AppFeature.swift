@@ -36,7 +36,7 @@ struct AppFeature {
             case nil:
                 return true
             case .home(let home):
-                return isDeletingAccount || home.isLoadingFirstEntries || isSignedOutSettling
+                return isDeletingAccount || home.isLoadingFirstContent || isSignedOutSettling
             case .signIn(let signIn):
                 return isSignedOutSettling || signIn.isAuthenticating
             }
@@ -50,21 +50,15 @@ struct AppFeature {
             switch scene {
             case .home(let home) where home.isDeletingAccount && !home.isReauthenticating:
                 return String(localized: "Deleting your account…")
-            case .home(let home) where home.isLoadingFirstEntries:
-                guard let isNewAccount = home.sessionOrigin.freshSignIn else { return nil }
-                return Self.signInMessage(isCreatingAccount: isNewAccount)
+            case .home(let home) where home.isLoadingFirstContent:
+                guard home.sessionOrigin == .freshSignIn else { return nil }
+                return String(localized: "Signing in…")
             case .signIn(let signIn):
-                guard case .signingIn(let isNewAccount) = signIn.step else { return nil }
-                return Self.signInMessage(isCreatingAccount: isNewAccount)
+                guard signIn.step == .signingIn else { return nil }
+                return String(localized: "Signing in…")
             case nil, .home:
                 return nil
             }
-        }
-
-        private static func signInMessage(isCreatingAccount: Bool) -> String {
-            isCreatingAccount
-                ? String(localized: "Creating your account…")
-                : String(localized: "Signing in…")
         }
     }
 
@@ -92,7 +86,6 @@ struct AppFeature {
 
     @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
-    @Dependency(\.entriesClient) var entriesClient
     @Dependency(\.signInWithAppleClient) var signInWithAppleClient
 
     var body: some Reducer<State, Action> {
@@ -113,9 +106,6 @@ struct AppFeature {
 
             case .authUserChanged(let user):
                 return resolveAuthChange(&state, user: user)
-
-            case .scene(.home(.destination(.presented(.accountDeletion(.delegate))))):
-                return verifyAppleCredential()
 
             case .scene:
                 return .none
@@ -152,14 +142,20 @@ struct AppFeature {
         .ifLet(\.scene, action: \.scene) {
             Scene.body
         }
+        .onChange(of: \.isDeletingAccount) { wasDeletingAccount, isDeletingAccount in
+            Reduce { state, _ in
+                guard wasDeletingAccount, !isDeletingAccount, state.hasLiveSession else { return .none }
+                return verifyAppleCredential()
+            }
+        }
     }
 
     private func clearLocalData() -> Effect<Action> {
         .run { _ in
-            try await entriesClient.clearLocalData()
+            try await clearAppLocalData()
         } catch: { error, _ in
-            logger.error("Clearing the local entries data failed: \(error, privacy: .public)")
-            reportIssue(error, "Clearing the local entries data failed.")
+            logger.error("Clearing the local data failed: \(error, privacy: .public)")
+            reportIssue(error, "Clearing the local data failed.")
         }
     }
 
@@ -194,12 +190,7 @@ struct AppFeature {
         case (.signIn(let signIn), .some(let user)):
             let isFreshSignIn = signIn.isAuthenticating
             state.scene = .home(
-                Home.State(
-                    user: user,
-                    sessionOrigin: isFreshSignIn
-                        ? .freshSignIn(isNewAccount: signIn.isCreatingAccount)
-                        : .restored
-                )
+                Home.State(user: user, sessionOrigin: isFreshSignIn ? .freshSignIn : .restored)
             )
             return isFreshSignIn ? .none : verifyAppleCredential()
 
@@ -215,7 +206,7 @@ struct AppFeature {
             state.isSignedOutSettling = false
             state.scene = nil
             return .concatenate(
-                .cancel(id: CancelID.signedOutSettle),
+                .merge(.cancel(id: CancelID.appleCredentialCheck), .cancel(id: CancelID.signedOutSettle)),
                 clearLocalData(),
                 .run { send in await send(.authUserChanged(authClient.currentUser())) }
             )
@@ -257,17 +248,5 @@ struct AppFeature {
 }
 
 extension AppFeature.Scene.State: Equatable {}
-
-extension SharedKey where Self == AppStorageKey<Bool>.Default {
-    static var hasDismissedWelcome: Self {
-        Self[.appStorage("hasDismissedWelcome"), default: false]
-    }
-
-    #if DEBUG
-    static var showsWelcomeAtNextLaunch: Self {
-        Self[.appStorage("showsWelcomeAtNextLaunch"), default: false]
-    }
-    #endif
-}
 
 private let logger = Logger(category: "AppFeature")

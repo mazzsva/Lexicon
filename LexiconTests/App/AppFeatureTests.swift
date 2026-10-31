@@ -213,7 +213,7 @@ extension BaseSuite {
         @Test
         func finishingTheSignInRoutesToHomeAsAFreshSignIn() async {
             var signIn = SignIn.State()
-            signIn.step = .signingIn(isNewAccount: true)
+            signIn.step = .signingIn
             var state = AppFeature.State()
             state.scene = .signIn(signIn)
 
@@ -223,7 +223,7 @@ extension BaseSuite {
 
             await store.send(.authUserChanged(.mock)) {
                 $0.scene = .home(
-                    Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: true))
+                    Home.State(user: .mock, sessionOrigin: .freshSignIn)
                 )
             }
             await store.finish()
@@ -344,13 +344,10 @@ extension BaseSuite {
             expectNoDifference(state.loadingMessage, nil)
 
             var signIn = SignIn.State()
-            signIn.step = .signingIn(isNewAccount: false)
+            signIn.step = .signingIn
             state.scene = .signIn(signIn)
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
-
-            state.scene?.modify(\.signIn) { $0.step = .signingIn(isNewAccount: true) }
-            expectNoDifference(state.loadingMessage, "Creating your account…")
 
             var home = Home.State(user: .mock)
             home.destination = .accountDeletion(AccountDeletion.State(step: .reauthenticating, uid: User.mock.uid))
@@ -362,7 +359,7 @@ extension BaseSuite {
             expectNoDifference(state.loadingMessage, "Deleting your account…")
 
             state.scene = .home(
-                Home.State(user: .mock, sessionOrigin: .freshSignIn(isNewAccount: false))
+                Home.State(user: .mock, sessionOrigin: .freshSignIn)
             )
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, "Signing in…")
@@ -527,6 +524,7 @@ extension BaseSuite {
         @Test
         func aSignOutCancelsTheCredentialCheck() async {
             let isCheckCanceled = LockIsolated(false)
+            let isCheckRunning = LockIsolated(false)
             var state = AppFeature.State()
             state.scene = .home(Home.State(user: .mock))
 
@@ -539,6 +537,7 @@ extension BaseSuite {
                 $0.entriesClient.clearLocalData = {}
                 $0.signInWithAppleClient.credentialState = { _ in
                     await withTaskCancellationHandler {
+                        isCheckRunning.setValue(true)
                         _ = try? await Task.never()
                     } onCancel: {
                         isCheckCanceled.setValue(true)
@@ -548,6 +547,9 @@ extension BaseSuite {
             }
 
             await store.send(.appBecameActive)
+            while !isCheckRunning.value {
+                await Task.yield()
+            }
             await store.send(.authUserChanged(nil)) {
                 $0.isSignedOutSettling = true
             }
@@ -562,6 +564,113 @@ extension BaseSuite {
             }
             await store.finish()
             #expect(isCheckCanceled.value)
+        }
+
+        // A late answer for the old user must not sign out the new one
+        @Test
+        func anAccountSwitchCancelsTheCredentialCheck() async {
+            let isCheckCanceled = LockIsolated(false)
+            let isCheckRunning = LockIsolated(false)
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { "apple-user" }
+                $0.authClient.currentUser = { nil }
+                $0.entriesClient.clearLocalData = {}
+                $0.signInWithAppleClient.credentialState = { _ in
+                    await withTaskCancellationHandler {
+                        isCheckRunning.setValue(true)
+                        _ = try? await Task.never()
+                    } onCancel: {
+                        isCheckCanceled.setValue(true)
+                    }
+                    return .revoked
+                }
+            }
+
+            await store.send(.appBecameActive)
+            while !isCheckRunning.value {
+                await Task.yield()
+            }
+            await withKnownIssue {
+                await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
+                    $0.scene = nil
+                }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
+            }
+            await store.receive(\.authUserChanged, nil) {
+                $0.scene = .signIn(SignIn.State())
+            }
+            await store.finish()
+            #expect(isCheckCanceled.value)
+        }
+
+        // The sign-out timers of the old session must not hide the new one
+        @Test
+        func anAccountSwitchDuringTheSignOutCancelsTheTimers() async {
+            let other = User(email: "other@example.com", uid: "other-uid")
+            var state = AppFeature.State()
+            state.scene = .home(Home.State(user: .mock))
+
+            let clock = TestClock()
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            } withDependencies: {
+                $0.authClient.appleUserID = { nil }
+                $0.authClient.currentUser = { other }
+                $0.continuousClock = clock
+                $0.entriesClient.clearLocalData = {}
+            }
+
+            await store.send(.authUserChanged(nil)) {
+                $0.isSignedOutSettling = true
+            }
+            await withKnownIssue {
+                await store.send(.authUserChanged(other)) {
+                    $0.isSignedOutSettling = false
+                    $0.scene = nil
+                }
+            } matching: {
+                $0.comments.contains { $0.rawValue == "Auth changed accounts without signing out first." }
+            }
+            await store.receive(\.authUserChanged, other) {
+                $0.scene = .home(Home.State(user: other))
+            }
+            await clock.advance(by: AppFeature.signedOutCoverDelay + AppFeature.signedOutSettleDelay)
+            await store.finish()
+        }
+
+        // The sign out is already in progress, so a second one would stop it
+        @Test
+        func theCredentialChecksAreIgnoredWhileSigningOut() async {
+            var state = AppFeature.State()
+            state.isSignedOutSettling = true
+            state.scene = .home(Home.State(user: .mock))
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            }
+
+            await store.send(.appBecameActive)
+            await store.send(.appleCredentialRevoked)
+        }
+
+        // The sign-in scene does not hold a session, so it has nothing to check
+        @Test
+        func theCredentialChecksAreIgnoredOutsideTheHomeScene() async {
+            var state = AppFeature.State()
+            state.scene = .signIn(SignIn.State())
+
+            let store = TestStore(initialState: state) {
+                AppFeature()
+            }
+
+            await store.send(.appBecameActive)
+            await store.send(.appleCredentialRevoked)
         }
     }
 }
