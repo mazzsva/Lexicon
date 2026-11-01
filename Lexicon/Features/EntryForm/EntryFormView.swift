@@ -241,7 +241,7 @@ struct EntryFormView: View {
         let announcement =
             store.generation.is(\.lookingUp)
             ? AttributedString(localized: "Looking up the term…")
-            : AttributedString(localized: "Writing…")
+            : AttributedString(localized: "Writing the definition…")
         AccessibilityNotification.Announcement(announcement).post()
     }
 
@@ -301,7 +301,7 @@ private struct GeneratingLabel: View {
             if isLookingUp {
                 Text("Looking up the term…")
             } else {
-                Text("Writing…")
+                Text("Writing the definition…")
             }
         }
         .foregroundStyle(.secondary)
