@@ -238,7 +238,11 @@ struct EntryFormView: View {
             isFollowingGeneration = true
         }
         guard isGenerating, isVoiceOverEnabled else { return }
-        AccessibilityNotification.Announcement(AttributedString(localized: "Writing definition")).post()
+        let announcement =
+            store.generation.is(\.lookingUp)
+            ? AttributedString(localized: "Looking up the term…")
+            : AttributedString(localized: "Writing…")
+        AccessibilityNotification.Announcement(announcement).post()
     }
 
     private func generationCompleted() {
