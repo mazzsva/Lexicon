@@ -4,3 +4,5 @@ xcuserdata/
 build/
 DerivedData/
 *.xcresult
+firebase-debug.log
+firestore-debug.log

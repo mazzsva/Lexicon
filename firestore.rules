@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isValidEntry(data) {
+      return data.keys().hasOnly(['createdAt', 'definition', 'isBookmarked', 'term'])
+        && data.keys().hasAll(['createdAt', 'definition', 'isBookmarked', 'term'])
+        && data.createdAt is timestamp
+        && data.definition is string
+        && data.isBookmarked is bool
+        && data.term is string
+        && data.term.matches('(?s).*\\S.*')
+        && data.term.size() <= 1000
+        && data.definition.size() <= 50000;
+    }
+
+    match /users/{uid} {
+      match /entries/{entryId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidEntry(request.resource.data);
+        allow update: if isOwner(uid)
+          && isValidEntry(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+    }
+  }
+}
