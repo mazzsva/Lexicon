@@ -291,8 +291,7 @@ extension EntryForm.Note {
 
 private struct GeneratingLabel: View {
     var body: some View {
-        Label("Writing…", systemImage: "sparkles")
-            .symbolEffect(.variableColor.iterative)
+        Text("Writing…")
             .foregroundStyle(.secondary)
             .accessibilityHidden(true)
     }
