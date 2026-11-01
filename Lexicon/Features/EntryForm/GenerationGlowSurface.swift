@@ -17,7 +17,7 @@ struct GenerationGlowSurface: View {
     nonisolated static let earliestCompletion: Double = 1.0
     nonisolated static let homeArrival: Double = 0.72
 
-    nonisolated private static let cornerRadius: Float = 26
+    nonisolated static let cornerRadius: CGFloat = 26
     private static let unset: Float = 1e6
 
     @Environment(\.colorScheme) private var colorScheme
@@ -79,7 +79,7 @@ struct GenerationGlowSurface: View {
     ) -> Shader {
         ShaderLibrary.default.generationGlow(
             .float2(size),
-            .float(cornerRadius),
+            .float(Float(cornerRadius)),
             .float(time),
             .float(writingStart),
             .float(completion),

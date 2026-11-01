@@ -50,6 +50,7 @@ struct GenerationGlow: View {
                         .transition(.identity)
                 }
             }
+            .clipShape(ConcentricRectangle(corners: .concentric(minimum: .fixed(GenerationGlowSurface.cornerRadius))))
             .onChange(of: definition) { definitionChanged() }
             .onChange(of: generation) { generationChanged() }
             .onChange(of: reduceMotion) { reduceMotionChanged() }
