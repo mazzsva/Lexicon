@@ -17,7 +17,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 ## Quality gates
 
-- **Tests:** 193 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 181 unit tests cover every reducer and never touch the network, and 12 integration tests run against local Firebase emulators.
+- **Tests:** 193 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 179 unit tests cover every reducer and never touch the network, and 12 integration tests run against local Firebase emulators.
 - **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
 - **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
