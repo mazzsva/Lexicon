@@ -17,14 +17,17 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 ## Quality gates
 
-- **Tests:** 174 [Swift Testing](https://github.com/swiftlang/swift-testing) tests cover every reducer, and none touch the network.
-- **CI:** GitHub Actions lints and runs the full suite on every pull request that is ready for review.
+- **Tests:** 193 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 181 unit tests cover every reducer and never touch the network, and 12 integration tests run against local Firebase emulators.
+- **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
+- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on every pull request that is ready for review.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
 
 ## Engineering decisions
 
 **Definitions.** On request, the on-device Apple Intelligence model writes a one-sentence definition in simple words for English learners. Online, it reads the Wiktionary senses first, and an unknown term gets a note.
+
+**Rules that match the app.** The Firestore rules check the same limits as the form: a term of 1 to 1000 characters that is not blank, and a definition of up to 50000 characters. A bad write fails on the server, not only in the UI.
 
 **Live sync.** The entry list has one source of truth: a live Firestore listener backed by its local cache, so local changes appear at once, even offline, and sync to every other device.
 
