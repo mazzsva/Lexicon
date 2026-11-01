@@ -87,7 +87,7 @@ struct EntryFormView: View {
             .overlay(alignment: .topLeading) {
                 Group {
                     if store.isGeneratingDefinition && store.definition.isEmpty {
-                        GeneratingLabel()
+                        GeneratingLabel(isLookingUp: store.generation.is(\.lookingUp))
                             .transition(.asymmetric(insertion: .opacity, removal: .identity))
                     } else if !store.isGeneratingDefinition && store.definition.isEmpty {
                         placeholder
@@ -290,10 +290,18 @@ extension EntryForm.Note {
 }
 
 private struct GeneratingLabel: View {
+    let isLookingUp: Bool
+
     var body: some View {
-        Text("Writing…")
-            .foregroundStyle(.secondary)
-            .accessibilityHidden(true)
+        Group {
+            if isLookingUp {
+                Text("Looking up the term…")
+            } else {
+                Text("Writing…")
+            }
+        }
+        .foregroundStyle(.secondary)
+        .accessibilityHidden(true)
     }
 }
 
