@@ -15,7 +15,8 @@ struct Entry: Equatable, Identifiable, Sendable {
     }
 
     struct Content: Hashable, Sendable {
-        static let maximumSize = 1_000_000
+        static let maximumDefinitionLength = 50_000
+        static let maximumTermLength = 1000
 
         let definition: String
         let term: String
@@ -24,7 +25,10 @@ struct Entry: Equatable, Identifiable, Sendable {
             let term = term.trimmingCharacters(in: .whitespacesAndNewlines)
             let definition = definition.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !term.isEmpty else { throw .emptyTerm }
-            guard term.utf8.count + definition.utf8.count <= Self.maximumSize else { throw .tooLarge }
+            guard term.utf16.count <= Self.maximumTermLength, definition.utf16.count <= Self.maximumDefinitionLength
+            else {
+                throw .tooLarge
+            }
             self.definition = definition
             self.term = term
         }

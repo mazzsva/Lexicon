@@ -94,9 +94,9 @@ extension BaseSuite {
         }
 
         @Test
-        func savingAnEntryOverTheSizeLimitDoesNothing() async {
-            let term = String(repeating: "a", count: Entry.Content.maximumSize / 2)
-            let definition = String(repeating: "é", count: Entry.Content.maximumSize / 4 + 1)
+        func savingAnEntryOverTheLengthLimitDoesNothing() async {
+            let term = String(repeating: "a", count: Entry.Content.maximumTermLength + 1)
+            let definition = "A long term."
 
             let store = TestStore(initialState: EntryForm.State()) {
                 EntryForm()

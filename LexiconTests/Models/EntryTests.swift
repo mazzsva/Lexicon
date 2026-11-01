@@ -41,10 +41,9 @@ extension BaseSuite {
         }
 
         @Test
-        func theSizeLimitCountsTheUTF8BytesOfTheTermAndTheDefinition() throws {
-            let term = String(repeating: "\u{E9}", count: Entry.Content.maximumSize / 4)
-            let definition = String(repeating: "👋", count: (Entry.Content.maximumSize - term.utf8.count) / 4)
-            try #require(term.utf8.count + definition.utf8.count == Entry.Content.maximumSize)
+        func theLimitsCountTheUTF16UnitsOfTheTermAndTheDefinitionSeparately() throws {
+            let term = String(repeating: "👋", count: Entry.Content.maximumTermLength / 2)
+            let definition = String(repeating: "é", count: Entry.Content.maximumDefinitionLength)
 
             expectNoDifference(
                 try Entry.Content(term: term, definition: "\n   " + definition + "   \n"),
