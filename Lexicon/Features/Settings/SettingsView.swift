@@ -73,8 +73,6 @@ struct SettingsView: View {
             }
             .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         }
-        // The swipe stays disabled at every step so the user leaves Settings only through the Dismiss button
-        .interactiveDismissDisabled()
     }
 }
 
