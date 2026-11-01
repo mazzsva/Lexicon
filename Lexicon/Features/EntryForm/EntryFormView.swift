@@ -169,7 +169,6 @@ struct EntryFormView: View {
         .buttonBorderShape(.circle)
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .disabled(!store.isGenerateButtonEnabled)
-        .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
         .accessibilityLabel(generateButtonTitle)
         .accessibilityHint(generateButtonHint)
         .accessibilityInputLabels(isGenerating ? ["Stop", "Stop Generating"] : ["Generate", "Generate Definition"])

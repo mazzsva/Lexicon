@@ -7,9 +7,6 @@
     "^[%lld Entry](inflect: true)" : {
 
     },
-    "A generated definition will replace the one you wrote." : {
-
-    },
     "Are you sure you want to delete this entry?" : {
 
     },
@@ -113,12 +110,6 @@
 
     },
     "Remove Bookmark" : {
-
-    },
-    "Replace Definition" : {
-
-    },
-    "Replace Your Definition?" : {
 
     },
     "Save" : {

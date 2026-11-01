@@ -11,10 +11,6 @@ import os
 
 @Reducer
 struct EntryForm {
-    enum ConfirmationDialog: Equatable {
-        case confirmReplacement
-    }
-
     struct GeneratedDefinition: Equatable {
         var correctForm: String?
         let text: String
@@ -36,7 +32,6 @@ struct EntryForm {
     @ObservableState
     struct State: Equatable {
         var completedGenerationCount = 0
-        @Presents var confirmationDialog: ConfirmationDialogState<ConfirmationDialog>?
         var definition: String
         let entry: Entry?
         var generatedDefinition: GeneratedDefinition?
@@ -87,11 +82,6 @@ struct EntryForm {
             trimmedTerm.count > EntryForm.maximumGeneratableTermLength
         }
 
-        var needsReplacementConfirmation: Bool {
-            !isDefinitionBlank
-                && definition != generatedDefinition?.text
-        }
-
         var note: Note? {
             switch generation {
             case .failed(let error):
@@ -114,7 +104,6 @@ struct EntryForm {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case confirmationDialog(PresentationAction<ConfirmationDialog>)
         case definitionGenerated(String)
         case definitionGenerationFailed(any Error)
         case definitionGenerationFinished(correctForm: String?)
@@ -171,12 +160,6 @@ struct EntryForm {
             case .binding:
                 return .none
 
-            case .confirmationDialog(.presented(.confirmReplacement)):
-                return generateDefinition(&state)
-
-            case .confirmationDialog:
-                return .none
-
             case .definitionGenerated(let definition):
                 guard state.generation.is(\.writing) else { return .none }
                 state.definition = definition
@@ -221,10 +204,6 @@ struct EntryForm {
 
             case .generateDefinitionButtonTapped:
                 guard state.generatableTerm != nil else { return .none }
-                guard !state.needsReplacementConfirmation else {
-                    state.confirmationDialog = .confirmReplacement
-                    return .none
-                }
                 return generateDefinition(&state)
 
             case .saveButtonTapped:
@@ -255,7 +234,6 @@ struct EntryForm {
                 return .run { _ in definitionClient.prewarm() }
             }
         }
-        .ifLet(\.$confirmationDialog, action: \.confirmationDialog)
     }
 
     private func clearFailure(_ state: inout State) {
@@ -331,21 +309,6 @@ struct EntryForm {
             }
         }
         .cancellable(id: CancelID.generation)
-    }
-}
-
-extension ConfirmationDialogState where Action == EntryForm.ConfirmationDialog {
-    static let confirmReplacement = ConfirmationDialogState(titleVisibility: .visible) {
-        TextState("Replace Your Definition?")
-    } actions: {
-        ButtonState(role: .destructive, action: .confirmReplacement) {
-            TextState("Replace Definition")
-        }
-        ButtonState(role: .cancel) {
-            TextState("Cancel")
-        }
-    } message: {
-        TextState("A generated definition will replace the one you wrote.")
     }
 }
 

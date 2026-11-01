@@ -277,7 +277,7 @@ extension BaseSuite {
         }
 
         @Test
-        func generatingOverAWrittenDefinitionAsksAndThenReplacesIt() async {
+        func generatingOverAWrittenDefinitionReplacesIt() async {
             let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
             var state = Self.generatableState(term: "Once in a blue moon")
             state.definition = "A rare event."
@@ -292,13 +292,6 @@ extension BaseSuite {
             }
 
             await store.send(.generateDefinitionButtonTapped) {
-                $0.confirmationDialog = .confirmReplacement
-            }
-            await store.finish()
-            expectNoDifference(haptics.value, [])
-
-            await store.send(.confirmationDialog(.presented(.confirmReplacement))) {
-                $0.confirmationDialog = nil
                 $0.definition = ""
                 $0.generation = .lookingUp(previousDefinition: "A rare event.", term: "Once in a blue moon")
                 $0.isAwaitingEarliestCompletion = true
@@ -580,18 +573,6 @@ extension BaseSuite {
         }
 
         @Test
-        func generatingOverAnEditedGeneratedDefinitionAsks() async {
-            var state = Self.generatableState(term: "Once in a blue moon")
-            state.definition = "Something that happens very rarely, almost never."
-            state.generatedDefinition = EntryForm.GeneratedDefinition(text: "Something that happens very rarely.")
-            let store = Self.store(state)
-
-            await store.send(.generateDefinitionButtonTapped) {
-                $0.confirmationDialog = .confirmReplacement
-            }
-        }
-
-        @Test
         func generatingOverABlankDefinitionDoesNotAsk() async {
             var state = Self.generatableState(term: "Once in a blue moon")
             state.definition = "  \n "
@@ -611,20 +592,6 @@ extension BaseSuite {
                 $0.definition = "  \n "
                 $0.generation = nil
                 $0.isAwaitingEarliestCompletion = false
-            }
-        }
-
-        @Test
-        func cancelingTheReplacementKeepsTheWrittenDefinition() async {
-            var state = Self.generatableState(term: "Once in a blue moon")
-            state.definition = "A rare event."
-            let store = Self.store(state)
-
-            await store.send(.generateDefinitionButtonTapped) {
-                $0.confirmationDialog = .confirmReplacement
-            }
-            await store.send(.confirmationDialog(.dismiss)) {
-                $0.confirmationDialog = nil
             }
         }
 
