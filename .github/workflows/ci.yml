@@ -59,6 +59,7 @@ jobs:
         run: swift format lint --recursive --strict Lexicon LexiconTests
 
       - name: Run the tests
+        timeout-minutes: 15
         run: |
           xcodebuild test \
             -scheme Lexicon \
@@ -68,9 +69,34 @@ jobs:
             -skipMacroValidation \
             -resultBundlePath TestResults.xcresult
 
+      - name: Install the Firebase emulators
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: |
+          brew install openjdk@21
+          npm install --global firebase-tools@15
+
+      - name: Run the integration tests
+        timeout-minutes: 10
+        run: |
+          DESTINATION="platform=iOS Simulator,id=$SIMULATOR_UDID" scripts/test-integration.sh \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -parallel-testing-enabled NO \
+            -skipMacroValidation \
+            -resultBundlePath IntegrationResults.xcresult
+
+      - name: Check that the integration tests ran
+        run: |
+          xcrun xcresulttool get test-results summary --path IntegrationResults.xcresult --compact \
+            | jq -e '.passedTests > 0 and .skippedTests == 0'
+
       - name: Upload the test results
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: TestResults
-          path: TestResults.xcresult
+          path: |
+            TestResults.xcresult
+            IntegrationResults.xcresult
+            firebase-debug.log
+            firestore-debug.log
