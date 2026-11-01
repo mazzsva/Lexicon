@@ -13,13 +13,14 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
   <tr><td><b>Backend</b></td><td>Firebase</td></tr>
   <tr><td><b>Database</b></td><td>Cloud Firestore</td></tr>
   <tr><td><b>Authentication</b></td><td>Sign in with Apple</td></tr>
+  <tr><td><b>Testing</b></td><td><a href="https://github.com/swiftlang/swift-testing">Swift Testing</a></td></tr>
 </table>
 
 ## Quality gates
 
-- **Tests:** 193 [Swift Testing](https://github.com/swiftlang/swift-testing) tests: 179 unit tests cover every reducer and never touch the network, and 12 integration tests run against local Firebase emulators.
+- **Tests:** 193 Swift Testing tests: 179 offline unit tests and 12 integration tests on Firebase emulators.
 - **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
-- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on every pull request that is ready for review.
+- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on each ready pull request.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
 
@@ -27,7 +28,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 **Definitions.** On request, the on-device Apple Intelligence model writes a one-sentence definition in simple words for English learners. Online, it reads the Wiktionary senses first, and an unknown term gets a note.
 
-**Rules that match the app.** The Firestore rules check the same limits as the form: a term of 1 to 1000 characters that is not blank, and a definition of up to 50000 characters. A bad write fails on the server, not only in the UI.
+**Rules that match the app.** The Firestore rules enforce the form's limits: a term of 1 to 1000 characters that is not blank, and a definition of up to 50000 characters. A bad write fails on the server, not only in the UI.
 
 **Live sync.** The entry list has one source of truth: a live Firestore listener backed by its local cache, so local changes appear at once, even offline, and sync to every other device.
 
