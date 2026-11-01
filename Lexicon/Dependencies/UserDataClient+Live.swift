@@ -9,10 +9,9 @@ import Dependencies
 
 extension UserDataClient: DependencyKey {
     static var liveValue: UserDataClient {
-        @Dependency(\.entriesClient) var entriesClient
-        return UserDataClient(
+        UserDataClient(
             deleteAll: { uid, didDeleteSomeData in
-                try await entriesClient.deleteAll(uid)
+                try await FirestoreStorage.shared.deleteAll(uid: uid)
                 await didDeleteSomeData()
             }
         )
