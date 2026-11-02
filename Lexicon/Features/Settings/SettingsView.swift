@@ -29,13 +29,13 @@ struct SettingsView: View {
                 }
                 Section {
                     Button("Sign Out") {
-                        store.send(.signOutButtonTapped)
+                        store.send(.account(.signOutButtonTapped))
                     }
                 }
                 .listSectionSpacing(.custom(8))
                 Section {
                     Button("Delete Account", role: .destructive) {
-                        store.send(.deleteAccountButtonTapped)
+                        store.send(.account(.deleteAccountButtonTapped))
                     }
                 }
                 #if DEBUG
@@ -72,7 +72,7 @@ struct SettingsView: View {
                     .labelStyle(.iconOnly)
                 }
             }
-            .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+            .alert($store.scope(state: \.account.alert, action: \.account.alert))
         }
     }
 }

@@ -156,7 +156,7 @@ struct Home {
                 return .none
 
             case .destination(.presented(.accountDeletion(.delegate(.didFail(let failure))))):
-                presentSettings(&state, destination: .alert(.accountDeletionFailed(failure)))
+                presentSettings(&state, alert: .accountDeletionFailed(failure))
                 return .none
 
             case .destination(.presented(.createEntry(.delegate(.didCreate(let entry))))):
@@ -166,7 +166,7 @@ struct Home {
                     create(entry, uid: state.user.uid)
                 )
 
-            case .destination(.presented(.settings(.delegate(.didConfirmAccountDeletion)))):
+            case .destination(.presented(.settings(.account(.delegate(.didConfirmAccountDeletion))))):
                 state.destination = .accountDeletion(AccountDeletion.State(uid: state.user.uid))
                 return .send(.destination(.presented(.accountDeletion(.deletionConfirmed))))
 
@@ -297,8 +297,8 @@ struct Home {
         .cancellable(id: CancelID.connectivitySubscription, cancelInFlight: true)
     }
 
-    private func presentSettings(_ state: inout State, destination: Settings.Destination.State? = nil) {
-        state.destination = .settings(Settings.State(destination: destination, user: state.user))
+    private func presentSettings(_ state: inout State, alert: AlertState<AccountSettings.Alert>? = nil) {
+        state.destination = .settings(Settings.State(account: AccountSettings.State(alert: alert), user: state.user))
     }
 
     private func subscribeToEntries(_ state: State) -> Effect<Action> {

@@ -746,7 +746,9 @@ extension BaseSuite {
         func confirmingTheAccountDeletionClosesTheSettingsAndCancelingReopensThem() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
-            state.destination = .settings(Settings.State(destination: .alert(.confirmAccountDeletion), user: .mock))
+            state.destination = .settings(
+                Settings.State(account: AccountSettings.State(alert: .confirmAccountDeletion), user: .mock)
+            )
 
             let store = TestStore(initialState: state) {
                 Home()
@@ -755,11 +757,11 @@ extension BaseSuite {
             }
 
             await store.send(
-                .destination(.presented(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
+                .destination(.presented(.settings(.account(.alert(.presented(.confirmAccountDeletion))))))
             ) {
-                $0.destination?.modify(\.settings) { $0.destination = nil }
+                $0.destination?.modify(\.settings) { $0.account.alert = nil }
             }
-            await store.receive(\.destination.presented.settings.delegate.didConfirmAccountDeletion) {
+            await store.receive(\.destination.presented.settings.account.delegate.didConfirmAccountDeletion) {
                 $0.destination = .accountDeletion(AccountDeletion.State(uid: AccountUser.mock.uid))
             }
             await store.receive(\.destination.presented.accountDeletion.deletionConfirmed)
@@ -785,7 +787,10 @@ extension BaseSuite {
             }
             await store.send(.destination(.presented(.accountDeletion(.delegate(.didFail(.notFullyDeleted)))))) {
                 $0.destination = .settings(
-                    Settings.State(destination: .alert(.accountDeletionFailed(.notFullyDeleted)), user: .mock)
+                    Settings.State(
+                        account: AccountSettings.State(alert: .accountDeletionFailed(.notFullyDeleted)),
+                        user: .mock
+                    )
                 )
             }
             await store.send(.destination(.dismiss)) {

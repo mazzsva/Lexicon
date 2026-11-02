@@ -327,7 +327,7 @@ extension BaseSuite {
                         .modify(\.home) { home in
                             home.destination = .settings(
                                 Settings.State(
-                                    destination: failure.map { .alert(.accountDeletionFailed($0)) },
+                                    account: AccountSettings.State(alert: failure.map { .accountDeletionFailed($0) }),
                                     user: .mock
                                 )
                             )
@@ -394,25 +394,26 @@ extension BaseSuite {
                         home.destination = .settings(Settings.State(user: .mock))
                     }
             }
-            await store.send(\.scene.home.destination.settings.deleteAccountButtonTapped) {
+            await store.send(\.scene.home.destination.settings.account.deleteAccountButtonTapped) {
                 $0.scene?
                     .modify(\.home) { home in
-                        home.destination?.modify(\.settings) { $0.destination = .alert(.confirmAccountDeletion) }
+                        home.destination?.modify(\.settings) { $0.account.alert = .confirmAccountDeletion }
                     }
             }
             await store.send(
                 .scene(
                     .home(
-                        .destination(.presented(.settings(.destination(.presented(.alert(.confirmAccountDeletion))))))
+                        .destination(.presented(.settings(.account(.alert(.presented(.confirmAccountDeletion))))))
                     )
                 )
             ) {
                 $0.scene?
                     .modify(\.home) { home in
-                        home.destination?.modify(\.settings) { $0.destination = nil }
+                        home.destination?.modify(\.settings) { $0.account.alert = nil }
                     }
             }
-            await store.receive(\.scene.home.destination.presented.settings.delegate.didConfirmAccountDeletion) {
+            await store.receive(\.scene.home.destination.presented.settings.account.delegate.didConfirmAccountDeletion)
+            {
                 $0.scene?
                     .modify(\.home) {
                         $0.destination = .accountDeletion(AccountDeletion.State(uid: AccountUser.mock.uid))
