@@ -336,6 +336,20 @@ struct Home {
 
 extension Home.Destination.State: Equatable {}
 
+extension Home: SignedInFeature {
+    static func clearLocalData() async throws {
+        @Dependency(\.entriesClient) var entriesClient
+        try await entriesClient.clearLocalData()
+    }
+
+    static func deleteUserData(uid: String, didDeleteSomeData: @Sendable () async -> Void) async throws {
+        try await FirestoreStorage.shared.deleteAll(uid: uid)
+        await didDeleteSomeData()
+    }
+}
+
+extension Home.State: SignedInState {}
+
 extension AlertState where Action == Home.Alert {
     static func failed(_ failure: Home.Failure) -> AlertState {
         AlertState {

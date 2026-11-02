@@ -5,11 +5,12 @@
 //  Created by Lorenzo Mazzarotto on 04/07/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import SwiftUI
 
 struct AppView: View {
-    @Bindable var store: StoreOf<AppFeature>
+    @Bindable var store: StoreOf<AccountSession<Home>>
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -27,7 +28,7 @@ struct AppView: View {
                     .ignoresSafeArea()
             }
         }
-        .loadingWindow(isVisible: store.isLoading, message: store.loadingMessage)
+        .loadingWindow(isVisible: store.isLoading, message: store.loadingReason.map(Self.loadingMessage))
         .sheet(isPresented: $store.isPresentingWelcome.sending(\.welcomePresentationChanged)) {
             WelcomeView { store.send(.welcomeContinueButtonTapped) }
                 .interactiveDismissDisabled()
@@ -37,12 +38,21 @@ struct AppView: View {
             if newPhase == .active { store.send(.appBecameActive) }
         }
     }
+
+    static func loadingMessage(_ reason: SessionLoadingReason) -> String {
+        switch reason {
+        case .deletingAccount:
+            String(localized: "Deleting your account…")
+        case .signingIn:
+            String(localized: "Signing in…")
+        }
+    }
 }
 
 #Preview {
     AppView(
-        store: Store(initialState: AppFeature.State()) {
-            AppFeature()
+        store: Store(initialState: AccountSession<Home>.State()) {
+            AccountSession<Home>()
         }
     )
 }
