@@ -549,7 +549,7 @@
 			repositoryURL = "https://github.com/mazzsva/AccountKit";
 			requirement = {
 				kind = revision;
-				revision = 9202c269c2c31f493bd013d53b034b77e5beb1bd;
+				revision = e12a86aae18b333ed31f1ab29fa6f0575758e445;
 			};
 		};
 		EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
