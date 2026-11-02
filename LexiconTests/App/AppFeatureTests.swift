@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 01/09/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import CustomDump
 import Testing
@@ -18,7 +19,7 @@ extension BaseSuite {
         // Firebase and Apple report the two events that can start or end a session
         @Test
         func theTaskObservesTheAuthChangesAndTheCredentialRevocations() async {
-            let authChanges = AsyncStream<User?>.makeStream()
+            let authChanges = AsyncStream<AccountUser?>.makeStream()
             let revocations = AsyncStream<Void>.makeStream()
 
             await confirmation("Signs the user out") { signsOut in
@@ -288,7 +289,8 @@ extension BaseSuite {
         @Test
         func theCredentialChecksAreIgnoredWhileDeletingTheAccount() async {
             var home = Home.State(user: .mock)
-            home.destination = .accountDeletion(AccountDeletion.State(step: .credentialRevoked, uid: User.mock.uid))
+            home.destination = .accountDeletion(
+                AccountDeletion.State(step: .credentialRevoked, uid: AccountUser.mock.uid))
             var state = AppFeature.State()
             state.scene = .home(home)
 
@@ -306,7 +308,7 @@ extension BaseSuite {
         )
         func endingTheAccountDeletionVerifiesTheCredential(failure: AccountDeletion.Failure?) async {
             var home = Home.State(user: .mock)
-            home.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid))
+            home.destination = .accountDeletion(AccountDeletion.State(uid: AccountUser.mock.uid))
             var state = AppFeature.State()
             state.scene = .home(home)
 
@@ -350,7 +352,8 @@ extension BaseSuite {
             expectNoDifference(state.loadingMessage, "Signing in…")
 
             var home = Home.State(user: .mock)
-            home.destination = .accountDeletion(AccountDeletion.State(step: .reauthenticating, uid: User.mock.uid))
+            home.destination = .accountDeletion(
+                AccountDeletion.State(step: .reauthenticating, uid: AccountUser.mock.uid))
             state.scene = .home(home)
             #expect(state.isLoading)
             expectNoDifference(state.loadingMessage, nil)
@@ -411,7 +414,9 @@ extension BaseSuite {
             }
             await store.receive(\.scene.home.destination.presented.settings.delegate.didConfirmAccountDeletion) {
                 $0.scene?
-                    .modify(\.home) { $0.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid)) }
+                    .modify(\.home) {
+                        $0.destination = .accountDeletion(AccountDeletion.State(uid: AccountUser.mock.uid))
+                    }
             }
             await store.receive(\.scene.home.destination.presented.accountDeletion.deletionConfirmed)
             expectNoDifference(store.state.loadingMessage, nil)
@@ -431,7 +436,7 @@ extension BaseSuite {
         // Auth must not change accounts without a sign out, so the app also reports an issue
         @Test
         func switchingAccountsRestartsTheSession() async {
-            let other = User(email: "other@example.com", uid: "other-uid")
+            let other = AccountUser(email: "other@example.com", uid: "other-uid")
             var state = AppFeature.State()
             state.scene = .home(Home.State(user: .mock))
 
@@ -473,7 +478,7 @@ extension BaseSuite {
             }
 
             await withKnownIssue {
-                await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
+                await store.send(.authUserChanged(AccountUser(email: "other@example.com", uid: "other-uid"))) {
                     $0.scene = nil
                 }
             } matching: {
@@ -597,7 +602,7 @@ extension BaseSuite {
                 await Task.yield()
             }
             await withKnownIssue {
-                await store.send(.authUserChanged(User(email: "other@example.com", uid: "other-uid"))) {
+                await store.send(.authUserChanged(AccountUser(email: "other@example.com", uid: "other-uid"))) {
                     $0.scene = nil
                 }
             } matching: {
@@ -613,7 +618,7 @@ extension BaseSuite {
         // The sign-out timers of the old session must not hide the new one
         @Test
         func anAccountSwitchDuringTheSignOutCancelsTheTimers() async {
-            let other = User(email: "other@example.com", uid: "other-uid")
+            let other = AccountUser(email: "other@example.com", uid: "other-uid")
             var state = AppFeature.State()
             state.scene = .home(Home.State(user: .mock))
 

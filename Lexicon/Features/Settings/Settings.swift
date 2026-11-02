@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 22/07/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import Foundation
 import os
@@ -27,7 +28,7 @@ struct Settings {
         #if DEBUG
         @Shared(.showsWelcomeAtNextLaunch) var showsWelcomeAtNextLaunch
         #endif
-        let user: User
+        let user: AccountUser
     }
 
     enum Action {

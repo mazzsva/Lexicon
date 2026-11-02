@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 31/08/26.
 //
 
+import AccountKit
 import AuthenticationServices
 import ComposableArchitecture
 import CustomDump
@@ -27,7 +28,7 @@ extension BaseSuite {
                 Home()
             } withDependencies: {
                 $0.entriesClient.entries = { uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     return entries.stream
                 }
                 $0.networkMonitorClient.connectivityChanges = { connectivity.stream }
@@ -376,7 +377,7 @@ extension BaseSuite {
                         $0.date.now = now
                         $0.entriesClient.create = { entry, uid in
                             expectNoDifference(entry, created)
-                            expectNoDifference(uid, User.mock.uid)
+                            expectNoDifference(uid, AccountUser.mock.uid)
                             savesEntry()
                         }
                         $0.hapticsClient.success = { playsHaptic() }
@@ -435,7 +436,7 @@ extension BaseSuite {
                     $0.entriesClient.updateBookmark = { id, isBookmarked, uid in
                         expectNoDifference(id, Entry.rabbitHole.id)
                         #expect(isBookmarked)
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         savesEntry()
                     }
                 }
@@ -486,7 +487,7 @@ extension BaseSuite {
                     $0.entriesClient.updateContent = { id, content, uid in
                         expectNoDifference(id, Entry.blueMoon.id)
                         expectNoDifference(content, edited)
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         savesContent()
                     }
                 }
@@ -553,7 +554,7 @@ extension BaseSuite {
                 } withDependencies: {
                     $0.entriesClient.delete = { id, uid in
                         expectNoDifference(id, Entry.blueMoon.id)
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         deletesEntry()
                     }
                     $0.hapticsClient.warning = {}
@@ -759,7 +760,7 @@ extension BaseSuite {
                 $0.destination?.modify(\.settings) { $0.destination = nil }
             }
             await store.receive(\.destination.presented.settings.delegate.didConfirmAccountDeletion) {
-                $0.destination = .accountDeletion(AccountDeletion.State(uid: User.mock.uid))
+                $0.destination = .accountDeletion(AccountDeletion.State(uid: AccountUser.mock.uid))
             }
             await store.receive(\.destination.presented.accountDeletion.deletionConfirmed)
             await store.receive(\.destination.presented.accountDeletion.deletionFailed)
@@ -773,7 +774,7 @@ extension BaseSuite {
         func aFailureWaitsForTheAccountDeletionToEnd() async {
             var state = Home.State(user: .mock)
             state.$entries.withLock { $0 = .loaded(IdentifiedArray(uniqueElements: Entry.mocks)) }
-            state.destination = .accountDeletion(AccountDeletion.State(step: .deleting, uid: User.mock.uid))
+            state.destination = .accountDeletion(AccountDeletion.State(step: .deleting, uid: AccountUser.mock.uid))
 
             let store = TestStore(initialState: state) {
                 Home()

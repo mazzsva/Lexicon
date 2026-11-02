@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 24/07/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import Foundation
 import os
@@ -50,9 +51,9 @@ struct Home {
         var pendingFailures: Set<Failure> = []
         var searchText = ""
         let sessionOrigin: SessionOrigin
-        let user: User
+        let user: AccountUser
 
-        init(user: User, sessionOrigin: SessionOrigin = .restored) {
+        init(user: AccountUser, sessionOrigin: SessionOrigin = .restored) {
             _entries = Shared(value: .loading)
             self.sessionOrigin = sessionOrigin
             self.user = user

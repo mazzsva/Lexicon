@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 26/07/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import Foundation
 import IssueReporting
@@ -65,7 +66,7 @@ struct AppFeature {
     enum Action {
         case appBecameActive
         case appleCredentialRevoked
-        case authUserChanged(User?)
+        case authUserChanged(AccountUser?)
         case scene(Scene.Action)
         case signedOutCoverTimerElapsed
         case signedOutSettleTimerElapsed
@@ -177,7 +178,7 @@ struct AppFeature {
         .cancellable(id: CancelID.credentialRevocationObservation, cancelInFlight: true)
     }
 
-    private func resolveAuthChange(_ state: inout State, user: User?) -> Effect<Action> {
+    private func resolveAuthChange(_ state: inout State, user: AccountUser?) -> Effect<Action> {
         switch (state.scene, user) {
         case (nil, nil):
             state.scene = .signIn(SignIn.State())

@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 22/07/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import SwiftUI
 

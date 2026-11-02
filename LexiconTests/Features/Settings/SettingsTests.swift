@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 31/08/26.
 //
 
+import AccountKit
 import ComposableArchitecture
 import CustomDump
 import Foundation
@@ -141,7 +142,7 @@ extension BaseSuite {
                 Settings()
             } withDependencies: {
                 $0.entriesClient.create = { entry, uid in
-                    expectNoDifference(uid, User.mock.uid)
+                    expectNoDifference(uid, AccountUser.mock.uid)
                     saved.withValue { $0.append(entry) }
                 }
             }
@@ -159,7 +160,7 @@ extension BaseSuite {
                     Settings()
                 } withDependencies: {
                     $0.entriesClient.deleteAll = { uid in
-                        expectNoDifference(uid, User.mock.uid)
+                        expectNoDifference(uid, AccountUser.mock.uid)
                         deletesAllEntries()
                     }
                 }
