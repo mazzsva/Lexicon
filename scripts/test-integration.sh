@@ -15,4 +15,4 @@ command=(
     "$@"
 )
 
-firebase emulators:exec --project demo-overhead --only auth,firestore "${(j: :)${(q)command[@]}}"
+firebase emulators:exec --project demo-lexicon --only auth,firestore "${(j: :)${(q)command[@]}}"
