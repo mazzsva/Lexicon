@@ -343,8 +343,7 @@ extension Home: SignedInFeature {
     }
 
     static func deleteUserData(uid: String, didDeleteSomeData: @Sendable () async -> Void) async throws {
-        try await FirestoreStorage.shared.deleteAll(uid: uid)
-        await didDeleteSomeData()
+        try await AccountStorage.shared.deleteAllEntries(uid: uid, didDeleteSomeData: didDeleteSomeData)
     }
 }
 

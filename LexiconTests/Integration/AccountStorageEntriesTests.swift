@@ -1,10 +1,11 @@
 //
-//  FirestoreStorageTests.swift
+//  AccountStorageEntriesTests.swift
 //  LexiconTests
 //
 //  Created by Lorenzo Mazzarotto on 01/11/26.
 //
 
+import AccountKit
 import ConcurrencyExtras
 import CustomDump
 import FirebaseAuth
@@ -17,16 +18,16 @@ import Testing
 
 extension BaseSuite.IntegrationSuite {
     @Suite
-    struct FirestoreStorageTests {
+    struct AccountStorageEntriesTests {
         @Test
         func createdEntriesArriveNewestFirstAndDeleteAllRemovesThem() async throws {
             let uid = try await FirebaseEmulators.signIn()
-            let snapshots = Recording(await FirestoreStorage.shared.entries(uid: uid))
+            let snapshots = Recording(await AccountStorage.shared.entries(uid: uid))
             defer { snapshots.cancel() }
             try await snapshots.wait { $0.last?.entries == [] }
 
             for entry in Entry.mocks {
-                try await FirestoreStorage.shared.create(entry, uid: uid)
+                try await AccountStorage.shared.create(entry, uid: uid)
             }
             try await snapshots.wait { $0.last?.entries.count == Entry.mocks.count }
             expectNoDifference(
@@ -34,38 +35,38 @@ extension BaseSuite.IntegrationSuite {
                 Entry.mocks.sorted { $0.createdAt > $1.createdAt }
             )
 
-            try await FirestoreStorage.shared.deleteAll(uid: uid)
+            try await AccountStorage.shared.deleteAllEntries(uid: uid)
             try await snapshots.wait { $0.last?.entries == [] }
         }
 
         @Test
         func aBookmarkAndAContentUpdateReachTheListener() async throws {
             let uid = try await FirebaseEmulators.signIn()
-            try await FirestoreStorage.shared.create(.blueMoon, uid: uid)
-            let snapshots = Recording(await FirestoreStorage.shared.entries(uid: uid))
+            try await AccountStorage.shared.create(.blueMoon, uid: uid)
+            let snapshots = Recording(await AccountStorage.shared.entries(uid: uid))
             defer { snapshots.cancel() }
             try await snapshots.wait { $0.last?.entries == [.blueMoon] }
 
-            try await FirestoreStorage.shared.updateBookmark(id: Entry.blueMoon.id, isBookmarked: true, uid: uid)
+            try await AccountStorage.shared.updateBookmark(id: Entry.blueMoon.id, isBookmarked: true, uid: uid)
             try await snapshots.wait { $0.last?.entries.first?.isBookmarked == true }
 
             let content = try Entry.Content(term: "Hit the books", definition: "To study hard.")
-            try await FirestoreStorage.shared.updateContent(id: Entry.blueMoon.id, content: content, uid: uid)
+            try await AccountStorage.shared.updateContent(id: Entry.blueMoon.id, content: content, uid: uid)
             try await snapshots.wait { $0.last?.entries.first?.content == content }
         }
 
         @Test
         func theRulesRefuseAnotherUsersEntries() async throws {
             let owner = try await FirebaseEmulators.signIn()
-            try await FirestoreStorage.shared.create(.blueMoon, uid: owner)
+            try await AccountStorage.shared.create(.blueMoon, uid: owner)
             _ = try await FirebaseEmulators.signIn()
 
             let error = await #expect(throws: NSError.self) {
-                try await FirestoreStorage.shared.create(.rabbitHole, uid: owner)
+                try await AccountStorage.shared.create(.rabbitHole, uid: owner)
             }
             expectNoDifference(error?.code, FirestoreErrorCode.permissionDenied.rawValue)
 
-            let snapshots = Recording(await FirestoreStorage.shared.entries(uid: owner))
+            let snapshots = Recording(await AccountStorage.shared.entries(uid: owner))
             defer { snapshots.cancel() }
             let failure = try await snapshots.waitForFailure() as NSError
             expectNoDifference(failure.code, FirestoreErrorCode.permissionDenied.rawValue)
@@ -157,7 +158,7 @@ enum FirebaseEmulators {
     static func signIn() async throws -> String {
         configuration
         try? Auth.auth().signOut()
-        try await FirestoreStorage.shared.clearLocalData()
+        try await AccountStorage.shared.clearLocalData()
         useFirestoreEmulator()
         return try await Auth.auth().signInAnonymously().user.uid
     }

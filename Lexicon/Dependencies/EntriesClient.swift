@@ -5,6 +5,7 @@
 //  Created by Lorenzo Mazzarotto on 15/07/26.
 //
 
+import AccountKit
 import Dependencies
 import DependenciesMacros
 import FirebaseFirestore
@@ -42,25 +43,25 @@ extension EntriesClient: DependencyKey {
     static var liveValue: EntriesClient {
         EntriesClient(
             clearLocalData: {
-                try await FirestoreStorage.shared.clearLocalData()
+                try await AccountStorage.shared.clearLocalData()
             },
             create: { entry, uid in
-                try await FirestoreStorage.shared.create(entry, uid: uid)
+                try await AccountStorage.shared.create(entry, uid: uid)
             },
             delete: { id, uid in
-                try await FirestoreStorage.shared.delete(id: id, uid: uid)
+                try await AccountStorage.shared.delete(id: id, uid: uid)
             },
             deleteAll: { uid in
-                try await FirestoreStorage.shared.deleteAll(uid: uid)
+                try await AccountStorage.shared.deleteAllEntries(uid: uid)
             },
             entries: { uid in
-                await FirestoreStorage.shared.entries(uid: uid)
+                await AccountStorage.shared.entries(uid: uid)
             },
             updateBookmark: { id, isBookmarked, uid in
-                try await FirestoreStorage.shared.updateBookmark(id: id, isBookmarked: isBookmarked, uid: uid)
+                try await AccountStorage.shared.updateBookmark(id: id, isBookmarked: isBookmarked, uid: uid)
             },
             updateContent: { id, content, uid in
-                try await FirestoreStorage.shared.updateContent(id: id, content: content, uid: uid)
+                try await AccountStorage.shared.updateContent(id: id, content: content, uid: uid)
             }
         )
     }
