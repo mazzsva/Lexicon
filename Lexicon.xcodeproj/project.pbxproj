@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EF070BA4A10FEBD284996969 /* AccountKit in Frameworks */ = {isa = PBXBuildFile; productRef = EF20ECD6C75EF52383D2C82F /* AccountKit */; };
 		EF5068C130437F7F0017ACD8 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = EF5068C230437F7F0017ACD8 /* DependenciesTestSupport */; };
 		EFEF340C2FF9633100E80CBE /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = EFEF340B2FF9633100E80CBE /* ComposableArchitecture */; };
 		EFEF34182FF9871900E80CBE /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = EFEF34172FF9871900E80CBE /* FirebaseCore */; };
@@ -72,6 +73,7 @@
 				EFEF341C2FF987B500E80CBE /* FirebaseFirestore in Frameworks */,
 				EFEF341A2FF9876D00E80CBE /* FirebaseAuth in Frameworks */,
 				EFEF340C2FF9633100E80CBE /* ComposableArchitecture in Frameworks */,
+				EF070BA4A10FEBD284996969 /* AccountKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -153,6 +155,7 @@
 				EFEF34172FF9871900E80CBE /* FirebaseCore */,
 				EFEF34192FF9876D00E80CBE /* FirebaseAuth */,
 				EFEF341B2FF987B500E80CBE /* FirebaseFirestore */,
+				EF20ECD6C75EF52383D2C82F /* AccountKit */,
 			);
 			productName = Lexicon;
 			productReference = EFEF33F52FF954F400E80CBE /* Lexicon.app */;
@@ -190,6 +193,7 @@
 				EFEF340A2FF9633100E80CBE /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				EFEF34152FF9863E00E80CBE /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */,
+				EF452EF2FD46E198792813B2 /* XCRemoteSwiftPackageReference "AccountKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = EFEF33F62FF954F400E80CBE /* Products */;
@@ -540,6 +544,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		EF452EF2FD46E198792813B2 /* XCRemoteSwiftPackageReference "AccountKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mazzsva/AccountKit";
+			requirement = {
+				kind = revision;
+				revision = 9202c269c2c31f493bd013d53b034b77e5beb1bd;
+			};
+		};
 		EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
@@ -569,6 +581,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		EF20ECD6C75EF52383D2C82F /* AccountKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EF452EF2FD46E198792813B2 /* XCRemoteSwiftPackageReference "AccountKit" */;
+			productName = AccountKit;
+		};
 		EF5068C230437F7F0017ACD8 /* DependenciesTestSupport */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */;

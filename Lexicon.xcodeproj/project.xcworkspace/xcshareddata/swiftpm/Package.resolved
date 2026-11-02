@@ -1,5 +1,5 @@
 {
-  "originHash" : "06e736e65fa0f9c8c3ce9223f6b0e67d8e02a63fb244428e9907a371a82296ff",
+  "originHash" : "c05e805547a5e9280d94a77f2dd83d104e33dbd295a902e332e33e8a9810b8fd",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -8,6 +8,14 @@
       "state" : {
         "revision" : "bbe8b69694d7873315fd3a4ad41efe043e1c07c5",
         "version" : "1.2024072200.0"
+      }
+    },
+    {
+      "identity" : "accountkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mazzsva/AccountKit",
+      "state" : {
+        "revision" : "9202c269c2c31f493bd013d53b034b77e5beb1bd"
       }
     },
     {
