@@ -15,7 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mazzsva/AccountKit",
       "state" : {
-        "revision" : "7f885cb3a705725588e147a3ac4b9c8a0351314d"
+        "revision" : "7f885cb3a705725588e147a3ac4b9c8a0351314d",
+        "version" : "1.0.0"
       }
     },
     {

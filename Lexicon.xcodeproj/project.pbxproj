@@ -548,8 +548,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mazzsva/AccountKit";
 			requirement = {
-				kind = revision;
-				revision = 7f885cb3a705725588e147a3ac4b9c8a0351314d;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 		EF5068C330437F7F0017ACD8 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
