@@ -18,7 +18,6 @@ struct EntriesClient: Sendable {
     var clearLocalData: @Sendable () async throws -> Void
     var create: @Sendable (_ entry: Entry, _ uid: String) async throws -> Void
     var delete: @Sendable (_ id: Entry.ID, _ uid: String) async throws -> Void
-    var deleteAll: @Sendable (_ uid: String) async throws -> Void
 
     var entries: @Sendable (_ uid: String) async -> AsyncThrowingStream<EntriesSnapshot, any Error> = { _ in
         AsyncThrowingStream { _ in }
@@ -51,9 +50,6 @@ extension EntriesClient: DependencyKey {
             delete: { id, uid in
                 try await AccountStorage.shared.delete(id: id, uid: uid)
             },
-            deleteAll: { uid in
-                try await AccountStorage.shared.deleteAllEntries(uid: uid)
-            },
             entries: { uid in
                 await AccountStorage.shared.entries(uid: uid)
             },
@@ -71,7 +67,6 @@ extension EntriesClient: DependencyKey {
             clearLocalData: {},
             create: { _, _ in },
             delete: { _, _ in },
-            deleteAll: { _ in },
             entries: { _ in
                 AsyncThrowingStream { continuation in
                     continuation.yield(.mock)

@@ -38,23 +38,6 @@ struct SettingsView: View {
                         store.send(.account(.deleteAccountButtonTapped))
                     }
                 }
-                #if DEBUG
-                Section("Developer") {
-                    Button {
-                        store.send(.debugAddMockEntriesButtonTapped)
-                    } label: {
-                        Text(verbatim: "Save Entry.mocks")
-                    }
-                    Button(role: .destructive) {
-                        store.send(.debugDeleteAllEntriesButtonTapped)
-                    } label: {
-                        Text(verbatim: "Call deleteAll(uid:)")
-                    }
-                    Toggle(isOn: $store.showsWelcomeAtNextLaunch.sending(\.debugResetWelcomeToggleChanged)) {
-                        Text(verbatim: "Reset hasDismissedWelcome")
-                    }
-                }
-                #endif
             }
             // Without this the navigation bar shows a back chevron at the root of the stack
             .navigationBarBackButtonHidden()
