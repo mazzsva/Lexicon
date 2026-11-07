@@ -36,14 +36,17 @@ struct SettingsView: View {
                     Text("Using Sign in with Apple")
                 }
                 Section {
-                    Button("Sign Out") {
+                    Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
                         store.send(.account(.signOutButtonTapped))
                     }
                 }
                 .listSectionSpacing(.custom(8))
                 Section {
-                    Button("Delete Account", role: .destructive) {
+                    Button(role: .destructive) {
                         store.send(.account(.deleteAccountButtonTapped))
+                    } label: {
+                        Label("Delete Account", systemImage: "trash")
+                            .foregroundStyle(.red)
                     }
                 }
             }
