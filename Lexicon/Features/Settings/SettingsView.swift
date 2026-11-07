@@ -24,16 +24,14 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Email")
+                    Label {
                         Text(store.user.email ?? String(localized: "Unknown"))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    } icon: {
+                        Image(systemName: "apple.logo")
+                            .accessibilityLabel("Sign in with Apple")
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityElement(children: .combine)
-                } footer: {
-                    Text("Using Sign in with Apple")
                 }
                 Section {
                     Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
