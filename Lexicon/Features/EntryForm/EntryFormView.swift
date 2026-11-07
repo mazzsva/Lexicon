@@ -19,7 +19,6 @@ struct EntryFormView: View {
 
     @Environment(\.accessibilityReduceMotion) private var isReduceMotionEnabled
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isFollowingGeneration = false
     @FocusState private var isDefinitionFocused: Bool
     @FocusState private var isTermFocused: Bool
@@ -195,7 +194,7 @@ struct EntryFormView: View {
 
     private var generateGradient: LinearGradient {
         LinearGradient(
-            colors: GenerationGlowSurface.palette(for: colorScheme),
+            colors: GenerationGlowSurface.palette,
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
