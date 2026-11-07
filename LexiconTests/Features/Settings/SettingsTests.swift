@@ -15,6 +15,20 @@ extension BaseSuite {
     @Suite
     @MainActor
     struct SettingsTests {
+        @Test
+        func theInfoButtonPresentsTheAbout() async {
+            let store = TestStore(initialState: Settings.State(user: .mock)) {
+                Settings()
+            }
+
+            await store.send(.infoButtonTapped) {
+                $0.isPresentingAbout = true
+            }
+            await store.send(.aboutPresentationChanged(false)) {
+                $0.isPresentingAbout = false
+            }
+        }
+
         // A sign out clears the local data
         @Test
         func theSignOutButtonAsksForConfirmation() async {
