@@ -24,7 +24,7 @@ struct AppView: View {
                     SignInView(store: signInStore)
                 }
             } else {
-                Color(.systemGroupedBackground)
+                Color.black
                     .ignoresSafeArea()
             }
         }
