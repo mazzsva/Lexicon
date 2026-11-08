@@ -57,15 +57,6 @@ struct Entry: Equatable, Identifiable, Sendable {
         self.isBookmarked = isBookmarked
     }
 
-    init(createdAt: Date, definition: String, id: UUID, isBookmarked: Bool, term: String) throws(ValidationError) {
-        try self.init(
-            content: Content(term: term, definition: definition),
-            createdAt: createdAt,
-            id: id,
-            isBookmarked: isBookmarked
-        )
-    }
-
     var definition: String { content.definition }
 
     var term: String { content.term }
