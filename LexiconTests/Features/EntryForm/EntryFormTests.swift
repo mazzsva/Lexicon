@@ -205,7 +205,7 @@ extension BaseSuite {
                     $0.generatedDefinition = EntryForm.GeneratedDefinition(text: created.definition)
                     $0.generation = nil
                 }
-                expectNoDifference(store.state.note, .generated(correctForm: nil))
+                expectNoDifference(store.state.note, .generated)
 
                 await store.send(.saveButtonTapped)
                 await store.receive(\.delegate.didCreate, created)
@@ -214,7 +214,7 @@ extension BaseSuite {
         }
 
         @Test
-        func theModelReadsTheDictionaryEntryAndTheNoteNamesTheCorrectForm() async {
+        func theModelReadsTheDictionaryEntry() async {
             let (definitions, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
             let entry = DictionaryEntry(
                 correctForm: "nip in the bud",
@@ -246,34 +246,24 @@ extension BaseSuite {
                     $0.definition = "To stop a problem early."
                 }
                 continuation.finish()
-                await store.receive(\.definitionGenerationFinished, "nip in the bud") {
+                await store.receive(\.definitionGenerationFinished) {
                     $0.completedGenerationCount = 1
-                    $0.generatedDefinition = EntryForm.GeneratedDefinition(
-                        correctForm: "nip in the bud",
-                        text: "To stop a problem early."
-                    )
+                    $0.generatedDefinition = EntryForm.GeneratedDefinition(text: "To stop a problem early.")
                     $0.generation = nil
                 }
-                expectNoDifference(store.state.note, .generated(correctForm: "nip in the bud"))
+                expectNoDifference(store.state.note, .generated)
                 await Self.finishTheOutro(store, clock: clock)
             }
         }
 
         @Test
-        func correctingTheTermRemovesTheCorrectForm() async {
-            var state = Self.generatableState(term: "nip it in the butt")
-            state.definition = "To stop a problem early."
-            state.generatedDefinition = EntryForm.GeneratedDefinition(
-                correctForm: "nip in the bud",
-                text: "To stop a problem early."
-            )
-            let store = Self.store(state)
+        func editingTheTermKeepsTheGeneratedNote() async {
+            let store = Self.store(Self.generatedState())
 
-            await store.send(.binding(.set(\.term, "nip in the bud"))) {
-                $0.generatedDefinition?.correctForm = nil
-                $0.term = "nip in the bud"
+            await store.send(.binding(.set(\.term, "Once in a blue moon!"))) {
+                $0.term = "Once in a blue moon!"
             }
-            expectNoDifference(store.state.note, .generated(correctForm: nil))
+            expectNoDifference(store.state.note, .generated)
         }
 
         @Test
@@ -344,7 +334,7 @@ extension BaseSuite {
                     $0.completedGenerationCount = 2
                     $0.generation = nil
                 }
-                expectNoDifference(store.state.note, .generated(correctForm: nil))
+                expectNoDifference(store.state.note, .generated)
                 await Self.finishTheOutro(store, clock: clock)
             }
         }
@@ -619,7 +609,7 @@ extension BaseSuite {
                 $0.generation = nil
                 $0.isAwaitingEarliestCompletion = false
             }
-            expectNoDifference(store.state.note, .generated(correctForm: nil))
+            expectNoDifference(store.state.note, .generated)
             continuation.yield("Something late")
             continuation.finish()
             await store.finish()
@@ -644,7 +634,7 @@ extension BaseSuite {
                 $0.generation = nil
                 $0.isAwaitingEarliestCompletion = false
             }
-            expectNoDifference(store.state.note, .generated(correctForm: nil))
+            expectNoDifference(store.state.note, .generated)
         }
 
         @Test(
@@ -672,7 +662,7 @@ extension BaseSuite {
             let store = Self.store(state)
 
             await store.send(.definitionGenerated("Something late"))
-            await store.send(.definitionGenerationFinished(correctForm: nil))
+            await store.send(.definitionGenerationFinished)
             await store.send(.definitionGenerationFailed(DefinitionClient.GenerationError.failed))
         }
 
@@ -776,7 +766,7 @@ extension BaseSuite {
             var state = Self.generatableState(term: "Once in a blue moon")
             state.definition = "Very rarely."
             state.generatedDefinition = EntryForm.GeneratedDefinition(text: "Very rarely.")
-            expectNoDifference(state.note, .generated(correctForm: nil))
+            expectNoDifference(state.note, .generated)
 
             state.generation = .failed(.unknownTerm)
             expectNoDifference(state.note, .failure(.unknownTerm))
@@ -815,11 +805,11 @@ extension BaseSuite {
         @Test
         func aTermThatIsTooLongKeepsTheGeneratedNote() {
             var state = Self.generatedState()
-            expectNoDifference(state.note, .generated(correctForm: nil))
+            expectNoDifference(state.note, .generated)
 
             state.term = String(repeating: "a", count: EntryForm.maximumGeneratableTermLength + 1)
             #expect(state.isTermTooLong)
-            expectNoDifference(state.note, .generated(correctForm: nil))
+            expectNoDifference(state.note, .generated)
         }
 
         @Test(

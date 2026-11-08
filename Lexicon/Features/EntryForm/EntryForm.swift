@@ -12,7 +12,6 @@ import os
 @Reducer
 struct EntryForm {
     struct GeneratedDefinition: Equatable {
-        var correctForm: String?
         let text: String
     }
 
@@ -25,7 +24,7 @@ struct EntryForm {
 
     enum Note: Hashable {
         case failure(DefinitionClient.GenerationError)
-        case generated(correctForm: String?)
+        case generated
         case termTooLong
     }
 
@@ -93,7 +92,7 @@ struct EntryForm {
                     return .termTooLong
                 }
                 guard let generatedDefinition, definition == generatedDefinition.text else { return nil }
-                return .generated(correctForm: generatedDefinition.correctForm)
+                return .generated
             }
         }
 
@@ -106,7 +105,7 @@ struct EntryForm {
         case binding(BindingAction<State>)
         case definitionGenerated(String)
         case definitionGenerationFailed(any Error)
-        case definitionGenerationFinished(correctForm: String?)
+        case definitionGenerationFinished
         case delegate(Delegate)
         case dictionaryEntryResponse(DictionaryEntry?)
         case dismissButtonTapped
@@ -153,7 +152,6 @@ struct EntryForm {
                 return .none
 
             case .binding(\.term):
-                state.generatedDefinition?.correctForm = nil
                 clearFailure(&state)
                 return .none
 
@@ -168,13 +166,13 @@ struct EntryForm {
             case .definitionGenerationFailed(let error):
                 return failGeneration(&state, error: error)
 
-            case .definitionGenerationFinished(let correctForm):
+            case .definitionGenerationFinished:
                 guard state.generation.is(\.writing) else { return .none }
                 guard !state.isDefinitionBlank else {
                     return failGeneration(&state, error: DefinitionClient.GenerationError.failed)
                 }
                 state.completedGenerationCount += 1
-                state.generatedDefinition = GeneratedDefinition(correctForm: correctForm, text: state.definition)
+                state.generatedDefinition = GeneratedDefinition(text: state.definition)
                 state.generation = nil
                 guard !state.isReduceMotionEnabled else {
                     state.isAwaitingEarliestCompletion = false
@@ -303,7 +301,7 @@ struct EntryForm {
                 for try await definition in definitionClient.definition(term: term, entry: entry) {
                     await send(.definitionGenerated(definition))
                 }
-                await send(.definitionGenerationFinished(correctForm: entry?.correctForm))
+                await send(.definitionGenerationFinished)
             } catch {
                 await send(.definitionGenerationFailed(error))
             }
