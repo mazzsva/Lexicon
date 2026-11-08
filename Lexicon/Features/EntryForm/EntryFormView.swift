@@ -275,19 +275,17 @@ extension EntryForm.Note {
     fileprivate var text: LocalizedStringResource {
         switch self {
         case .failure(.failed):
-            "The definition couldn't be generated. Write it yourself, or try again later."
+            "The definition couldn't be generated."
         case .failure(.unknownTerm):
-            "Lexicon doesn't know this term. Check the spelling, or write the definition yourself."
+            "Lexicon doesn't know this term."
         case .failure(.unsupportedLanguage):
             "Lexicon can't define terms in this language yet."
         case .failure(.unsupportedTerm):
             "Lexicon can't define this term."
-        case .generated(let correctForm?):
-            "Did you mean “\(correctForm)”? Check the generated definition for mistakes."
-        case .generated(nil):
+        case .generated:
             "Check the generated definition for mistakes."
         case .termTooLong:
-            "Lexicon can generate definitions for terms of up to \(EntryForm.maximumGeneratableTermLength) characters."
+            "This term is too long for Lexicon to define."
         }
     }
 }

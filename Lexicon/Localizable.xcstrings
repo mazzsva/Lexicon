@@ -55,9 +55,6 @@
     "Deleting your account…" : {
 
     },
-    "Did you mean “%@”? Check the generated definition for mistakes." : {
-
-    },
     "Dismiss" : {
 
     },
@@ -79,16 +76,13 @@
     "Lexicon" : {
       "shouldTranslate" : false
     },
-    "Lexicon can generate definitions for terms of up to %lld characters." : {
-
-    },
     "Lexicon can't define terms in this language yet." : {
 
     },
     "Lexicon can't define this term." : {
 
     },
-    "Lexicon doesn't know this term. Check the spelling, or write the definition yourself." : {
+    "Lexicon doesn't know this term." : {
 
     },
     "Lexicon will try again shortly." : {
@@ -169,7 +163,10 @@
     "Term" : {
 
     },
-    "The definition couldn't be generated. Write it yourself, or try again later." : {
+    "The definition couldn't be generated." : {
+
+    },
+    "This term is too long for Lexicon to define." : {
 
     },
     "Unknown" : {
