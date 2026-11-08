@@ -37,7 +37,7 @@ jobs:
         run: |
           udid=$(xcrun simctl list devices available --json | jq -r '
             [.devices | to_entries[]
-              | select(.key | contains("SimRuntime.iOS-"))
+              | select(.key | test("SimRuntime\\.iOS-[0-9]+(-[0-9]+)*$"))
               | {version: (.key | split("iOS-")[1] | split("-") | map(tonumber)), device: (.value[] | select(.name == "iPhone 18 Pro"))}]
             | sort_by(.version) | last | .device.udid')
           echo "Booting iPhone 18 Pro ($udid)"
