@@ -33,11 +33,13 @@ struct SettingsView: View {
                             .accessibilityLabel("Sign in with Apple")
                     }
                 }
+                .listRowBackground(Color.appSurface)
                 Section {
                     Button("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") {
                         store.send(.account(.signOutButtonTapped))
                     }
                 }
+                .listRowBackground(Color.appSurface)
                 .listSectionSpacing(.custom(8))
                 Section {
                     Button(role: .destructive) {
@@ -47,6 +49,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }
                 }
+                .listRowBackground(Color.appSurface)
             }
             // Without this the navigation bar shows a back chevron at the root of the stack
             .navigationBarBackButtonHidden()

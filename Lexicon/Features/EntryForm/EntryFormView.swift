@@ -33,6 +33,7 @@ struct EntryFormView: View {
                             .disabled(store.isGeneratingDefinition)
                             .accessibilityLabel("Term")
                     }
+                    .listRowBackground(Color.appSurface)
                     Section {
                         definitionRow
                     } header: {
