@@ -22,7 +22,7 @@ struct SignInView: View {
             .padding(10)
             .glassEffect(.regular, in: .capsule)
             .padding(.horizontal, 24)
-            .padding(.bottom, 48)
+            .padding(.bottom, 36)
         }
         .ignoresSafeArea(.container, edges: .bottom)
         .groupedBackground()
