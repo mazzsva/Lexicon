@@ -10,8 +10,6 @@ import SwiftUI
 struct WelcomeView: View {
     let onContinue: () -> Void
 
-    @Environment(\.self) private var environment
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 56) {
@@ -41,7 +39,6 @@ struct WelcomeView: View {
             } label: {
                 Text("Continue")
                     .font(.headline)
-                    .foregroundStyle(Color.accentColor.resolve(in: environment).contrastingLabel)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
