@@ -32,6 +32,7 @@ struct HomeView: View {
             .scrollIndicators(.hidden)
             .groupedBackground()
             .searchable(text: $store.searchText)
+            .navigationTitle("Lexicon")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarRole(.editor)
             .toolbar {
