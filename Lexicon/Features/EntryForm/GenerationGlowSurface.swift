@@ -20,12 +20,14 @@ struct GenerationGlowSurface: View {
     nonisolated static let cornerRadius: CGFloat = 26
     private static let unset: Float = 1e6
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         let time = Float(time)
         let writingStart = writingStart.map(Float.init) ?? Self.unset
         let completion = completion.map(Float.init) ?? Self.unset
+        let dark: Float = colorScheme == .dark ? 1 : 0
         let mirrored: Float = layoutDirection == .rightToLeft ? 1 : 0
         let pulses = pulses.map(Float.init)
         Rectangle()
@@ -36,6 +38,7 @@ struct GenerationGlowSurface: View {
                         time: time,
                         writingStart: writingStart,
                         completion: completion,
+                        dark: dark,
                         mirrored: mirrored,
                         pulses: pulses
                     )
@@ -43,21 +46,34 @@ struct GenerationGlowSurface: View {
             }
     }
 
-    static let palette: [Color] = [
-        Color(red: 0.30, green: 0.78, blue: 1.00),
-        Color(red: 0.33, green: 0.50, blue: 1.00),
-        Color(red: 0.66, green: 0.40, blue: 1.00),
-        Color(red: 1.00, green: 0.36, blue: 0.78),
-        Color(red: 1.00, green: 0.47, blue: 0.42),
-        Color(red: 1.00, green: 0.70, blue: 0.32),
-        Color(red: 1.00, green: 0.82, blue: 0.24),
-    ]
+    static func palette(for colorScheme: ColorScheme) -> [Color] {
+        colorScheme == .dark
+            ? [
+                Color(red: 0.30, green: 0.78, blue: 1.00),
+                Color(red: 0.33, green: 0.50, blue: 1.00),
+                Color(red: 0.66, green: 0.40, blue: 1.00),
+                Color(red: 1.00, green: 0.36, blue: 0.78),
+                Color(red: 1.00, green: 0.47, blue: 0.42),
+                Color(red: 1.00, green: 0.70, blue: 0.32),
+                Color(red: 1.00, green: 0.82, blue: 0.24),
+            ]
+            : [
+                Color(red: 0.22, green: 0.62, blue: 1.00),
+                Color(red: 0.18, green: 0.40, blue: 1.00),
+                Color(red: 0.55, green: 0.30, blue: 1.00),
+                Color(red: 0.95, green: 0.24, blue: 0.62),
+                Color(red: 1.00, green: 0.40, blue: 0.32),
+                Color(red: 1.00, green: 0.62, blue: 0.30),
+                Color(red: 1.00, green: 0.74, blue: 0.16),
+            ]
+    }
 
     nonisolated private static func shader(
         size: CGSize,
         time: Float,
         writingStart: Float,
         completion: Float,
+        dark: Float,
         mirrored: Float,
         pulses: [Float]
     ) -> Shader {
@@ -69,6 +85,7 @@ struct GenerationGlowSurface: View {
             .float(completion),
             .float(Float(completionDuration)),
             .float(Float(homeArrival)),
+            .float(dark),
             .float(mirrored),
             .floatArray(pulses)
         )

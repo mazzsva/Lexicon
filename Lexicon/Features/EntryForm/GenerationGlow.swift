@@ -23,7 +23,7 @@ struct GenerationGlow: View {
     @State private var run: Run?
 
     var body: some View {
-        Color.appSurface
+        Color(.secondarySystemGroupedBackground)
             .overlay {
                 if let run {
                     TimelineView(.animation(paused: reduceMotion)) { context in

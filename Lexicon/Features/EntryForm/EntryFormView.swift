@@ -19,6 +19,7 @@ struct EntryFormView: View {
 
     @Environment(\.accessibilityReduceMotion) private var isReduceMotionEnabled
     @Environment(\.accessibilityVoiceOverEnabled) private var isVoiceOverEnabled
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isFollowingGeneration = false
     @FocusState private var isDefinitionFocused: Bool
     @FocusState private var isTermFocused: Bool
@@ -33,7 +34,6 @@ struct EntryFormView: View {
                             .disabled(store.isGeneratingDefinition)
                             .accessibilityLabel("Term")
                     }
-                    .listRowBackground(Color.appSurface)
                     Section {
                         definitionRow
                     } header: {
@@ -195,7 +195,7 @@ struct EntryFormView: View {
 
     private var generateGradient: LinearGradient {
         LinearGradient(
-            colors: GenerationGlowSurface.palette,
+            colors: GenerationGlowSurface.palette(for: colorScheme),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
