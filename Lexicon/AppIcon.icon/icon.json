@@ -1,93 +1,44 @@
 {
-  "fill" : {
-    "automatic-gradient" : "srgb:1.00000,1.00000,1.00000,1.00000"
+  "fill": {
+    "solid": "srgb:0.02300,0.14400,0.08100,1.00000"
   },
-  "groups" : [
+  "groups": [
     {
-      "layers" : [
+      "layers": [
         {
-          "fill" : {
-            "solid" : "srgb:1.00000,0.57637,0.00000,1.00000"
+          "fill": {
+            "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
           },
-          "image-name" : "bookmark.fill@2x.png",
-          "name" : "bookmark.fill",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              166.5,
-              -382
+          "image-name": "glyph.png",
+          "name": "quote.opening",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
             ]
           }
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
       },
-      "specular-highlight-placement" : "inside",
-      "specular-highlight-placement-specializations" : [
+      "specular-highlight-placement": "inside",
+      "specular-highlight-placement-specializations": [
         {
-          "appearance" : "dark",
-          "value" : "outside"
+          "appearance": "dark",
+          "value": "outside"
         }
       ],
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.1
-      }
-    },
-    {
-      "layers" : [
-        {
-          "fill-specializations" : [
-            {
-              "value" : {
-                "solid" : "srgb:0.11000,0.11000,0.12000,1.00000"
-              }
-            },
-            {
-              "appearance" : "dark",
-              "value" : {
-                "solid" : "srgb:0.92000,0.92000,0.94000,1.00000"
-              }
-            },
-            {
-              "appearance" : "tinted",
-              "value" : {
-                "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-              }
-            }
-          ],
-          "image-name" : "textformat@2x.png",
-          "name" : "textformat",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              8.5,
-              30
-            ]
-          }
-        }
-      ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
-      },
-      "specular-highlight-placement" : "inside",
-      "specular-highlight-placement-specializations" : [
-        {
-          "appearance" : "dark",
-          "value" : "outside"
-        }
-      ],
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.1
+      "translucency": {
+        "enabled": true,
+        "value": 0.1
       }
     }
   ],
-  "supported-platforms" : {
-    "squares" : [
+  "supported-platforms": {
+    "squares": [
       "iOS"
     ]
   }
