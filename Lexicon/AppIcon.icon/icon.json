@@ -1,40 +1,74 @@
 {
-  "fill": {
-    "solid": "srgb:0.02300,0.14400,0.08100,1.00000"
-  },
+  "features": [
+    "specular-location"
+  ],
+  "fill-specializations": [
+    {
+      "value": {
+        "solid": "srgb:0.47843,0.07451,0.16078,1.00000"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "solid": "srgb:0.05098,0.02353,0.02745,1.00000"
+      }
+    },
+    {
+      "appearance": "tinted",
+      "value": {
+        "solid": "srgb:0.47843,0.07451,0.16078,1.00000"
+      }
+    }
+  ],
   "groups": [
     {
       "layers": [
         {
-          "fill": {
-            "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
-          },
-          "image-name": "glyph.png",
+          "blend-mode": "normal",
           "name": "quote.opening",
+          "image-name": "glyph.png",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.69020,0.13333,0.24314,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ],
           "position": {
-            "scale": 1,
+            "scale": 1.12,
             "translation-in-points": [
               0,
-              0
+              -4.0
             ]
-          }
+          },
+          "opacity": 1.0,
+          "glass": true
         }
       ],
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.5
+        "opacity": 0.35
       },
-      "specular-highlight-placement": "inside",
-      "specular-highlight-placement-specializations": [
-        {
-          "appearance": "dark",
-          "value": "outside"
-        }
-      ],
+      "specular": "inside",
       "translucency": {
-        "enabled": true,
-        "value": 0.1
-      }
+        "enabled": false,
+        "value": 0
+      },
+      "blur-material": 0.3,
+      "lighting": "individual"
     }
   ],
   "supported-platforms": {
