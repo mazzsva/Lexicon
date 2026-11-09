@@ -11,10 +11,13 @@ import SwiftUI
 struct AppleSignInButton: View {
     let action: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        AppleSignInButtonRepresentable(action: action, style: .white)
+        AppleSignInButtonRepresentable(action: action, style: colorScheme == .dark ? .white : .black)
             .clipShape(.capsule)
             .frame(height: 50)
+            .id(colorScheme)
     }
 }
 
@@ -55,7 +58,14 @@ private struct AppleSignInButtonRepresentable: UIViewRepresentable {
     }
 }
 
-#Preview {
+#Preview("Light") {
     AppleSignInButton {}
         .padding(.horizontal, 32)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Dark") {
+    AppleSignInButton {}
+        .padding(.horizontal, 32)
+        .preferredColorScheme(.dark)
 }
