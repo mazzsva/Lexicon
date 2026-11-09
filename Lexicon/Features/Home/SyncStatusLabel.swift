@@ -50,7 +50,7 @@ struct SyncStatusLabel: View {
 
 #Preview("In Toolbar") {
     NavigationStack {
-        Color.appBackground
+        Color(.systemGroupedBackground)
             .ignoresSafeArea()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

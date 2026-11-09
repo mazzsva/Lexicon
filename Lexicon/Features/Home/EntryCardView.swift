@@ -46,7 +46,7 @@ struct EntryCardView: View {
             .padding(.vertical, 10)
         }
         .background(
-            Color.appSurface,
+            Color(.secondarySystemGroupedBackground),
             in: ConcentricRectangle(corners: .concentric(minimum: 16))
         )
         .contentShape(ConcentricRectangle(corners: .concentric(minimum: 16)))
