@@ -58,6 +58,7 @@ struct WelcomeView: View {
 private struct WelcomeHighlight {
     let systemImage: String
     let text: LocalizedStringResource
+    var isTinted = true
 
     static let all = [
         WelcomeHighlight(
@@ -70,7 +71,8 @@ private struct WelcomeHighlight {
         ),
         WelcomeHighlight(
             systemImage: "apple.logo",
-            text: "Sign in with Apple to keep every entry in your account."
+            text: "Sign in with Apple to keep every entry in your account.",
+            isTinted: false
         ),
     ]
 }
@@ -85,7 +87,7 @@ private struct WelcomeHighlightRow: View {
             Image(systemName: highlight.systemImage)
                 .resizable()
                 .scaledToFit()
-                .foregroundStyle(.tint)
+                .foregroundStyle(highlight.isTinted ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 .frame(width: iconSize, height: iconSize)
                 .frame(width: 44, height: 44)
                 .accessibilityHidden(true)
