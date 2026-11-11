@@ -1,0 +1,77 @@
+{
+  "color-space-for-untagged-svg-colors" : "display-p3",
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:1.00000,1.00000,1.00000,1.00000",
+      "display-p3:0.94118,0.94118,0.94902,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : "none"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:0.66000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "hidden" : true,
+          "image-name" : "cap.svg",
+          "name" : "Cap"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Cap",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.45
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : "none"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:0.96000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "nut.svg",
+          "name" : "Nut"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Nut",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.45
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "iOS"
+    ]
+  }
+}

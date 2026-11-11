@@ -1,0 +1,188 @@
+{
+  "groups": [
+    {
+      "name": "Cap",
+      "layers": [
+        {
+          "image-name": "scales.svg",
+          "name": "Scales",
+          "glass": false,
+          "fill": "none"
+        },
+        {
+          "image-name": "cap.svg",
+          "name": "Cap",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "extended-gray:0.62000,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "image-name": "stem.svg",
+          "name": "Stem",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "extended-gray:0.50000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "combined"
+    },
+    {
+      "name": "Nut",
+      "layers": [
+        {
+          "image-name": "shine.svg",
+          "name": "Shine",
+          "glass": false,
+          "fill": "none"
+        },
+        {
+          "image-name": "nut.svg",
+          "name": "Nut",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "extended-gray:1.00000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    },
+    {
+      "name": "Hollow",
+      "layers": [
+        {
+          "image-name": "stash.svg",
+          "name": "Stash",
+          "glass": false,
+          "fill": "none"
+        },
+        {
+          "image-name": "hollow.svg",
+          "name": "Hollow",
+          "glass": false,
+          "fill": "none"
+        },
+        {
+          "image-name": "rim.svg",
+          "name": "Rim",
+          "glass": false,
+          "fill": "none"
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    },
+    {
+      "name": "Grain",
+      "layers": [
+        {
+          "image-name": "grain.svg",
+          "name": "Grain",
+          "glass": false,
+          "fill": "none"
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "iOS"
+    ]
+  },
+  "fill-specializations": [
+    {
+      "value": {
+        "linear-gradient": [
+          "srgb:0.72157,0.47843,0.25882,1.00000",
+          "srgb:0.43922,0.25098,0.11373,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 1
+          }
+        }
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "linear-gradient": [
+          "srgb:0.41961,0.25882,0.13333,1.00000",
+          "srgb:0.20000,0.10196,0.03922,1.00000"
+        ],
+        "orientation": {
+          "start": {
+            "x": 0.5,
+            "y": 0
+          },
+          "stop": {
+            "x": 0.5,
+            "y": 1
+          }
+        }
+      }
+    }
+  ]
+}

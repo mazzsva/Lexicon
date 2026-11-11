@@ -1,0 +1,86 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "srgb:1.00000,0.70980,0.23922,1.00000",
+      "srgb:1.00000,0.46667,0.06667,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  },
+  "groups": [
+    {
+      "name": "Letter",
+      "layers": [
+        {
+          "image-name": "letter.svg",
+          "name": "Letter",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,0.60392,0.12157,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    },
+    {
+      "name": "Rules",
+      "layers": [
+        {
+          "image-name": "rules.svg",
+          "name": "Rules",
+          "glass": false,
+          "opacity": 0.42,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,0.60392,0.12157,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "iOS"
+    ]
+  }
+}

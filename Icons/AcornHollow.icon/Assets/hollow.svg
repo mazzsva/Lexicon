@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><radialGradient id="h" cx="512" cy="640" r="420" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#40210C" stop-opacity="1"/><stop offset="0.55" stop-color="#1F0F05" stop-opacity="1"/><stop offset="1" stop-color="#0B0502" stop-opacity="1"/></radialGradient></defs>
+<path d="M512 176 C664 176 786 372 786 588 C786 760 664 868 512 868 C360 868 238 760 238 588 C238 372 360 176 512 176 Z" fill="url(#h)"/>
+</svg>

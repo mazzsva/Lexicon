@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs><clipPath id="k"><path d="M284 468 A228 176 0 0 1 740 468 A228 34 0 0 1 284 468 Z"/></clipPath><linearGradient id="c" x1="0" y1="292" x2="0" y2="502" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#8A5527" stop-opacity="1"/><stop offset="1" stop-color="#2C1505" stop-opacity="1"/></linearGradient><radialGradient id="h" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#FFE7B8" stop-opacity="0.45"/><stop offset="1" stop-color="#FFE7B8" stop-opacity="0"/></radialGradient></defs>
+<g transform="translate(512.0 498.0) rotate(0.0) scale(1.1) translate(-512 -508.0)"><path d="M284 468 A228 176 0 0 1 740 468 A228 34 0 0 1 284 468 Z" fill="url(#c)"/><ellipse clip-path="url(#k)" cx="456" cy="358" rx="128" ry="50" fill="url(#h)"/></g>
+</svg>

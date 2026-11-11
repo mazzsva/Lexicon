@@ -1,0 +1,98 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "srgb:0.24706,0.22745,0.61176,1.00000",
+      "srgb:0.07451,0.06275,0.21176,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : "none",
+          "glass" : true,
+          "image-name" : "lid.svg",
+          "name" : "Lid"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Lid",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    },
+    {
+      "blur-material" : 0,
+      "layers" : [
+        {
+          "fill" : "none",
+          "glass" : true,
+          "image-name" : "jar.svg",
+          "name" : "Jar"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Jar",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.35
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.7
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : "none",
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "phrase.svg",
+          "name" : "Phrase"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Phrase",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.8
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : "none",
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "glow.svg",
+          "name" : "Glow"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Glow",
+      "shadow" : {
+        "kind" : "none",
+        "opacity" : 0
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "iOS"
+    ]
+  }
+}

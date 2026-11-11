@@ -1,0 +1,113 @@
+{
+  "groups": [
+    {
+      "name": "Cap",
+      "layers": [
+        {
+          "image-name": "scales.svg",
+          "name": "Scales",
+          "glass": false,
+          "fill": "none"
+        },
+        {
+          "image-name": "cap.svg",
+          "name": "Cap",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "extended-gray:0.62000,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "image-name": "stem.svg",
+          "name": "Stem",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "extended-gray:0.50000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "combined"
+    },
+    {
+      "name": "Nut",
+      "layers": [
+        {
+          "image-name": "shine.svg",
+          "name": "Shine",
+          "glass": false,
+          "fill": "none"
+        },
+        {
+          "image-name": "nut.svg",
+          "name": "Nut",
+          "glass": true,
+          "fill-specializations": [
+            {
+              "value": "none"
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "extended-gray:1.00000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "iOS"
+    ]
+  },
+  "fill": {
+    "linear-gradient": [
+      "srgb:1.00000,0.97647,0.91765,1.00000",
+      "srgb:0.94510,0.86667,0.70980,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  }
+}

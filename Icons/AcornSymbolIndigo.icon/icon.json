@@ -1,0 +1,64 @@
+{
+  "groups": [
+    {
+      "name": "Cap",
+      "layers": [
+        {
+          "image-name": "cap.svg",
+          "name": "Cap",
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    },
+    {
+      "name": "Nut",
+      "layers": [
+        {
+          "image-name": "nut.svg",
+          "name": "Nut",
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "lighting": "individual"
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "iOS"
+    ]
+  },
+  "color-space-for-untagged-svg-colors": "display-p3",
+  "fill": {
+    "linear-gradient": [
+      "display-p3:0.50196,0.49412,1.00000,1.00000",
+      "display-p3:0.29020,0.27059,0.90196,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0.5,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.5,
+        "y": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "fill-specializations" : [
+    {
+      "value" : {
+        "linear-gradient" : [
+          "display-p3:0.99053,0.98057,0.94929,1.00000",
+          "display-p3:0.96112,0.92538,0.84546,1.00000"
+        ]
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "linear-gradient" : [
+          "display-p3:0.17620,0.14279,0.11264,1.00000",
+          "display-p3:0.09100,0.06726,0.04928,1.00000"
+        ]
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.63427,0.39854,0.19963,1.00000",
+                  "display-p3:0.48179,0.26087,0.14980,1.00000"
+                ]
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.70635,0.47185,0.26337,1.00000",
+                  "display-p3:0.55267,0.32975,0.20786,1.00000"
+                ]
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:0.74000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "cap.svg",
+          "name" : "Cap"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Cap",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.4
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.94814,0.76122,0.36181,1.00000",
+                  "display-p3:0.86029,0.56302,0.21119,1.00000"
+                ]
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:1.00000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "nut.svg",
+          "name" : "Nut"
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Nut",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.4
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "iOS"
+    ]
+  }
+}
