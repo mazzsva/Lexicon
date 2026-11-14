@@ -22,7 +22,7 @@
           "fill-specializations" : [
             {
               "value" : {
-                "solid" : "srgb:0.10000,0.10000,0.10000,1.00000"
+                "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
               }
             },
             {
@@ -38,6 +38,7 @@
               }
             }
           ],
+          "glass" : true,
           "image-name" : "quote.opening.svg",
           "name" : "quote.opening"
         }
