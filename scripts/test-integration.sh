@@ -5,9 +5,10 @@ cd "$(dirname "$0")/.."
 export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 
 destination="${DESTINATION:-platform=iOS Simulator,name=iPhone 18 Pro}"
+action="${XCODEBUILD_ACTION:-test}"
 command=(
     env TEST_RUNNER_FIREBASE_EMULATORS=1
-    xcodebuild test
+    xcodebuild "$action"
     -scheme Lexicon
     -destination "$destination"
     -only-testing:LexiconTests/BaseSuite/IntegrationSuite
