@@ -20,7 +20,7 @@ Vocabulary app in SwiftUI, TCA, Firestore, and Foundation Models.
 
 - **Tests:** Offline unit tests, and integration tests on Firebase emulators.
 - **Integration:** The integration tests check the Firestore rules and the storage layer on every pull request.
-- **CI:** GitHub Actions lints with `swift format --strict` and runs the full suite on each ready pull request.
+- **CI:** GitHub Actions lints with `swift format --strict`, builds with no warnings, and runs the full suite on each ready pull request, each merge to main, and every Monday.
 - **Accessibility:** Every control has a VoiceOver label, and each entry card reads as one element.
 - **Localization:** Every string the app shows is ready for translation.
 

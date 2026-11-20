@@ -3,8 +3,10 @@ name: CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - '**.md'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -15,102 +17,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Build and Test
-    if: github.event.pull_request.draft != true
-    runs-on: xcode-27
-    timeout-minutes: 35
-
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v7
-
-      - name: Report the toolchain
-        run: |
-          xcodebuild -version
-          swift format --version
-
-      - name: Install the Metal Toolchain
-        run: xcodebuild -downloadComponent MetalToolchain
-
-      - name: Boot the simulator
-        run: |
-          udid=$(xcrun simctl list devices available --json | jq -r '
-            [.devices | to_entries[]
-              | select(.key | test("SimRuntime\\.iOS-[0-9]+(-[0-9]+)*$"))
-              | {version: (.key | split("iOS-")[1] | split("-") | map(tonumber)), device: (.value[] | select(.name == "iPhone 18 Pro"))}]
-            | sort_by(.version) | last | .device.udid')
-          echo "Booting iPhone 18 Pro ($udid)"
-          xcrun simctl boot "$udid"
-          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
-
-      - name: Hash the package versions
-        id: packages
-        run: echo "hash=$(shasum -a 256 Lexicon.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore the Swift packages
-        id: cache
-        uses: actions/cache@v6
-        with:
-          path: ${{ runner.temp }}/SourcePackages
-          key: swiftpm-${{ steps.packages.outputs.hash }}
-          restore-keys: swiftpm-
-
-      - name: Lint the sources
-        run: swift format lint --recursive --strict Lexicon LexiconTests
-
-      - name: Build for testing
-        timeout-minutes: 20
-        run: |
-          xcodebuild build-for-testing \
-            -scheme Lexicon \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
-            -onlyUsePackageVersionsFromResolvedFile \
-            ${{ steps.cache.outputs.cache-hit == 'true' && '-skipPackageUpdates' || '' }} \
-            -skipMacroValidation
-
-      - name: Run the tests
-        timeout-minutes: 5
-        run: |
-          xcodebuild test-without-building \
-            -scheme Lexicon \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
-            -onlyUsePackageVersionsFromResolvedFile \
-            -skipPackageUpdates \
-            -parallel-testing-enabled NO \
-            -resultBundlePath TestResults.xcresult
-
-      - name: Install the Firebase emulators
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: 1
-        run: |
-          brew install openjdk@21
-          npm install --global firebase-tools@15
-
-      - name: Run the integration tests
-        timeout-minutes: 10
-        run: |
-          DESTINATION="platform=iOS Simulator,id=$SIMULATOR_UDID" XCODEBUILD_ACTION=test-without-building scripts/test-integration.sh \
-            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
-            -onlyUsePackageVersionsFromResolvedFile \
-            -skipPackageUpdates \
-            -parallel-testing-enabled NO \
-            -resultBundlePath IntegrationResults.xcresult
-
-      - name: Check that the integration tests ran
-        run: |
-          xcrun xcresulttool get test-results summary --path IntegrationResults.xcresult --compact \
-            | jq -e '.passedTests > 0 and .skippedTests == 0'
-
-      - name: Upload the test results
-        if: failure() || cancelled()
-        uses: actions/upload-artifact@v7
-        with:
-          name: TestResults
-          path: |
-            TestResults.xcresult
-            IntegrationResults.xcresult
-            firebase-debug.log
-            firestore-debug.log
+  xcode:
+    name: Xcode
+    uses: mazzsva/.github/.github/workflows/xcode.yml@v1.0.0
+    with:
+      scheme: Lexicon
+      platform: iOS
+      lint-paths: Lexicon LexiconTests
+      metal-toolchain: true
+      integration-tests: true
